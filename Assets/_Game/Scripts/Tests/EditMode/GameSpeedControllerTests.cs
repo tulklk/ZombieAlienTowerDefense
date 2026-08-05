@@ -102,5 +102,33 @@ namespace AlienDefense.Tests.EditMode
 
             Assert.IsFalse(result);
         }
+
+        [Test]
+        public void SetSpeed_WhilePaused_IsRejected_AndDoesNotChangeTimeScale()
+        {
+            var target = new FakeTimeScaleTarget();
+            var controller = new GameSpeedController(target);
+            controller.Pause();
+
+            bool result = controller.SetSpeed(2);
+
+            Assert.IsFalse(result);
+            Assert.AreEqual(1, controller.CurrentSpeed);
+            Assert.AreEqual(0f, target.TimeScale);
+        }
+
+        [Test]
+        public void SetSpeed_WhilePaused_ThenResume_RestoresPrePauseSpeed_NotTheRejectedOne()
+        {
+            var target = new FakeTimeScaleTarget();
+            var controller = new GameSpeedController(target);
+            controller.Pause();
+
+            controller.SetSpeed(2);
+            controller.Resume();
+
+            Assert.AreEqual(1, controller.CurrentSpeed);
+            Assert.AreEqual(1f, target.TimeScale);
+        }
     }
 }

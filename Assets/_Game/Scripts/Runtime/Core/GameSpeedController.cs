@@ -30,7 +30,7 @@ namespace AlienDefense.Core
         /// <summary>Selects a new gameplay speed multiplier (e.g. x1, x2).</summary>
         public bool SetSpeed(int speed)
         {
-            if (_isLocked)
+            if (_isLocked || IsPaused)
             {
                 return false;
             }
