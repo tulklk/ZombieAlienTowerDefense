@@ -27,7 +27,9 @@ namespace AlienDefense.DebugTools
             }
         }
 
+#if UNITY_EDITOR
         [ContextMenu("Spawn One Enemy")]
+#endif
         public void SpawnOne()
         {
             if (_factory == null)
