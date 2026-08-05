@@ -1,5 +1,7 @@
 using AlienDefense.Base;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace AlienDefense.Tests.EditMode
 {
@@ -46,7 +48,9 @@ namespace AlienDefense.Tests.EditMode
             int eventCount = 0;
             health.HealthChanged += (current, max) => eventCount++;
 
+            LogAssert.Expect(LogType.Warning, "[BaseHealthService] Ignored TakeDamage(0); amount must be positive.");
             health.TakeDamage(0);
+            LogAssert.Expect(LogType.Warning, "[BaseHealthService] Ignored TakeDamage(-5); amount must be positive.");
             health.TakeDamage(-5);
 
             Assert.AreEqual(10, health.CurrentHealth);

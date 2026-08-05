@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace AlienDefense.Economy
 {
-    /// <summary>
-    /// Owns the player's spendable resource (gold/energy) for the current level.
-    /// This is the only place resource may change — BuildService, tower upgrade and
-    /// enemy reward payout must all go through this service instead of touching a number themselves.
-    /// </summary>
+    /// <summary>Owns the player's spendable resource (gold/energy) for the current level.</summary>
     public sealed class EconomyService
     {
         public int CurrentResource { get; private set; }
@@ -30,7 +26,7 @@ namespace AlienDefense.Economy
             return amount >= 0 && CurrentResource >= amount;
         }
 
-        /// <summary>Spends resource if, and only if, the full amount can be afforded. Never overdraws.</summary>
+        /// <summary>Spends resource if, and only if, the full amount can be afforded.</summary>
         public bool TrySpend(int amount)
         {
             if (amount <= 0)
@@ -48,7 +44,7 @@ namespace AlienDefense.Economy
             return true;
         }
 
-        /// <summary>Adds resource, e.g. enemy kill reward. Rejects non-positive amounts.</summary>
+        /// <summary>Adds resource, e.g. enemy kill reward.</summary>
         public void Add(int amount)
         {
             if (amount <= 0)

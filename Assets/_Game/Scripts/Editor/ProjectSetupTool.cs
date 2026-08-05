@@ -6,16 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace AlienDefense.EditorTools
 {
-    /// <summary>
-    /// One-time project bootstrap. The Unity project files that matter here (the URP Pipeline
-    /// Asset, its Renderer Data, TextMeshPro's Essential Resources) are created through Unity's
-    /// own Editor APIs rather than hand-authored as raw .asset YAML, so the result is guaranteed
-    /// to match what "Assets > Create > Rendering > URP Asset" would have produced.
-    ///
-    /// Run the menu items in order, once, after opening the project:
-    ///   AlienDefense/Setup/1. Configure Render Pipeline (URP)
-    ///   AlienDefense/Setup/2. Import TextMeshPro Essentials
-    /// </summary>
+    /// <summary>One-time Editor bootstrap: creates the URP pipeline asset and imports TMP essentials.</summary>
     internal static class ProjectSetupTool
     {
         private const string SettingsFolder = "Assets/_Game/Settings";
@@ -49,9 +40,7 @@ namespace AlienDefense.EditorTools
 
             AssignAsActivePipeline(pipelineAsset);
 
-            Debug.Log("[AlienDefense Setup] Created " + PipelineAssetPath + " and assigned it as the active render pipeline.\n" +
-                      "Note: Post Process Data was left unassigned on the Renderer Data (Volume-based bloom/color grading won't apply " +
-                      "until you assign one manually on the Universal Renderer asset) — not required for the MVP's flat-shaded stylized look.");
+            Debug.Log("[AlienDefense Setup] Created " + PipelineAssetPath + " and assigned it as the active render pipeline.");
         }
 
         private static void AssignAsActivePipeline(UniversalRenderPipelineAsset pipelineAsset)
@@ -62,8 +51,6 @@ namespace AlienDefense.EditorTools
 
         private static void ApplyMobileStylizedDefaults(UniversalRenderPipelineAsset asset)
         {
-            // Mobile-tier defaults per spec section 37: bright stylized look, shadows limited to
-            // what's needed for depth read, no HDR/depth/opaque textures unless a later phase needs them.
             asset.supportsCameraDepthTexture = false;
             asset.supportsCameraOpaqueTexture = false;
             asset.supportsHDR = false;

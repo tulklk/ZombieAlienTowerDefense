@@ -3,12 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace AlienDefense.Input
 {
-    /// <summary>
-    /// Production <see cref="IPlayerInput"/> backed by the Input System's "Player/Move" action.
-    /// Covers keyboard/gamepad in the Editor and the on-screen virtual joystick on device for free —
-    /// the on-screen stick (OnScreenStick, control path "&lt;Gamepad&gt;/leftStick") drives the same
-    /// binding the Move action already listens to, so no touch-specific branch is needed here.
-    /// </summary>
+    /// <summary>Reads player move input from the Input System's "Player/Move" action.</summary>
     public sealed class UnityInputReader : MonoBehaviour, IPlayerInput
     {
         [SerializeField]

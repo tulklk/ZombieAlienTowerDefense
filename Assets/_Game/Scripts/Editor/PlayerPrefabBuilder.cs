@@ -7,12 +7,7 @@ using UnityEngine.InputSystem;
 
 namespace AlienDefense.EditorTools
 {
-    /// <summary>
-    /// Builds (or reuses) the UFO_Player prefab: primitive placeholder art per spec section 38
-    /// ("don't wait for final models to test gameplay"), wired with the Phase 2 movement/camera
-    /// components. Only intra-prefab references are baked in here (Input reader, PlayerMovement) —
-    /// Scene-only references (LevelBounds) are wired on the Scene instance by LevelSceneScaffolder.
-    /// </summary>
+    /// <summary>Builds (or reuses) the UFO_Player prefab with placeholder art and Phase 2 components.</summary>
     internal static class PlayerPrefabBuilder
     {
         private const string PrefabFolder = "Assets/_Game/Prefabs/Player";
@@ -23,6 +18,9 @@ namespace AlienDefense.EditorTools
 
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string PlayerLayerName = "Player";
+
+        private const string CameraFollowTargetName = "CameraFollowTarget";
+        private static readonly Vector3 CameraFollowTargetLocalPosition = new Vector3(0f, 0.4f, 0f);
 
         public static PlayerDefinition CreateOrLoadPlayerDefinition()
         {
@@ -45,6 +43,7 @@ namespace AlienDefense.EditorTools
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (existing != null)
             {
+                MigrateAddCameraFollowTargetIfMissing(existing);
                 return existing;
             }
 
@@ -64,6 +63,26 @@ namespace AlienDefense.EditorTools
 
             Debug.Log("[AlienDefense Setup] Created " + PrefabPath + ".");
             return AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        }
+
+        /// <summary>Adds CameraFollowTarget to an existing prefab that predates it.</summary>
+        private static void MigrateAddCameraFollowTargetIfMissing(GameObject prefabAsset)
+        {
+            if (prefabAsset.transform.Find(CameraFollowTargetName) != null)
+            {
+                return;
+            }
+
+            string path = AssetDatabase.GetAssetPath(prefabAsset);
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+            if (contents.transform.Find(CameraFollowTargetName) == null)
+            {
+                BuildEmptyChild(CameraFollowTargetName, contents.transform, CameraFollowTargetLocalPosition);
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+                Debug.Log("[AlienDefense Setup] Migrated " + path + ": added missing CameraFollowTarget child.");
+            }
+
+            PrefabUtility.UnloadPrefabContents(contents);
         }
 
         private static GameObject BuildHierarchy(PlayerDefinition definition, InputActionAsset actions)
@@ -88,6 +107,7 @@ namespace AlienDefense.EditorTools
             BuildEmptyChild("FirePoint", root.transform, new Vector3(0f, -0.2f, 0.8f));
             BuildEmptyChild("CollectionPoint", root.transform, Vector3.zero);
             BuildEmptyChild("GroundIndicator", root.transform, Vector3.zero);
+            BuildEmptyChild(CameraFollowTargetName, root.transform, CameraFollowTargetLocalPosition);
             BuildShadow(root.transform, definition);
             GameObject vfx = BuildEmptyChild("VFX", root.transform, Vector3.zero);
             BuildEmptyChild("HoverEffect", vfx.transform, Vector3.zero);
@@ -144,8 +164,6 @@ namespace AlienDefense.EditorTools
             shadow.transform.localPosition = new Vector3(0f, -hoverHeight + 0.02f, 0f);
             Object.DestroyImmediate(shadow.GetComponent<Collider>());
 
-            // Kept opaque (no alpha blending) to avoid hand-authoring URP transparent shader state here;
-            // swap for a proper soft blob-shadow material/decal once real art comes in.
             var renderer = shadow.GetComponent<MeshRenderer>();
             var material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
             material.color = new Color(0.05f, 0.05f, 0.05f, 1f);

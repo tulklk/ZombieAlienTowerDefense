@@ -5,13 +5,7 @@ using UnityEngine;
 
 namespace AlienDefense.Player
 {
-    /// <summary>
-    /// Moves the UFO root on the XZ plane using a CharacterController and holds it at a fixed
-    /// hover height. CharacterController was chosen over Rigidbody because the UFO needs stable,
-    /// predictable mobile-friendly collision with static geometry and never needs forces/impulses —
-    /// a kinematic Rigidbody would add FixedUpdate/interpolation bookkeeping for no benefit here.
-    /// Reads input through <see cref="IPlayerInput"/> only; never touches a UI widget directly.
-    /// </summary>
+    /// <summary>Moves the UFO on the XZ plane via CharacterController and holds it at hover height.</summary>
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerMovement : MonoBehaviour
     {

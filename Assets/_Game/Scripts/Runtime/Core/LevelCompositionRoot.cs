@@ -1,21 +1,14 @@
 using AlienDefense.Base;
 using AlienDefense.Data;
+using AlienDefense.DebugTools;
 using AlienDefense.Economy;
+using AlienDefense.Enemies;
 using AlienDefense.Player;
 using UnityEngine;
 
 namespace AlienDefense.Core
 {
-    /// <summary>
-    /// Wires up the pure C# services a level needs, in explicit order, from a
-    /// <see cref="LevelDefinition"/> and whatever fixed Scene objects are assigned in the Inspector.
-    /// This is the only MonoBehaviour allowed to construct these services with `new` — everything
-    /// else receives them already built, via constructor/method injection or [SerializeField].
-    ///
-    /// Grows in later phases (Player, Camera, Enemy, Wave, Build systems get wired in here too)
-    /// but must stay a thin wiring layer: validate dependencies, create services, inject, start,
-    /// clean up. No gameplay rules belong in this class.
-    /// </summary>
+    /// <summary>Wires up a level's pure C# services from its LevelDefinition and Scene objects.</summary>
     public sealed class LevelCompositionRoot : MonoBehaviour
     {
         [SerializeField]
@@ -25,10 +18,24 @@ namespace AlienDefense.Core
         [Tooltip("Optional (not present until Phase 2's Player is in the scene).")]
         private PlayerController _player;
 
+        [SerializeField]
+        private Transform _enemyRuntimeParent;
+
+        [SerializeField]
+        private Transform _cameraTransform;
+
+        [SerializeField]
+        [Tooltip("Optional.")]
+        private EnemyDebugSpawner _debugSpawner;
+
+        private EnemyPoolRegistry _enemyPoolRegistry;
+
         public GameFlowController GameFlow { get; private set; }
         public GameSpeedController GameSpeed { get; private set; }
         public EconomyService Economy { get; private set; }
         public BaseHealthService BaseHealth { get; private set; }
+        public EnemyRegistry Enemies { get; private set; }
+        public EnemyFactory EnemySpawner { get; private set; }
 
         private void Awake()
         {
@@ -48,6 +55,8 @@ namespace AlienDefense.Core
 
             BaseHealth.Destroyed += HandleBaseDestroyed;
             GameFlow.GameStateChanged += HandleGameStateChanged;
+
+            InitializeEnemySystem();
         }
 
         private void Start()
@@ -71,6 +80,24 @@ namespace AlienDefense.Core
             {
                 GameFlow.GameStateChanged -= HandleGameStateChanged;
             }
+
+            Enemies?.Clear();
+            _enemyPoolRegistry?.Clear();
+        }
+
+        private void InitializeEnemySystem()
+        {
+            if (_enemyRuntimeParent == null)
+            {
+                Debug.LogError("[LevelCompositionRoot] No enemy runtime parent assigned; Enemy system will not be available.", this);
+                return;
+            }
+
+            Enemies = new EnemyRegistry();
+            _enemyPoolRegistry = new EnemyPoolRegistry(_enemyRuntimeParent);
+            EnemySpawner = new EnemyFactory(_enemyPoolRegistry, Enemies, Economy, BaseHealth, _cameraTransform);
+
+            _debugSpawner?.Initialize(EnemySpawner);
         }
 
         private void HandleBaseDestroyed()
@@ -83,6 +110,7 @@ namespace AlienDefense.Core
             if (current == GameState.Victory || current == GameState.Defeat)
             {
                 GameSpeed.Lock();
+                DespawnAllEnemies();
             }
 
             if (_player != null)
@@ -91,6 +119,20 @@ namespace AlienDefense.Core
                     && current != GameState.Victory
                     && current != GameState.Defeat;
                 _player.SetMovementEnabled(movementEnabled);
+            }
+        }
+
+        private void DespawnAllEnemies()
+        {
+            if (Enemies == null)
+            {
+                return;
+            }
+
+            while (Enemies.Count > 0)
+            {
+                EnemyController enemy = Enemies.GetAt(0);
+                enemy.ForceResolve(EnemyResolveReason.LevelEnded);
             }
         }
     }

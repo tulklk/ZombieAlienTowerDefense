@@ -2,12 +2,7 @@ using UnityEngine;
 
 namespace AlienDefense.Data
 {
-    /// <summary>
-    /// Config-only description of the player's UFO: stats and movement tuning. No runtime mutable
-    /// state (no current health, no current position) — those belong to runtime components that
-    /// read this asset. ProjectileDefinition / attack wiring is added once the Combat phase lands;
-    /// attackRange/attackDamage/attacksPerSecond are declared now so the asset schema doesn't churn later.
-    /// </summary>
+    /// <summary>Config-only description of the player's UFO: stats and movement tuning.</summary>
     [CreateAssetMenu(fileName = "PlayerDefinition", menuName = "AlienDefense/Player/Player Definition")]
     public sealed class PlayerDefinition : ScriptableObject
     {

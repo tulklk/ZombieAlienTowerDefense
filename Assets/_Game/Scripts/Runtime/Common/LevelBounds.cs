@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace AlienDefense.Common
 {
-    /// <summary>
-    /// Fixed Scene object describing the playable area on the XZ plane. Assigned via
-    /// [SerializeField] to whichever systems need it (PlayerMovement, TopDownCameraController) —
-    /// it is not a ScriptableObject because it is Scene-specific geometry, not level configuration data.
-    /// </summary>
+    /// <summary>Playable area on the XZ plane, used to clamp player and camera positions.</summary>
     public sealed class LevelBounds : MonoBehaviour
     {
         [SerializeField]
@@ -18,10 +14,26 @@ namespace AlienDefense.Common
         /// <summary>Clamps the X/Z components of a world position to stay inside the bounds; Y is untouched.</summary>
         public Vector3 ClampXZ(Vector3 worldPosition)
         {
-            float minX = _center.x - _extents.x;
-            float maxX = _center.x + _extents.x;
-            float minZ = _center.y - _extents.y;
-            float maxZ = _center.y + _extents.y;
+            return ClampXZ(worldPosition, 0f);
+        }
+
+        /// <summary>Same as <see cref="ClampXZ(Vector3)"/> but shrinks the usable range by padding on every side.</summary>
+        public Vector3 ClampXZ(Vector3 worldPosition, float padding)
+        {
+            float minX = _center.x - _extents.x + padding;
+            float maxX = _center.x + _extents.x - padding;
+            float minZ = _center.y - _extents.y + padding;
+            float maxZ = _center.y + _extents.y - padding;
+
+            if (minX > maxX)
+            {
+                minX = maxX = (minX + maxX) * 0.5f;
+            }
+
+            if (minZ > maxZ)
+            {
+                minZ = maxZ = (minZ + maxZ) * 0.5f;
+            }
 
             worldPosition.x = Mathf.Clamp(worldPosition.x, minX, maxX);
             worldPosition.z = Mathf.Clamp(worldPosition.z, minZ, maxZ);

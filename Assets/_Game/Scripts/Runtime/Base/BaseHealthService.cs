@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace AlienDefense.Base
 {
-    /// <summary>
-    /// Owns the defended base's health for the current level. Enemies that reach the base
-    /// call <see cref="TakeDamage"/> through an explicit dependency — nobody else is allowed
-    /// to touch base health, and nobody but this service decides when the base is destroyed.
-    /// </summary>
+    /// <summary>Owns the defended base's health for the current level.</summary>
     public sealed class BaseHealthService
     {
         public int MaxHealth { get; }

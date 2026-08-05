@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbbc469ed8cbf9044aff6d8d2a88127a, type: 3}
+  m_Name: PlayerDefinition
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Data.PlayerDefinition
+  _id: ufo_player
+  _displayName: UFO
+  _maxHealth: 150
+  _moveSpeed: 5
+  _rotationSpeed: 540
+  _acceleration: 25
+  _deceleration: 30
+  _inputDeadZone: 0.15
+  _hoverHeight: 1.5
+  _attackRange: 5
+  _attackDamage: 12
+  _attacksPerSecond: 1.5
+  _collectionRadius: 2.5

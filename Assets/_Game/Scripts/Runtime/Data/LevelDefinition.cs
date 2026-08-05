@@ -2,13 +2,7 @@ using UnityEngine;
 
 namespace AlienDefense.Data
 {
-    /// <summary>
-    /// Configuration-only description of a level: starting economy, base health and
-    /// pacing. Contains no runtime mutable state (no current health, no current gold) —
-    /// those live in the pure C# services the composition root creates from this data.
-    /// Fields grow across phases (player definition, wave list, ...) as those systems land;
-    /// nothing here should ever be written to at runtime.
-    /// </summary>
+    /// <summary>Configuration-only description of a level: starting economy, base health, pacing.</summary>
     [CreateAssetMenu(fileName = "LevelDefinition", menuName = "AlienDefense/Level/Level Definition")]
     public sealed class LevelDefinition : ScriptableObject
     {

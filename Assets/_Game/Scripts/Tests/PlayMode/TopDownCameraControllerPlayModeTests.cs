@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Reflection;
 using AlienDefense.CameraSystem;
+using AlienDefense.Common;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -12,6 +13,7 @@ namespace AlienDefense.Tests.PlayMode
         private GameObject _rigObject;
         private GameObject _cameraObject;
         private GameObject _followTargetObject;
+        private GameObject _boundsObject;
 
         [TearDown]
         public void TearDown()
@@ -19,6 +21,7 @@ namespace AlienDefense.Tests.PlayMode
             if (_rigObject != null) Object.Destroy(_rigObject);
             if (_cameraObject != null) Object.Destroy(_cameraObject);
             if (_followTargetObject != null) Object.Destroy(_followTargetObject);
+            if (_boundsObject != null) Object.Destroy(_boundsObject);
         }
 
         private static void SetPrivateField(object target, string fieldName, object value)
@@ -36,14 +39,16 @@ namespace AlienDefense.Tests.PlayMode
 
             _cameraObject = new GameObject("Main Camera");
             _rigObject = new GameObject("CameraRig");
+            _rigObject.SetActive(false);
             var controller = _rigObject.AddComponent<TopDownCameraController>();
 
             var offset = new Vector3(0f, 12f, -9f);
             SetPrivateField(controller, "_followTarget", _followTargetObject.transform);
             SetPrivateField(controller, "_cameraTransform", _cameraObject.transform);
             SetPrivateField(controller, "_positionOffset", offset);
+            _rigObject.SetActive(true);
 
-            yield return null; // one LateUpdate pass
+            yield return null;
 
             Vector3 expected = _followTargetObject.transform.position + offset;
             Vector3 actual = _cameraObject.transform.position;
@@ -58,14 +63,16 @@ namespace AlienDefense.Tests.PlayMode
             _followTargetObject = new GameObject("FollowTarget");
             _cameraObject = new GameObject("Main Camera");
             _rigObject = new GameObject("CameraRig");
+            _rigObject.SetActive(false);
             var controller = _rigObject.AddComponent<TopDownCameraController>();
 
             SetPrivateField(controller, "_followTarget", _followTargetObject.transform);
             SetPrivateField(controller, "_cameraTransform", _cameraObject.transform);
             SetPrivateField(controller, "_positionOffset", Vector3.zero);
             SetPrivateField(controller, "_followSmoothTime", 0.5f);
+            _rigObject.SetActive(true);
 
-            yield return null; // snaps to (0,0,0)
+            yield return null;
 
             _followTargetObject.transform.position = new Vector3(10f, 0f, 0f);
 
@@ -80,6 +87,34 @@ namespace AlienDefense.Tests.PlayMode
             float distanceAfterSettling = Vector3.Distance(_cameraObject.transform.position, _followTargetObject.transform.position);
 
             Assert.Less(distanceAfterSettling, distanceAfterOneFrame);
+        }
+
+        [UnityTest]
+        public IEnumerator TopDownCameraController_ClampsFocusPoint_ToLevelBoundsMinusPadding()
+        {
+            _boundsObject = new GameObject("TestLevelBounds");
+            var bounds = _boundsObject.AddComponent<LevelBounds>();
+            SetPrivateField(bounds, "_center", Vector2.zero);
+            SetPrivateField(bounds, "_extents", new Vector2(5f, 5f));
+
+            _followTargetObject = new GameObject("FollowTarget");
+            _followTargetObject.transform.position = new Vector3(50f, 0f, 0f);
+
+            _cameraObject = new GameObject("Main Camera");
+            _rigObject = new GameObject("CameraRig");
+            _rigObject.SetActive(false);
+            var controller = _rigObject.AddComponent<TopDownCameraController>();
+
+            SetPrivateField(controller, "_followTarget", _followTargetObject.transform);
+            SetPrivateField(controller, "_cameraTransform", _cameraObject.transform);
+            SetPrivateField(controller, "_positionOffset", Vector3.zero);
+            SetPrivateField(controller, "_levelBounds", bounds);
+            SetPrivateField(controller, "_cameraBoundsPadding", 1f);
+            _rigObject.SetActive(true);
+
+            yield return null;
+
+            Assert.AreEqual(4f, _cameraObject.transform.position.x, 0.01f);
         }
     }
 }

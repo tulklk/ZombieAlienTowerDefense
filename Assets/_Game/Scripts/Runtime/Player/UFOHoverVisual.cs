@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace AlienDefense.Player
 {
-    /// <summary>
-    /// Purely cosmetic hover bob/spin/tilt for the UFO's Model child. Lives on the Model transform
-    /// itself and only ever touches its own local position/rotation — the gameplay root (with the
-    /// CharacterController and collider) driven by <see cref="PlayerMovement"/> never moves because of this.
-    /// Uses scaled Time so hover freezes with the rest of gameplay on Pause, matching every other
-    /// animated system in the project.
-    /// </summary>
+    /// <summary>Cosmetic hover bob/spin/tilt for the UFO's Model child; never moves the gameplay root.</summary>
     public sealed class UFOHoverVisual : MonoBehaviour
     {
         [Header("Hover")]

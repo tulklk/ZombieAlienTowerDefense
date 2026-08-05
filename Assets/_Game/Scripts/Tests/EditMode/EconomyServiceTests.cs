@@ -1,5 +1,7 @@
 using AlienDefense.Economy;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace AlienDefense.Tests.EditMode
 {
@@ -16,6 +18,8 @@ namespace AlienDefense.Tests.EditMode
         [Test]
         public void Constructor_ClampsNegativeStartingResourceToZero()
         {
+            LogAssert.Expect(LogType.Warning, "[EconomyService] Starting resource -50 is negative, clamped to 0.");
+
             var economy = new EconomyService(-50);
 
             Assert.AreEqual(0, economy.CurrentResource);
@@ -43,7 +47,9 @@ namespace AlienDefense.Tests.EditMode
             int eventCount = 0;
             economy.ResourceChanged += _ => eventCount++;
 
+            LogAssert.Expect(LogType.Warning, "[EconomyService] Ignored Add(0); amount must be positive.");
             economy.Add(0);
+            LogAssert.Expect(LogType.Warning, "[EconomyService] Ignored Add(-10); amount must be positive.");
             economy.Add(-10);
 
             Assert.AreEqual(100, economy.CurrentResource);

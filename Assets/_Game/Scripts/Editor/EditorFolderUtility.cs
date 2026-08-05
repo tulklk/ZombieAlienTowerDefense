@@ -2,7 +2,7 @@ using UnityEditor;
 
 namespace AlienDefense.EditorTools
 {
-    /// <summary>Creates a nested Assets/ folder path one level at a time (AssetDatabase requires that).</summary>
+    /// <summary>Creates a nested Assets/ folder path one level at a time.</summary>
     internal static class EditorFolderUtility
     {
         public static void EnsureFolder(string assetPath)
@@ -13,7 +13,7 @@ namespace AlienDefense.EditorTools
             }
 
             string[] parts = assetPath.Split('/');
-            string current = parts[0]; // "Assets"
+            string current = parts[0];
 
             for (int i = 1; i < parts.Length; i++)
             {

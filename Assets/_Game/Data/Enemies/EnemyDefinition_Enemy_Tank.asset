@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1407a406dbac8774ca7fe1e1991bdd80, type: 3}
+  m_Name: EnemyDefinition_Enemy_Tank
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyDefinition
+  _id: enemy_tank
+  _displayName: Tank Enemy
+  _icon: {fileID: 0}
+  _prefab: {fileID: 3875839926730969246, guid: 5503a458d751afd44965ea0490720c2e, type: 3}
+  _maxHealth: 350
+  _moveSpeed: 1.1
+  _rotationSpeed: 240
+  _rewardResource: 25
+  _baseDamage: 2
+  _arrivalThreshold: 0.1
+  _healthBarHeightOffset: 2
+  _poolPrewarmCount: 5
+  _poolDefaultCapacity: 10
+  _poolMaximumSize: 60

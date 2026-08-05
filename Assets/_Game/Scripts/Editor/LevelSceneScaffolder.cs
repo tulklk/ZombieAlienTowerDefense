@@ -2,7 +2,10 @@ using AlienDefense.CameraSystem;
 using AlienDefense.Common;
 using AlienDefense.Core;
 using AlienDefense.Data;
+using AlienDefense.DebugTools;
+using AlienDefense.Enemies;
 using AlienDefense.Player;
+using AlienDefense.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,16 +17,7 @@ using UnityEngine.UI;
 
 namespace AlienDefense.EditorTools
 {
-    /// <summary>
-    /// Builds the Level_01 scene skeleton (composition root, UFO_Player instance, top-down camera
-    /// rig, environment, runtime containers, portrait Canvas with a virtual joystick, EventSystem)
-    /// and the matching default LevelDefinition asset, all through Editor APIs so GameObjects/
-    /// components come out correctly serialized.
-    ///
-    /// EnemyPath and BuildNodes are added in Phase 3. Re-running "Build Level_01 Scene Skeleton"
-    /// overwrites the scene file, so hand edits made in the Editor after running it will be lost
-    /// if you run it again.
-    /// </summary>
+    /// <summary>Builds the Level_01 scene skeleton and its default LevelDefinition asset.</summary>
     internal static class LevelSceneScaffolder
     {
         private const string LevelDataFolder = "Assets/_Game/Data/Levels";
@@ -34,6 +28,20 @@ namespace AlienDefense.EditorTools
 
         private const string GroundLayerName = "Ground";
         private static readonly Vector3 PlayerStartPosition = new Vector3(0f, 0f, -18f);
+
+        private static readonly Vector3[] EnemyPathPoints =
+        {
+            new Vector3(0f, 0f, 20f),
+            new Vector3(0f, 0f, 10f),
+            new Vector3(0f, 0f, 0f),
+            new Vector3(0f, 0f, -10f),
+            new Vector3(0f, 0f, -20f)
+        };
+
+        private static readonly string[] EnemyWaypointNames =
+        {
+            "Waypoint_00", "Waypoint_01", "Waypoint_02", "Waypoint_03", "Waypoint_End"
+        };
 
         [MenuItem("AlienDefense/Setup/3. Create Default LevelDefinition Asset")]
         public static LevelDefinition CreateDefaultLevelDefinition()
@@ -61,27 +69,28 @@ namespace AlienDefense.EditorTools
             LevelDefinition levelDefinition = CreateDefaultLevelDefinition();
             PlayerDefinition playerDefinition = PlayerPrefabBuilder.CreateOrLoadPlayerDefinition();
             GameObject playerPrefab = PlayerPrefabBuilder.CreateOrLoadPrefab();
+            EnemyDefinition normalEnemyDefinition = EnemyPrefabBuilder.CreateAll();
 
             EditorFolderUtility.EnsureFolder(LevelSceneFolder);
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             LevelCompositionRoot compositionRoot = BuildCompositionRoot(levelDefinition);
-            BuildSystemsPlaceholder();
             GameObject playerInstance = BuildPlayer(playerPrefab, playerDefinition);
-            LevelBounds levelBounds = BuildEnvironment();
-            BuildCameraRig(playerInstance.transform, levelBounds);
-            BuildRuntimeContainers();
+            (LevelBounds levelBounds, EnemyPath3D enemyPath) = BuildEnvironment();
+            Transform cameraTransform = BuildCameraRig(playerInstance, levelBounds);
+            Transform enemyRuntimeParent = BuildRuntimeContainers();
+            EnemyDebugSpawner debugSpawner = BuildSystems(normalEnemyDefinition, enemyPath);
             BuildCanvas();
             BuildEventSystem();
 
             WirePlayerLevelBounds(playerInstance, levelBounds);
             WireCompositionRootPlayer(compositionRoot, playerInstance);
+            WireCompositionRootEnemySystem(compositionRoot, enemyRuntimeParent, cameraTransform, debugSpawner);
 
             EditorSceneManager.SaveScene(scene, LevelScenePath);
 
-            Debug.Log("[AlienDefense Setup] Saved scene skeleton to " + LevelScenePath +
-                      ". EnemyPath and BuildNodes are added in Phase 3.");
+            Debug.Log("[AlienDefense Setup] Saved scene skeleton to " + LevelScenePath + ".");
         }
 
         private static LevelCompositionRoot BuildCompositionRoot(LevelDefinition levelDefinition)
@@ -90,16 +99,20 @@ namespace AlienDefense.EditorTools
             var compositionRoot = rootObject.AddComponent<LevelCompositionRoot>();
 
             var serializedRoot = new SerializedObject(compositionRoot);
+            serializedRoot.Update();
             serializedRoot.FindProperty("_levelDefinition").objectReferenceValue = levelDefinition;
             serializedRoot.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(compositionRoot);
+
+            var verifyRoot = new SerializedObject(compositionRoot);
+            if (verifyRoot.FindProperty("_levelDefinition").objectReferenceValue == null)
+            {
+                Debug.LogError("[AlienDefense Setup] CompositionRoot's Level Definition failed to wire. " +
+                    "Select CompositionRoot in the Hierarchy and drag " + levelDefinition.name +
+                    " into the Level Definition field manually, then save the scene.", rootObject);
+            }
 
             return compositionRoot;
-        }
-
-        private static void BuildSystemsPlaceholder()
-        {
-            // Populated in later phases: WaveController, BuildService, EnemyRegistry, factories, PoolRoot.
-            new GameObject("Systems");
         }
 
         private static GameObject BuildPlayer(GameObject playerPrefab, PlayerDefinition playerDefinition)
@@ -124,8 +137,16 @@ namespace AlienDefense.EditorTools
             return instance;
         }
 
-        private static void BuildCameraRig(Transform followTarget, LevelBounds levelBounds)
+        private static Transform BuildCameraRig(GameObject playerInstance, LevelBounds levelBounds)
         {
+            Transform followTarget = playerInstance.transform.Find("CameraFollowTarget");
+            if (followTarget == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] UFO_Player has no CameraFollowTarget child; " +
+                    "falling back to following the root transform.", playerInstance);
+                followTarget = playerInstance.transform;
+            }
+
             var rig = new GameObject("CameraRig");
             var controller = rig.AddComponent<TopDownCameraController>();
 
@@ -144,8 +165,6 @@ namespace AlienDefense.EditorTools
 
             cameraObject.AddComponent<AudioListener>();
 
-            // Reference top-down composition: offset (0, 12, -9), pitch 60deg. Rotation is fixed
-            // by TopDownCameraController design (no free rotation in MVP) — set once here.
             cameraObject.transform.localRotation = Quaternion.Euler(60f, 0f, 0f);
 
             var serializedController = new SerializedObject(controller);
@@ -154,15 +173,17 @@ namespace AlienDefense.EditorTools
             serializedController.FindProperty("_focusPointAnchor").objectReferenceValue = followTargetAnchor.transform;
             serializedController.FindProperty("_positionOffset").vector3Value = new Vector3(0f, 12f, -9f);
             serializedController.FindProperty("_movementDirectionSource").objectReferenceValue =
-                followTarget.GetComponent<PlayerController>();
+                playerInstance.GetComponent<PlayerController>();
             if (levelBounds != null)
             {
                 serializedController.FindProperty("_levelBounds").objectReferenceValue = levelBounds;
             }
             serializedController.ApplyModifiedPropertiesWithoutUndo();
+
+            return cameraObject.transform;
         }
 
-        private static LevelBounds BuildEnvironment()
+        private static (LevelBounds bounds, EnemyPath3D path) BuildEnvironment()
         {
             var environment = new GameObject("Environment");
 
@@ -194,16 +215,71 @@ namespace AlienDefense.EditorTools
             levelBoundsObject.transform.SetParent(environment.transform, false);
             var levelBounds = levelBoundsObject.AddComponent<LevelBounds>();
 
-            return levelBounds;
+            EnemyPath3D path = BuildEnemyPath(environment.transform);
+
+            return (levelBounds, path);
         }
 
-        private static void BuildRuntimeContainers()
+        private static EnemyPath3D BuildEnemyPath(Transform environmentParent)
+        {
+            var pathObject = new GameObject("EnemyPath");
+            pathObject.transform.SetParent(environmentParent, false);
+
+            var waypointTransforms = new Transform[EnemyPathPoints.Length];
+            for (int i = 0; i < EnemyPathPoints.Length; i++)
+            {
+                var waypoint = new GameObject(EnemyWaypointNames[i]);
+                waypoint.transform.SetParent(pathObject.transform, false);
+                waypoint.transform.position = EnemyPathPoints[i];
+                waypointTransforms[i] = waypoint.transform;
+            }
+
+            var path = pathObject.AddComponent<EnemyPath3D>();
+            var serializedPath = new SerializedObject(path);
+            SerializedProperty waypointsProperty = serializedPath.FindProperty("_waypoints");
+            waypointsProperty.arraySize = waypointTransforms.Length;
+            for (int i = 0; i < waypointTransforms.Length; i++)
+            {
+                waypointsProperty.GetArrayElementAtIndex(i).objectReferenceValue = waypointTransforms[i];
+            }
+            serializedPath.ApplyModifiedPropertiesWithoutUndo();
+
+            var baseTarget = new GameObject("BaseTarget");
+            baseTarget.transform.SetParent(environmentParent, false);
+            baseTarget.transform.position = EnemyPathPoints[EnemyPathPoints.Length - 1];
+
+            return path;
+        }
+
+        private static Transform BuildRuntimeContainers()
         {
             var runtime = new GameObject("Runtime");
-            new GameObject("Enemies").transform.SetParent(runtime.transform, false);
+
+            var enemies = new GameObject("Enemies");
+            enemies.transform.SetParent(runtime.transform, false);
+
             new GameObject("Towers").transform.SetParent(runtime.transform, false);
             new GameObject("Projectiles").transform.SetParent(runtime.transform, false);
             new GameObject("VFX").transform.SetParent(runtime.transform, false);
+
+            return enemies.transform;
+        }
+
+        private static EnemyDebugSpawner BuildSystems(EnemyDefinition debugDefinition, EnemyPath3D path)
+        {
+            var systems = new GameObject("Systems");
+
+            var spawnerObject = new GameObject("EnemyDebugSpawner");
+            spawnerObject.transform.SetParent(systems.transform, false);
+            var spawner = spawnerObject.AddComponent<EnemyDebugSpawner>();
+
+            var serializedSpawner = new SerializedObject(spawner);
+            serializedSpawner.FindProperty("_definition").objectReferenceValue = debugDefinition;
+            serializedSpawner.FindProperty("_path").objectReferenceValue = path;
+            serializedSpawner.FindProperty("_autoSpawnOnPlay").boolValue = false;
+            serializedSpawner.ApplyModifiedPropertiesWithoutUndo();
+
+            return spawner;
         }
 
         private static void BuildCanvas()
@@ -220,7 +296,7 @@ namespace AlienDefense.EditorTools
 
             canvasObject.AddComponent<GraphicRaycaster>();
 
-            var safeAreaObject = new GameObject("SafeArea", typeof(RectTransform));
+            var safeAreaObject = new GameObject("SafeArea", typeof(RectTransform), typeof(SafeAreaFitter));
             safeAreaObject.transform.SetParent(canvasObject.transform, false);
             var safeAreaRect = safeAreaObject.GetComponent<RectTransform>();
             safeAreaRect.anchorMin = Vector2.zero;
@@ -302,6 +378,19 @@ namespace AlienDefense.EditorTools
 
             var serialized = new SerializedObject(compositionRoot);
             serialized.FindProperty("_player").objectReferenceValue = playerController;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void WireCompositionRootEnemySystem(
+            LevelCompositionRoot compositionRoot,
+            Transform enemyRuntimeParent,
+            Transform cameraTransform,
+            EnemyDebugSpawner debugSpawner)
+        {
+            var serialized = new SerializedObject(compositionRoot);
+            serialized.FindProperty("_enemyRuntimeParent").objectReferenceValue = enemyRuntimeParent;
+            serialized.FindProperty("_cameraTransform").objectReferenceValue = cameraTransform;
+            serialized.FindProperty("_debugSpawner").objectReferenceValue = debugSpawner;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }

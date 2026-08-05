@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1407a406dbac8774ca7fe1e1991bdd80, type: 3}
+  m_Name: EnemyDefinition_Enemy_Normal
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyDefinition
+  _id: enemy_normal
+  _displayName: Normal Enemy
+  _icon: {fileID: 0}
+  _prefab: {fileID: 2895546161493411235, guid: a9906db529ae2e04592b960ccc7a787d, type: 3}
+  _maxHealth: 100
+  _moveSpeed: 1.8
+  _rotationSpeed: 360
+  _rewardResource: 10
+  _baseDamage: 1
+  _arrivalThreshold: 0.1
+  _healthBarHeightOffset: 2
+  _poolPrewarmCount: 10
+  _poolDefaultCapacity: 20
+  _poolMaximumSize: 100

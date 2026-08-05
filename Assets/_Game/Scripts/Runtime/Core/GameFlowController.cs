@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace AlienDefense.Core
 {
-    /// <summary>
-    /// Pure C# state machine that owns the current <see cref="GameState"/> for a level.
-    /// It does not know about gold, base health, player movement, enemies, towers or UI —
-    /// it only decides which phase the match is in and notifies listeners.
-    /// Other systems (WaveController, BaseHealthService via composition root, UI presenters)
-    /// react to <see cref="GameStateChanged"/> instead of polling a singleton.
-    /// </summary>
+    /// <summary>Owns the current match state and the valid transitions between states.</summary>
     public sealed class GameFlowController
     {
         public GameState CurrentState { get; private set; } = GameState.Initializing;

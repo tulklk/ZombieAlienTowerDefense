@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace AlienDefense.CameraSystem
 {
-    /// <summary>
-    /// Perspective top-down-ish follow camera. Depends only on a plain <see cref="Transform"/> for
-    /// the thing it follows and an optional <see cref="IMovementDirectionSource"/> for look-ahead —
-    /// never on PlayerController — so it has no compile-time link to the Player system at all.
-    /// Sits on CameraRig, moves the child Main Camera transform in LateUpdate. Rotation is fixed by
-    /// design (no free rotation in the MVP); only position is smoothed and offset.
-    /// </summary>
+    /// <summary>Perspective top-down follow camera: smooth position, look-ahead, level bounds clamp.</summary>
     public sealed class TopDownCameraController : MonoBehaviour
     {
         [Header("Target")]
@@ -49,6 +43,10 @@ namespace AlienDefense.CameraSystem
         [Tooltip("Optional. Clamps the focus point so the camera never looks outside the level.")]
         private LevelBounds _levelBounds;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("Extra margin (world units) the focus point is kept away from the level edge.")]
+        private float _cameraBoundsPadding = 1.5f;
+
         private IMovementDirectionSource _resolvedMovementSource;
         private Vector3 _positionVelocity;
         private Vector3 _lookAheadVelocity;
@@ -76,7 +74,7 @@ namespace AlienDefense.CameraSystem
             Vector3 focusPoint = _followTarget.position + _lookAtOffset + _currentLookAhead;
             if (_levelBounds != null)
             {
-                focusPoint = _levelBounds.ClampXZ(focusPoint);
+                focusPoint = _levelBounds.ClampXZ(focusPoint, _cameraBoundsPadding);
             }
 
             Vector3 desiredCameraPosition = focusPoint + _positionOffset;

@@ -6,12 +6,7 @@ using UnityEngine;
 
 namespace AlienDefense.Player
 {
-    /// <summary>
-    /// Thin orchestrator for the UFO: validates its fixed dependencies, wires them into
-    /// <see cref="PlayerMovement"/>, and exposes the one thing outside systems (the camera) are
-    /// allowed to read — current movement direction, via <see cref="IMovementDirectionSource"/>.
-    /// Does not implement movement/visual/attack logic itself.
-    /// </summary>
+    /// <summary>Validates the UFO's dependencies and wires them into PlayerMovement.</summary>
     public sealed class PlayerController : MonoBehaviour, IMovementDirectionSource
     {
         [SerializeField]
@@ -55,7 +50,7 @@ namespace AlienDefense.Player
             _movement.Initialize(_definition, playerInput, _levelBounds);
         }
 
-        /// <summary>Called by the level composition root in reaction to GameState changes.</summary>
+        /// <summary>Enables or disables player movement.</summary>
         public void SetMovementEnabled(bool value)
         {
             if (_movement != null)

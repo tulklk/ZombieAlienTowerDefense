@@ -1,5 +1,7 @@
 using AlienDefense.Core;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace AlienDefense.Tests.EditMode
 {
@@ -29,6 +31,7 @@ namespace AlienDefense.Tests.EditMode
         {
             var flow = new GameFlowController();
 
+            LogAssert.Expect(LogType.Warning, "[GameFlowController] Rejected transition 'BeginPlayingWave': not valid from current state.");
             bool result = flow.BeginPlayingWave();
 
             Assert.IsFalse(result);
@@ -97,6 +100,7 @@ namespace AlienDefense.Tests.EditMode
             var flow = new GameFlowController();
             flow.ReportDefeat();
 
+            LogAssert.Expect(LogType.Warning, "[GameFlowController] Rejected transition 'Pause': not valid from current state.");
             bool result = flow.Pause();
 
             Assert.IsFalse(result);
