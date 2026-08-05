@@ -1,5 +1,6 @@
 using System;
 using AlienDefense.Base;
+using AlienDefense.Combat;
 using AlienDefense.Economy;
 using AlienDefense.UI;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace AlienDefense.Enemies
 {
     /// <summary>Coordinates one enemy's lifecycle: init, resolve (defeated/reached base), pool return.</summary>
     [RequireComponent(typeof(EnemyHealth), typeof(EnemyMovement))]
-    public sealed class EnemyController : MonoBehaviour
+    public sealed class EnemyController : MonoBehaviour, ICombatTarget
     {
         [SerializeField]
         private EnemyHealth _health;
@@ -30,11 +31,20 @@ namespace AlienDefense.Enemies
         private Action<EnemyController> _releaseToPool;
 
         private bool _isResolved;
+        private int _generation;
 
         public EnemyDefinition Definition => _definition;
         public Transform TargetPoint => _targetPoint;
         public EnemyHealth Health => _health;
         public EnemyMovement Movement => _movement;
+
+        public bool IsTargetable => !_isResolved && _health != null && _health.IsDamageable;
+        public int Generation => _generation;
+        public Transform AimPoint => _targetPoint != null ? _targetPoint : transform;
+        public IDamageable Damageable => _health;
+
+        /// <summary>Fired once per spawn instance when this enemy resolves, before it returns to the pool.</summary>
+        public event Action<EnemyController, EnemyResolveReason> Resolved;
 
         private void Awake()
         {
@@ -64,10 +74,15 @@ namespace AlienDefense.Enemies
             _registry = registry;
             _releaseToPool = releaseToPool;
             _isResolved = false;
+            _generation++;
 
             _health.Initialize(definition.MaxHealth);
             _movement.Initialize(path, definition.MoveSpeed, definition.RotationSpeed, definition.ArrivalThreshold);
-            _healthBarView?.Initialize(cameraTransform);
+
+            if (_healthBarView != null)
+            {
+                _healthBarView.Initialize(cameraTransform);
+            }
 
             _registry.Register(this);
         }
@@ -121,6 +136,7 @@ namespace AlienDefense.Enemies
             }
 
             _registry?.Unregister(this);
+            Resolved?.Invoke(this, reason);
             _releaseToPool?.Invoke(this);
         }
     }

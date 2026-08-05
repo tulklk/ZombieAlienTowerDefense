@@ -22,7 +22,12 @@ namespace AlienDefense.Player
         [Tooltip("Must implement IPlayerInput.")]
         private MonoBehaviour _inputSource;
 
+        [SerializeField]
+        [Tooltip("Optional (Phase 5).")]
+        private PlayerAutoAttack _autoAttack;
+
         public Vector2 MovementDirection => _movement != null ? _movement.CurrentMoveInput : Vector2.zero;
+        public PlayerDefinition Definition => _definition;
 
         private void Awake()
         {
@@ -56,6 +61,15 @@ namespace AlienDefense.Player
             if (_movement != null)
             {
                 _movement.SetMovementEnabled(value);
+            }
+        }
+
+        /// <summary>Enables or disables player auto attack.</summary>
+        public void SetCombatEnabled(bool value)
+        {
+            if (_autoAttack != null)
+            {
+                _autoAttack.SetAttackEnabled(value);
             }
         }
     }

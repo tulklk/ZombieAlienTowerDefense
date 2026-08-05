@@ -92,6 +92,7 @@ namespace AlienDefense.EditorTools
             serializedDefinition.FindProperty("_rotationSpeed").floatValue = spec.RotationSpeed;
             serializedDefinition.FindProperty("_rewardResource").intValue = spec.Reward;
             serializedDefinition.FindProperty("_baseDamage").intValue = spec.BaseDamage;
+            serializedDefinition.FindProperty("_defeatedVfxDefinition").objectReferenceValue = VfxPrefabBuilder.EnemyDefeated;
             serializedDefinition.FindProperty("_poolPrewarmCount").intValue = spec.PoolPrewarm;
             serializedDefinition.FindProperty("_poolDefaultCapacity").intValue = spec.PoolDefault;
             serializedDefinition.FindProperty("_poolMaximumSize").intValue = spec.PoolMax;
@@ -110,6 +111,8 @@ namespace AlienDefense.EditorTools
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (existing != null)
             {
+                MigrateRepairBrokenModelMaterial(existing, spec, prefabPath);
+                MigrateFixHealthBarFillSprite(existing, prefabPath);
                 return existing;
             }
 
@@ -118,6 +121,55 @@ namespace AlienDefense.EditorTools
             Object.DestroyImmediate(root);
 
             return AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        }
+
+        /// <summary>Re-links an existing prefab's Model renderer to its persistent material if it points elsewhere or nowhere.</summary>
+        private static void MigrateRepairBrokenModelMaterial(GameObject prefabAsset, EnemySpec spec, string prefabPath)
+        {
+            Material material = EditorMaterialUtility.CreateOrLoadMaterial(
+                "Mat_Enemy_" + spec.PrefabName, "Universal Render Pipeline/Lit", spec.Color);
+
+            Transform modelTransform = prefabAsset.transform.Find("VisualRoot/Model");
+            Renderer existingRenderer = modelTransform != null ? modelTransform.GetComponent<MeshRenderer>() : null;
+            if (existingRenderer == null || existingRenderer.sharedMaterial == material)
+            {
+                return;
+            }
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+
+            Renderer renderer = contents.transform.Find("VisualRoot/Model")?.GetComponent<MeshRenderer>();
+            if (renderer != null && renderer.sharedMaterial != material)
+            {
+                renderer.sharedMaterial = material;
+                PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+                Debug.Log("[AlienDefense Setup] Migrated " + prefabPath + ": re-linked Model material to the persistent asset.");
+            }
+
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+
+        /// <summary>Assigns the Fill image's sprite on an existing prefab if missing, so Image.Type.Filled actually clips.</summary>
+        private static void MigrateFixHealthBarFillSprite(GameObject prefabAsset, string prefabPath)
+        {
+            Transform fillTransform = prefabAsset.transform.Find("HealthBarAnchor/EnemyHealthBarCanvas/Fill");
+            Image existingFill = fillTransform != null ? fillTransform.GetComponent<Image>() : null;
+            if (existingFill == null || existingFill.sprite != null)
+            {
+                return;
+            }
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+
+            Image fillImage = contents.transform.Find("HealthBarAnchor/EnemyHealthBarCanvas/Fill")?.GetComponent<Image>();
+            if (fillImage != null && fillImage.sprite == null)
+            {
+                fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+                Debug.Log("[AlienDefense Setup] Migrated " + prefabPath + ": assigned Fill sprite so the health bar reflects damage.");
+            }
+
+            PrefabUtility.UnloadPrefabContents(contents);
         }
 
         private static GameObject BuildHierarchy(EnemySpec spec)
@@ -150,9 +202,14 @@ namespace AlienDefense.EditorTools
             Object.DestroyImmediate(model.GetComponent<Collider>());
 
             var renderer = model.GetComponent<MeshRenderer>();
-            var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            material.color = spec.Color;
-            renderer.sharedMaterial = material;
+            renderer.sharedMaterial = EditorMaterialUtility.CreateOrLoadMaterial(
+                "Mat_Enemy_" + spec.PrefabName, "Universal Render Pipeline/Lit", spec.Color);
+
+            var hitFlash = root.AddComponent<EnemyHitFlash>();
+            var hitFlashSerialized = new SerializedObject(hitFlash);
+            hitFlashSerialized.FindProperty("_health").objectReferenceValue = health;
+            hitFlashSerialized.FindProperty("_renderer").objectReferenceValue = renderer;
+            hitFlashSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var targetPoint = new GameObject("TargetPoint");
             targetPoint.transform.SetParent(root.transform, false);
@@ -202,6 +259,7 @@ namespace AlienDefense.EditorTools
             fillRect.offsetMin = new Vector2(2f, 2f);
             fillRect.offsetMax = new Vector2(-2f, -2f);
             var fillImage = fill.GetComponent<Image>();
+            fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             fillImage.color = new Color(0.2f, 0.85f, 0.3f);
             fillImage.type = Image.Type.Filled;
             fillImage.fillMethod = Image.FillMethod.Horizontal;

@@ -1,14 +1,16 @@
 using System;
+using AlienDefense.Combat;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
 {
     /// <summary>Owns an enemy's current/maximum health and death notification.</summary>
-    public sealed class EnemyHealth : MonoBehaviour
+    public sealed class EnemyHealth : MonoBehaviour, IDamageable
     {
         public float CurrentHealth { get; private set; }
         public float MaximumHealth { get; private set; }
         public bool IsDead => CurrentHealth <= 0f;
+        public bool IsDamageable => !IsDead;
 
         public event Action<float, float> HealthChanged;
         public event Action Died;
@@ -50,6 +52,11 @@ namespace AlienDefense.Enemies
             }
 
             return true;
+        }
+
+        public bool TryApplyDamage(in DamageInfo damageInfo)
+        {
+            return TryApplyDamage(damageInfo.Amount);
         }
     }
 }

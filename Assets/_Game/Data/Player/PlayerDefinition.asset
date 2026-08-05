@@ -24,4 +24,6 @@ MonoBehaviour:
   _attackRange: 5
   _attackDamage: 12
   _attacksPerSecond: 1.5
+  _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
+    type: 2}
   _collectionRadius: 2.5

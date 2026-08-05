@@ -422,7 +422,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 8898c39c012bf0d47982d8e82cd5e7c3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -490,6 +490,7 @@ GameObject:
   - component: {fileID: 6079657817468201424}
   - component: {fileID: 2619290757283921917}
   - component: {fileID: 4713827749077139528}
+  - component: {fileID: 6768504169177931887}
   m_Layer: 9
   m_Name: UFO_Player
   m_TagString: Untagged
@@ -588,6 +589,20 @@ MonoBehaviour:
   _movement: {fileID: 2619290757283921917}
   _levelBounds: {fileID: 0}
   _inputSource: {fileID: 6079657817468201424}
+  _autoAttack: {fileID: 6768504169177931887}
+--- !u!114 &6768504169177931887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8212620876725071372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6638439548e56b4ba6c65294a18ea3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Player.PlayerAutoAttack
+  _firePoint: {fileID: 7168648887567135659}
 --- !u!1 &8593012820724881356
 GameObject:
   m_ObjectHideFlags: 0

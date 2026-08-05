@@ -44,6 +44,8 @@ namespace AlienDefense.EditorTools
             if (existing != null)
             {
                 MigrateAddCameraFollowTargetIfMissing(existing);
+                MigrateAddPlayerAutoAttackIfMissing(existing);
+                MigrateRepairBrokenShadowMaterial(existing);
                 return existing;
             }
 
@@ -85,6 +87,40 @@ namespace AlienDefense.EditorTools
             PrefabUtility.UnloadPrefabContents(contents);
         }
 
+        /// <summary>Adds PlayerAutoAttack to an existing prefab that predates it (Phase 5).</summary>
+        private static void MigrateAddPlayerAutoAttackIfMissing(GameObject prefabAsset)
+        {
+            if (prefabAsset.GetComponent<PlayerAutoAttack>() != null)
+            {
+                return;
+            }
+
+            string path = AssetDatabase.GetAssetPath(prefabAsset);
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+
+            if (contents.GetComponent<PlayerAutoAttack>() == null)
+            {
+                Transform firePoint = contents.transform.Find("FirePoint");
+                var autoAttack = contents.AddComponent<PlayerAutoAttack>();
+                var autoAttackSerialized = new SerializedObject(autoAttack);
+                autoAttackSerialized.FindProperty("_firePoint").objectReferenceValue = firePoint;
+                autoAttackSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+                var controller = contents.GetComponent<PlayerController>();
+                if (controller != null)
+                {
+                    var controllerSerialized = new SerializedObject(controller);
+                    controllerSerialized.FindProperty("_autoAttack").objectReferenceValue = autoAttack;
+                    controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+                Debug.Log("[AlienDefense Setup] Migrated " + path + ": added missing PlayerAutoAttack component.");
+            }
+
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+
         private static GameObject BuildHierarchy(PlayerDefinition definition, InputActionAsset actions)
         {
             var root = new GameObject("UFO_Player");
@@ -102,9 +138,10 @@ namespace AlienDefense.EditorTools
             var inputReader = root.AddComponent<UnityInputReader>();
             var movement = root.AddComponent<PlayerMovement>();
             var controller = root.AddComponent<PlayerController>();
+            var autoAttack = root.AddComponent<PlayerAutoAttack>();
 
             GameObject model = BuildModel(root.transform);
-            BuildEmptyChild("FirePoint", root.transform, new Vector3(0f, -0.2f, 0.8f));
+            GameObject firePoint = BuildEmptyChild("FirePoint", root.transform, new Vector3(0f, -0.2f, 0.8f));
             BuildEmptyChild("CollectionPoint", root.transform, Vector3.zero);
             BuildEmptyChild("GroundIndicator", root.transform, Vector3.zero);
             BuildEmptyChild(CameraFollowTargetName, root.transform, CameraFollowTargetLocalPosition);
@@ -122,10 +159,15 @@ namespace AlienDefense.EditorTools
             inputReaderSerialized.FindProperty("_actions").objectReferenceValue = actions;
             inputReaderSerialized.ApplyModifiedPropertiesWithoutUndo();
 
+            var autoAttackSerialized = new SerializedObject(autoAttack);
+            autoAttackSerialized.FindProperty("_firePoint").objectReferenceValue = firePoint.transform;
+            autoAttackSerialized.ApplyModifiedPropertiesWithoutUndo();
+
             var controllerSerialized = new SerializedObject(controller);
             controllerSerialized.FindProperty("_definition").objectReferenceValue = definition;
             controllerSerialized.FindProperty("_movement").objectReferenceValue = movement;
             controllerSerialized.FindProperty("_inputSource").objectReferenceValue = inputReader;
+            controllerSerialized.FindProperty("_autoAttack").objectReferenceValue = autoAttack;
             controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             return root;
@@ -165,9 +207,35 @@ namespace AlienDefense.EditorTools
             Object.DestroyImmediate(shadow.GetComponent<Collider>());
 
             var renderer = shadow.GetComponent<MeshRenderer>();
-            var material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            material.color = new Color(0.05f, 0.05f, 0.05f, 1f);
-            renderer.sharedMaterial = material;
+            renderer.sharedMaterial = EditorMaterialUtility.CreateOrLoadMaterial(
+                "Mat_PlayerShadow", "Universal Render Pipeline/Unlit", new Color(0.05f, 0.05f, 0.05f, 1f));
+        }
+
+        /// <summary>Re-links an existing prefab's Shadow renderer to the persistent shadow material if it points elsewhere or nowhere.</summary>
+        private static void MigrateRepairBrokenShadowMaterial(GameObject prefabAsset)
+        {
+            Material material = EditorMaterialUtility.CreateOrLoadMaterial(
+                "Mat_PlayerShadow", "Universal Render Pipeline/Unlit", new Color(0.05f, 0.05f, 0.05f, 1f));
+
+            Transform shadowTransform = prefabAsset.transform.Find("Shadow");
+            Renderer existingRenderer = shadowTransform != null ? shadowTransform.GetComponent<MeshRenderer>() : null;
+            if (existingRenderer == null || existingRenderer.sharedMaterial == material)
+            {
+                return;
+            }
+
+            string path = AssetDatabase.GetAssetPath(prefabAsset);
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+
+            Renderer renderer = contents.transform.Find("Shadow")?.GetComponent<MeshRenderer>();
+            if (renderer != null && renderer.sharedMaterial != material)
+            {
+                renderer.sharedMaterial = material;
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+                Debug.Log("[AlienDefense Setup] Migrated " + path + ": re-linked Shadow material to the persistent asset.");
+            }
+
+            PrefabUtility.UnloadPrefabContents(contents);
         }
 
         private static GameObject BuildEmptyChild(string name, Transform parent, Vector3 localPosition)

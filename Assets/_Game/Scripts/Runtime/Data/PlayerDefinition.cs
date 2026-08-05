@@ -1,3 +1,4 @@
+using AlienDefense.Combat;
 using UnityEngine;
 
 namespace AlienDefense.Data
@@ -46,6 +47,9 @@ namespace AlienDefense.Data
         [SerializeField, Min(0.01f)]
         private float _attacksPerSecond = 1.5f;
 
+        [SerializeField]
+        private ProjectileDefinition _projectileDefinition;
+
         [Header("Resource Collection")]
         [SerializeField, Min(0f)]
         private float _collectionRadius = 2.5f;
@@ -62,6 +66,7 @@ namespace AlienDefense.Data
         public float AttackRange => _attackRange;
         public int AttackDamage => _attackDamage;
         public float AttacksPerSecond => _attacksPerSecond;
+        public ProjectileDefinition ProjectileDefinition => _projectileDefinition;
         public float CollectionRadius => _collectionRadius;
 
         private void OnValidate()
@@ -94,6 +99,11 @@ namespace AlienDefense.Data
             if (_attacksPerSecond <= 0f)
             {
                 _attacksPerSecond = 0.01f;
+            }
+
+            if (_projectileDefinition == null)
+            {
+                Debug.LogError($"[PlayerDefinition] '{name}' has no Projectile Definition assigned; auto attack will not fire.", this);
             }
         }
     }
