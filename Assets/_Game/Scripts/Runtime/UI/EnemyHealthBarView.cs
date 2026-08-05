@@ -34,7 +34,10 @@ namespace AlienDefense.UI
 
         public void Initialize(Transform cameraTransform)
         {
-            _billboard?.Initialize(cameraTransform);
+            if (_billboard != null)
+            {
+                _billboard.Initialize(cameraTransform);
+            }
         }
 
         private void HandleHealthChanged(float current, float max)

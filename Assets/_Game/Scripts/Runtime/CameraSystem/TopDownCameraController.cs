@@ -19,7 +19,7 @@ namespace AlienDefense.CameraSystem
 
         [Header("Composition")]
         [SerializeField]
-        private Vector3 _positionOffset = new Vector3(0f, 12f, -9f);
+        private Vector3 _positionOffset = new Vector3(0f, 20f, -15f);
 
         [SerializeField]
         private Vector3 _lookAtOffset = Vector3.zero;

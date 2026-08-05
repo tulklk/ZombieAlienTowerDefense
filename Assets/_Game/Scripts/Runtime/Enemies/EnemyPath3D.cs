@@ -27,6 +27,7 @@ namespace AlienDefense.Enemies
             return true;
         }
 
+#if UNITY_EDITOR
         [ContextMenu("Populate From Children")]
         private void PopulateFromChildren()
         {
@@ -37,6 +38,7 @@ namespace AlienDefense.Enemies
                 _waypoints[i] = transform.GetChild(i);
             }
         }
+#endif
 
         private void OnValidate()
         {
