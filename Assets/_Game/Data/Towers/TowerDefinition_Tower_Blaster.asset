@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e91c1eaa00231b347aa50b5847a67931, type: 3}
+  m_Name: TowerDefinition_Tower_Blaster
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Towers.TowerDefinition
+  _id: tower_blaster
+  _displayName: Blaster Tower
+  _icon: {fileID: 0}
+  _prefab: {fileID: 6171785530919239617, guid: e94c20233ffb9ee4881e7b06070cb7ef, type: 3}
+  _buildCost: 75
+  _sellPercentage: 0.5
+  _defaultTargetingMode: 0
+  _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
+    type: 2}
+  _muzzleVfxDefinition: {fileID: 11400000, guid: 81f325e45ba233a4c8ab02e246488f70,
+    type: 2}
+  _levels:
+  - _upgradeCost: 0
+    _damage: 20
+    _range: 4
+    _attacksPerSecond: 1
+    _turretRotationSpeed: 720
+  - _upgradeCost: 90
+    _damage: 32
+    _range: 4.4
+    _attacksPerSecond: 1.2
+    _turretRotationSpeed: 720
+  - _upgradeCost: 160
+    _damage: 50
+    _range: 4.8
+    _attacksPerSecond: 1.4
+    _turretRotationSpeed: 720
