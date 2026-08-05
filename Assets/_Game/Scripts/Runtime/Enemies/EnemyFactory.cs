@@ -1,5 +1,6 @@
 using AlienDefense.Base;
 using AlienDefense.Economy;
+using AlienDefense.Vfx;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
@@ -12,19 +13,22 @@ namespace AlienDefense.Enemies
         private readonly EconomyService _economy;
         private readonly BaseHealthService _baseHealth;
         private readonly Transform _cameraTransform;
+        private readonly VfxService _vfxService;
 
         public EnemyFactory(
             EnemyPoolRegistry poolRegistry,
             EnemyRegistry enemyRegistry,
             EconomyService economy,
             BaseHealthService baseHealth,
-            Transform cameraTransform)
+            Transform cameraTransform,
+            VfxService vfxService = null)
         {
             _poolRegistry = poolRegistry;
             _enemyRegistry = enemyRegistry;
             _economy = economy;
             _baseHealth = baseHealth;
             _cameraTransform = cameraTransform;
+            _vfxService = vfxService;
         }
 
         public EnemyController Spawn(EnemyDefinition definition, EnemyPath3D path, Vector3 position, Quaternion rotation)
@@ -58,7 +62,20 @@ namespace AlienDefense.Enemies
             enemy.Initialize(definition, path, _economy, _baseHealth, _enemyRegistry, pool.Release, _cameraTransform);
             enemy.gameObject.SetActive(true);
 
+            enemy.Resolved -= HandleEnemyResolved;
+            enemy.Resolved += HandleEnemyResolved;
+
             return enemy;
+        }
+
+        private void HandleEnemyResolved(EnemyController enemy, EnemyResolveReason reason)
+        {
+            if (reason != EnemyResolveReason.Defeated || _vfxService == null)
+            {
+                return;
+            }
+
+            _vfxService.Play(enemy.Definition.DefeatedVfxDefinition, enemy.transform.position, Quaternion.identity);
         }
     }
 }

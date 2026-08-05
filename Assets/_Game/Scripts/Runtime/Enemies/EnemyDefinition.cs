@@ -1,3 +1,4 @@
+using AlienDefense.Vfx;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
@@ -42,6 +43,10 @@ namespace AlienDefense.Enemies
         [SerializeField, Min(0f)]
         private float _healthBarHeightOffset = 2f;
 
+        [Header("VFX (optional)")]
+        [SerializeField]
+        private VfxDefinition _defeatedVfxDefinition;
+
         [Header("Pool")]
         [SerializeField, Min(0)]
         private int _poolPrewarmCount = 10;
@@ -63,6 +68,7 @@ namespace AlienDefense.Enemies
         public int BaseDamage => _baseDamage;
         public float ArrivalThreshold => _arrivalThreshold;
         public float HealthBarHeightOffset => _healthBarHeightOffset;
+        public VfxDefinition DefeatedVfxDefinition => _defeatedVfxDefinition;
         public int PoolPrewarmCount => _poolPrewarmCount;
         public int PoolDefaultCapacity => _poolDefaultCapacity;
         public int PoolMaximumSize => _poolMaximumSize;

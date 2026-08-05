@@ -23,6 +23,8 @@ MonoBehaviour:
   _baseDamage: 2
   _arrivalThreshold: 0.1
   _healthBarHeightOffset: 2
+  _defeatedVfxDefinition: {fileID: 11400000, guid: 1847044a557f5134095884b86dc3f9b6,
+    type: 2}
   _poolPrewarmCount: 5
   _poolDefaultCapacity: 10
   _poolMaximumSize: 60
