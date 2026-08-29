@@ -3,8 +3,9 @@ using UnityEngine;
 
 namespace AlienDefense.UI
 {
-    /// <summary>Shows/hides Pause, Victory, and Defeat panels based on GameFlow state, and routes their
-    /// Resume/Restart button clicks to GameFlow/GameSpeed/LevelRestartService. Never sets GameState directly.</summary>
+    /// <summary>Shows/hides Pause, Victory, and Defeat panels based on GameFlow state, and routes their buttons
+    /// (Resume/Restart/Main Menu/Level Selection/Next Level) and the Android back button. Never sets GameState
+    /// directly except via GameFlow/GameSpeed, and never contains gameplay/scene-routing rules beyond navigation.</summary>
     public sealed class GameStateUIController : MonoBehaviour
     {
         [SerializeField]
@@ -32,17 +33,30 @@ namespace AlienDefense.UI
         [Tooltip("Optional. Disabled (not hidden) while the game is not PreparingWave/PlayingWave, so Build/TowerDetails buttons can't be clicked mid-pause.")]
         private CanvasGroup _gameplayInteractionGroup;
 
+        [SerializeField]
+        [Tooltip("Optional.")]
+        private BackNavigationController _backNavigation;
+
         private GameFlowController _gameFlow;
         private GameSpeedController _gameSpeed;
         private LevelRestartService _restartService;
+        private ApplicationServices _applicationServices;
+        private string _currentLevelId;
 
-        public void Initialize(GameFlowController gameFlow, GameSpeedController gameSpeed, LevelRestartService restartService)
+        public void Initialize(
+            GameFlowController gameFlow,
+            GameSpeedController gameSpeed,
+            LevelRestartService restartService,
+            ApplicationServices applicationServices,
+            string currentLevelId)
         {
             Unsubscribe();
 
             _gameFlow = gameFlow;
             _gameSpeed = gameSpeed;
             _restartService = restartService;
+            _applicationServices = applicationServices;
+            _currentLevelId = currentLevelId;
 
             if (_gameFlow != null)
             {
@@ -54,17 +68,23 @@ namespace AlienDefense.UI
             {
                 _pausePanelView.ResumeClicked += HandleResumeClicked;
                 _pausePanelView.RestartClicked += HandleRestartClicked;
+                _pausePanelView.MainMenuClicked += HandleMainMenuClicked;
             }
 
             if (_victoryResultView != null)
             {
                 _victoryResultView.RestartClicked += HandleRestartClicked;
+                _victoryResultView.LevelSelectionClicked += HandleLevelSelectionClicked;
+                _victoryResultView.NextLevelClicked += HandleNextLevelClicked;
             }
 
             if (_defeatResultView != null)
             {
                 _defeatResultView.RestartClicked += HandleRestartClicked;
+                _defeatResultView.LevelSelectionClicked += HandleLevelSelectionClicked;
             }
+
+            _backNavigation?.SetHandler(HandleBackPressed);
         }
 
         private void HandleGameStateChanged(GameState previous, GameState current)
@@ -100,6 +120,57 @@ namespace AlienDefense.UI
             _restartService?.Restart();
         }
 
+        private void HandleMainMenuClicked()
+        {
+            _applicationServices?.LevelLaunchContext.Clear();
+            _applicationServices?.SceneTransition.TryLoadSceneViaBootstrap(SceneNames.MainMenu);
+        }
+
+        private void HandleLevelSelectionClicked()
+        {
+            _applicationServices?.LevelLaunchContext.Clear();
+            _applicationServices?.SceneTransition.TryLoadSceneViaBootstrap(SceneNames.LevelSelection);
+        }
+
+        private void HandleNextLevelClicked()
+        {
+            if (_applicationServices?.LevelCatalog != null
+                && _applicationServices.LevelCatalog.TryGetNext(_currentLevelId, out LevelCatalogEntry nextEntry))
+            {
+                _applicationServices.LevelLaunchContext.SetSelectedLevel(nextEntry.LevelId);
+                _applicationServices.SceneTransition.TryLoadSceneViaBootstrap(nextEntry.SceneName);
+                return;
+            }
+
+            // No next level in the catalog yet: fall back to Level Selection rather than a Campaign Complete
+            // placeholder, keeping Phase 12 scope minimal.
+            HandleLevelSelectionClicked();
+        }
+
+        private void HandleBackPressed()
+        {
+            if (_gameFlow == null)
+            {
+                return;
+            }
+
+            switch (_gameFlow.CurrentState)
+            {
+                case GameState.Paused:
+                    HandleResumeClicked();
+                    break;
+                case GameState.PreparingWave:
+                case GameState.PlayingWave:
+                    _gameFlow.Pause();
+                    _gameSpeed?.Pause();
+                    break;
+                case GameState.Victory:
+                case GameState.Defeat:
+                    HandleLevelSelectionClicked();
+                    break;
+            }
+        }
+
         private static void SetActiveIfAssigned(GameObject target, bool active)
         {
             if (target != null)
@@ -119,17 +190,23 @@ namespace AlienDefense.UI
             {
                 _pausePanelView.ResumeClicked -= HandleResumeClicked;
                 _pausePanelView.RestartClicked -= HandleRestartClicked;
+                _pausePanelView.MainMenuClicked -= HandleMainMenuClicked;
             }
 
             if (_victoryResultView != null)
             {
                 _victoryResultView.RestartClicked -= HandleRestartClicked;
+                _victoryResultView.LevelSelectionClicked -= HandleLevelSelectionClicked;
+                _victoryResultView.NextLevelClicked -= HandleNextLevelClicked;
             }
 
             if (_defeatResultView != null)
             {
                 _defeatResultView.RestartClicked -= HandleRestartClicked;
+                _defeatResultView.LevelSelectionClicked -= HandleLevelSelectionClicked;
             }
+
+            _backNavigation?.SetHandler(null);
         }
 
         private void OnDestroy()

@@ -5,7 +5,9 @@ using UnityEngine;
 
 namespace AlienDefense.EditorTools
 {
-    /// <summary>Builds (or reuses) the three Phase 6 tower definitions and their prototype prefabs.</summary>
+    /// <summary>Builds (or reuses/migrates) the Blaster tower definition and prototype prefab. Also owns the
+    /// one-time cleanup of the retired Rapid/Heavy tower assets (replaced by Frost/Mortar; see
+    /// AdvancedTowerPrefabBuilder) so the game ships exactly 3 tower types.</summary>
     internal static class TowerPrefabBuilder
     {
         private const string DataFolder = "Assets/_Game/Data/Towers";
@@ -13,6 +15,11 @@ namespace AlienDefense.EditorTools
         private const string TowerLayerName = "Tower";
 
         private const string ProjectileDefinitionPath = "Assets/_Game/Data/Projectiles/Projectile_Blaster.asset";
+
+        // Retired 2026-08: replaced by the 3-tower catalog (Blaster/Frost/Mortar) requested to match the
+        // reference "Súng trụ / Dao Băng / Cối" tower-select UI. Kept here only so RemoveLegacyTowerAssets can
+        // find and delete their leftover assets on projects that built them before this change.
+        private static readonly string[] LegacyPrefabNames = { "Tower_Rapid", "Tower_Heavy" };
 
         private struct LevelSpec
         {
@@ -40,7 +47,7 @@ namespace AlienDefense.EditorTools
             public int BuildCost;
             public float SellPercentage;
             public TargetingMode DefaultTargetingMode;
-            public Color Color;
+            public string TurretModelPath;
             public LevelSpec[] Levels;
         }
 
@@ -48,7 +55,7 @@ namespace AlienDefense.EditorTools
         {
             Id = "tower_blaster", DisplayName = "Blaster Tower", PrefabName = "Tower_Blaster",
             BuildCost = 75, SellPercentage = 0.5f, DefaultTargetingMode = TargetingMode.First,
-            Color = new Color(0.25f, 0.55f, 0.95f),
+            TurretModelPath = TowerModelAttacher.Turret1Path,
             Levels = new[]
             {
                 new LevelSpec(0, 20f, 4f, 1f, 720f),
@@ -57,41 +64,13 @@ namespace AlienDefense.EditorTools
             }
         };
 
-        private static readonly TowerSpec RapidSpec = new TowerSpec
-        {
-            Id = "tower_rapid", DisplayName = "Rapid Gun Tower", PrefabName = "Tower_Rapid",
-            BuildCost = 100, SellPercentage = 0.5f, DefaultTargetingMode = TargetingMode.Closest,
-            Color = new Color(0.95f, 0.8f, 0.2f),
-            Levels = new[]
-            {
-                new LevelSpec(0, 9f, 3.7f, 2.5f, 900f),
-                new LevelSpec(110, 14f, 3.9f, 2.8f, 900f),
-                new LevelSpec(190, 20f, 4.1f, 3.2f, 900f)
-            }
-        };
-
-        private static readonly TowerSpec HeavySpec = new TowerSpec
-        {
-            Id = "tower_heavy", DisplayName = "Heavy Cannon Tower", PrefabName = "Tower_Heavy",
-            BuildCost = 150, SellPercentage = 0.5f, DefaultTargetingMode = TargetingMode.Strongest,
-            Color = new Color(0.5f, 0.15f, 0.15f),
-            Levels = new[]
-            {
-                new LevelSpec(0, 60f, 5f, 0.45f, 360f),
-                new LevelSpec(220, 90f, 5.3f, 0.5f, 360f),
-                new LevelSpec(380, 130f, 5.6f, 0.55f, 360f)
-            }
-        };
-
-        /// <summary>Reloads the three tower definitions fresh from disk. Use right before a use site that follows
+        /// <summary>Reloads the Blaster tower definition fresh from disk. Use right before a use site that follows
         /// several AssetDatabase/PrefabUtility operations, which can otherwise leave an earlier in-memory reference stale.</summary>
         public static TowerDefinition[] LoadAll()
         {
             return new[]
             {
-                AssetDatabase.LoadAssetAtPath<TowerDefinition>($"{DataFolder}/TowerDefinition_{BlasterSpec.PrefabName}.asset"),
-                AssetDatabase.LoadAssetAtPath<TowerDefinition>($"{DataFolder}/TowerDefinition_{RapidSpec.PrefabName}.asset"),
-                AssetDatabase.LoadAssetAtPath<TowerDefinition>($"{DataFolder}/TowerDefinition_{HeavySpec.PrefabName}.asset")
+                AssetDatabase.LoadAssetAtPath<TowerDefinition>($"{DataFolder}/TowerDefinition_{BlasterSpec.PrefabName}.asset")
             };
         }
 
@@ -108,11 +87,29 @@ namespace AlienDefense.EditorTools
             }
 
             TowerDefinition blaster = CreateOrLoadTower(BlasterSpec, projectileDefinition);
-            TowerDefinition rapid = CreateOrLoadTower(RapidSpec, projectileDefinition);
-            TowerDefinition heavy = CreateOrLoadTower(HeavySpec, projectileDefinition);
+            RemoveLegacyTowerAssets();
 
             Debug.Log("[AlienDefense Setup] Tower definitions and prefabs ready.");
-            return new[] { blaster, rapid, heavy };
+            return new[] { blaster };
+        }
+
+        /// <summary>Deletes the prefab/definition/material assets of tower types that no longer ship (Rapid, Heavy).
+        /// Safe to call repeatedly: AssetDatabase.DeleteAsset is a no-op if the asset is already gone.</summary>
+        private static void RemoveLegacyTowerAssets()
+        {
+            bool removedAny = false;
+            foreach (string prefabName in LegacyPrefabNames)
+            {
+                removedAny |= AssetDatabase.DeleteAsset($"{PrefabFolder}/{prefabName}.prefab");
+                removedAny |= AssetDatabase.DeleteAsset($"{DataFolder}/TowerDefinition_{prefabName}.asset");
+                removedAny |= AssetDatabase.DeleteAsset($"Assets/_Game/Materials/Generated/Mat_{prefabName}.mat");
+            }
+
+            if (removedAny)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log("[AlienDefense Setup] Removed retired tower assets (Rapid/Heavy).");
+            }
         }
 
         private static TowerDefinition CreateOrLoadTower(TowerSpec spec, ProjectileDefinition projectileDefinition)
@@ -164,6 +161,7 @@ namespace AlienDefense.EditorTools
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (existing != null)
             {
+                MigrateAttachTurretModel(existing, spec);
                 return existing;
             }
 
@@ -172,6 +170,51 @@ namespace AlienDefense.EditorTools
             Object.DestroyImmediate(root);
 
             return AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        }
+
+        /// <summary>Idempotent: replaces an existing prefab's placeholder-primitive (or older) visual with the
+        /// TD_Sci-Fi turret model, re-wiring TowerAttackController/_firePoint and TowerVisual/_turretPivot. Skips
+        /// entirely if the correct model is already attached.</summary>
+        private static void MigrateAttachTurretModel(GameObject prefabAsset, TowerSpec spec)
+        {
+            GameObject turretModel = AssetDatabase.LoadAssetAtPath<GameObject>(spec.TurretModelPath);
+            if (turretModel == null)
+            {
+                Debug.LogWarning($"[AlienDefense Setup] Turret model not found at '{spec.TurretModelPath}'; leaving {spec.PrefabName} unchanged.");
+                return;
+            }
+
+            if (TowerModelAttacher.HasModelAttached(prefabAsset.transform, turretModel))
+            {
+                return;
+            }
+
+            string path = AssetDatabase.GetAssetPath(prefabAsset);
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+
+            TowerModelAttacher.DestroyAllChildrenExcept(contents.transform, "RangeIndicator");
+            (Transform turretPivot, Transform firePoint) = TowerModelAttacher.Attach(contents.transform, turretModel);
+
+            var attack = contents.GetComponent<TowerAttackController>();
+            if (attack != null)
+            {
+                var attackSerialized = new SerializedObject(attack);
+                attackSerialized.FindProperty("_firePoint").objectReferenceValue = firePoint;
+                attackSerialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            var visual = contents.GetComponent<TowerVisual>();
+            if (visual != null)
+            {
+                var visualSerialized = new SerializedObject(visual);
+                visualSerialized.FindProperty("_turretPivot").objectReferenceValue = turretPivot;
+                visualSerialized.FindProperty("_forwardAxis").vector3Value = Vector3.forward;
+                visualSerialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(contents, path);
+            PrefabUtility.UnloadPrefabContents(contents);
+            Debug.Log($"[AlienDefense Setup] Migrated {path}: attached {turretModel.name} model.");
         }
 
         private static GameObject BuildHierarchy(TowerSpec spec)
@@ -192,41 +235,17 @@ namespace AlienDefense.EditorTools
             var visual = root.AddComponent<TowerVisual>();
             var controller = root.AddComponent<TowerController>();
 
-            Material material = EditorMaterialUtility.CreateOrLoadMaterial(
-                "Mat_" + spec.PrefabName, "Universal Render Pipeline/Lit", spec.Color);
-
-            GameObject baseMesh = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            baseMesh.name = "Base";
-            baseMesh.transform.SetParent(root.transform, false);
-            baseMesh.transform.localScale = new Vector3(0.9f, 0.15f, 0.9f);
-            baseMesh.transform.localPosition = new Vector3(0f, 0.15f, 0f);
-            baseMesh.GetComponent<MeshRenderer>().sharedMaterial = material;
-            Object.DestroyImmediate(baseMesh.GetComponent<Collider>());
-
-            var turretPivot = new GameObject("TurretPivot");
-            turretPivot.transform.SetParent(root.transform, false);
-            turretPivot.transform.localPosition = new Vector3(0f, 0.4f, 0f);
-
-            GameObject turretVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            turretVisual.name = "TurretVisual";
-            turretVisual.transform.SetParent(turretPivot.transform, false);
-            turretVisual.transform.localScale = new Vector3(0.3f, 0.3f, 0.9f);
-            turretVisual.transform.localPosition = new Vector3(0f, 0f, 0.35f);
-            turretVisual.GetComponent<MeshRenderer>().sharedMaterial = material;
-            Object.DestroyImmediate(turretVisual.GetComponent<Collider>());
-
-            var firePoint = new GameObject("FirePoint");
-            firePoint.transform.SetParent(turretPivot.transform, false);
-            firePoint.transform.localPosition = new Vector3(0f, 0f, 0.8f);
+            GameObject turretModel = AssetDatabase.LoadAssetAtPath<GameObject>(spec.TurretModelPath);
+            (Transform turretPivot, Transform firePoint) = TowerModelAttacher.Attach(root.transform, turretModel);
 
             RangeIndicator rangeIndicator = BuildRangeIndicator(root.transform);
 
             var attackSerialized = new SerializedObject(attack);
-            attackSerialized.FindProperty("_firePoint").objectReferenceValue = firePoint.transform;
+            attackSerialized.FindProperty("_firePoint").objectReferenceValue = firePoint;
             attackSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var visualSerialized = new SerializedObject(visual);
-            visualSerialized.FindProperty("_turretPivot").objectReferenceValue = turretPivot.transform;
+            visualSerialized.FindProperty("_turretPivot").objectReferenceValue = turretPivot;
             visualSerialized.FindProperty("_forwardAxis").vector3Value = Vector3.forward;
             visualSerialized.ApplyModifiedPropertiesWithoutUndo();
 

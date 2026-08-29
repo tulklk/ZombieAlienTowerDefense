@@ -19,14 +19,15 @@ namespace AlienDefense.Player
         private LevelBounds _levelBounds;
 
         [SerializeField]
+        [Tooltip("Optional. The follow camera's Transform — when assigned, joystick input is remapped onto its " +
+            "current forward/right so movement always matches what's visually up/right on screen.")]
+        private Transform _cameraTransform;
+
+        [SerializeField]
         [Tooltip("Must implement IPlayerInput.")]
         private MonoBehaviour _inputSource;
 
-        [SerializeField]
-        [Tooltip("Optional (Phase 5).")]
-        private PlayerAutoAttack _autoAttack;
-
-        public Vector2 MovementDirection => _movement != null ? _movement.CurrentMoveInput : Vector2.zero;
+        public Vector2 MovementDirection => _movement != null ? _movement.CurrentWorldMoveDirection : Vector2.zero;
         public PlayerDefinition Definition => _definition;
 
         private void Awake()
@@ -52,7 +53,7 @@ namespace AlienDefense.Player
                 return;
             }
 
-            _movement.Initialize(_definition, playerInput, _levelBounds);
+            _movement.Initialize(_definition, playerInput, _levelBounds, _cameraTransform);
         }
 
         /// <summary>Enables or disables player movement.</summary>
@@ -61,15 +62,6 @@ namespace AlienDefense.Player
             if (_movement != null)
             {
                 _movement.SetMovementEnabled(value);
-            }
-        }
-
-        /// <summary>Enables or disables player auto attack.</summary>
-        public void SetCombatEnabled(bool value)
-        {
-            if (_autoAttack != null)
-            {
-                _autoAttack.SetAttackEnabled(value);
             }
         }
     }

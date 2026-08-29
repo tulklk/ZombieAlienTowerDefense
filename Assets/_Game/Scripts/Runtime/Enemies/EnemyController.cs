@@ -24,6 +24,26 @@ namespace AlienDefense.Enemies
         [Tooltip("Optional.")]
         private EnemyHealthBarView _healthBarView;
 
+        [SerializeField]
+        [Tooltip("Optional. Armor: reduces incoming Physical damage.")]
+        private EnemyDefense _defense;
+
+        [SerializeField]
+        [Tooltip("Optional. Absorbs damage before EnemyHealth, with delayed regen.")]
+        private EnemyShield _shield;
+
+        [SerializeField]
+        [Tooltip("Optional. Owns Slow/Burn and every other active status effect.")]
+        private EnemyStatusController _statusController;
+
+        [SerializeField]
+        [Tooltip("Optional. Present only on the Boss prefab.")]
+        private BossController _bossController;
+
+        [SerializeField]
+        [Tooltip("Optional. Owns Pull/Lift movement while this enemy is being tractor-beam captured.")]
+        private EnemyCaptureController _captureController;
+
         private EnemyDefinition _definition;
         private EconomyService _economy;
         private BaseHealthService _baseHealth;
@@ -31,6 +51,7 @@ namespace AlienDefense.Enemies
         private Action<EnemyController> _releaseToPool;
 
         private bool _isResolved;
+        private bool _isCaptured;
         private int _generation;
 
         public EnemyDefinition Definition => _definition;
@@ -38,10 +59,18 @@ namespace AlienDefense.Enemies
         public EnemyHealth Health => _health;
         public EnemyMovement Movement => _movement;
 
-        public bool IsTargetable => !_isResolved && _health != null && _health.IsDamageable;
+        public bool IsTargetable => !_isResolved && !_isCaptured && _health != null && _health.IsDamageable;
         public int Generation => _generation;
         public Transform AimPoint => _targetPoint != null ? _targetPoint : transform;
         public IDamageable Damageable => _health;
+        public IStatusApplicable StatusController => _statusController;
+        public BossController BossController => _bossController;
+
+        /// <summary>True only while this enemy is eligible to start a fresh tractor beam capture.</summary>
+        public bool IsCapturable =>
+            !_isResolved && !_isCaptured &&
+            _definition != null && _definition.CanBeTractorCaptured &&
+            _health != null && _health.IsDamageable;
 
         /// <summary>Fired once per spawn instance when this enemy resolves, before it returns to the pool.</summary>
         public event Action<EnemyController, EnemyResolveReason> Resolved;
@@ -74,10 +103,18 @@ namespace AlienDefense.Enemies
             _registry = registry;
             _releaseToPool = releaseToPool;
             _isResolved = false;
+            _isCaptured = false;
             _generation++;
 
             _health.Initialize(definition.MaxHealth);
+            _health.SetDefenseAndShield(_defense, _shield);
             _movement.Initialize(path, definition.MoveSpeed, definition.RotationSpeed, definition.ArrivalThreshold);
+
+            _defense?.ResetState();
+            _shield?.ResetState();
+            _statusController?.Clear();
+            _bossController?.ResetState();
+            _captureController?.ResetState();
 
             if (_healthBarView != null)
             {
@@ -92,6 +129,23 @@ namespace AlienDefense.Enemies
             _health.TryApplyDamage(amount);
         }
 
+        /// <summary>Admission into a tractor beam's capture. Fails silently (returns false) if this enemy is not
+        /// currently capturable — the beam simply tries a different enemy on its next scan.</summary>
+        public bool TryBeginTractorCapture(in TractorCaptureRequest request)
+        {
+            if (!IsCapturable || _captureController == null)
+            {
+                return false;
+            }
+
+            _isCaptured = true;
+            _health.SetCaptureImmune(true);
+            _movement.StopMovement();
+            _healthBarView?.Hide();
+            _captureController.BeginCapture(request, HandleCaptureCompleted);
+            return true;
+        }
+
         /// <summary>Forces resolve for reasons the enemy itself never triggers (e.g. level cleanup).</summary>
         public void ForceResolve(EnemyResolveReason reason)
         {
@@ -103,6 +157,12 @@ namespace AlienDefense.Enemies
         {
             _movement.StopMovement();
             _health.ResetState();
+            _defense?.ResetState();
+            _shield?.ResetState();
+            _statusController?.Clear();
+            _bossController?.ResetState();
+            _captureController?.ResetState();
+            _isCaptured = false;
         }
 
         private void HandleDied()
@@ -115,6 +175,11 @@ namespace AlienDefense.Enemies
             Resolve(EnemyResolveReason.ReachedBase);
         }
 
+        private void HandleCaptureCompleted()
+        {
+            Resolve(EnemyResolveReason.Captured);
+        }
+
         private void Resolve(EnemyResolveReason reason)
         {
             if (_isResolved)
@@ -124,6 +189,7 @@ namespace AlienDefense.Enemies
 
             _isResolved = true;
             _movement.StopMovement();
+            _captureController?.Abort();
 
             switch (reason)
             {
@@ -133,6 +199,10 @@ namespace AlienDefense.Enemies
                 case EnemyResolveReason.ReachedBase:
                     _baseHealth?.TakeDamage(_definition.BaseDamage);
                     break;
+
+                // Captured (UFO tractor beam) intentionally falls through to no-op: capturing an enemy only
+                // removes it from the battlefield. See EnemyResolutionPolicy — reward/XP come exclusively from
+                // an EnergyPickup a Tower kill (Defeated) drops, actually being tractor-beamed into the UFO.
             }
 
             _registry?.Unregister(this);

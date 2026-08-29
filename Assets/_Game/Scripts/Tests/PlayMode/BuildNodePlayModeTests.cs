@@ -192,7 +192,7 @@ namespace AlienDefense.Tests.PlayMode
 
             var runtimeParent = new GameObject("TowerRuntimeParent");
             _spawnedObjects.Add(runtimeParent);
-            var factory = new TowerFactory(runtimeParent.transform, registry, projectileFactory, null);
+            var factory = new TowerFactory(runtimeParent.transform, registry, projectileFactory, null, null);
 
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();
@@ -229,7 +229,7 @@ namespace AlienDefense.Tests.PlayMode
 
             var runtimeParent = new GameObject("TowerRuntimeParent");
             _spawnedObjects.Add(runtimeParent);
-            var factory = new TowerFactory(runtimeParent.transform, new EnemyRegistry(), projectileFactory, null);
+            var factory = new TowerFactory(runtimeParent.transform, new EnemyRegistry(), projectileFactory, null, null);
 
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();

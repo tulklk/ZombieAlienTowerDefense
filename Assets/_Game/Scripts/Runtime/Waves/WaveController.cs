@@ -6,7 +6,7 @@ using UnityEngine;
 namespace AlienDefense.Waves
 {
     /// <summary>Drives wave preparation/spawning/completion using EnemyFactory and a WaveRuntimeTracker.</summary>
-    public sealed class WaveController : MonoBehaviour
+    public sealed class WaveController : MonoBehaviour, IEnemySpawnCoordinator
     {
         [SerializeField]
         private EnemyPath3D _path;
@@ -40,6 +40,7 @@ namespace AlienDefense.Waves
         public event Action<int> WaveCompleted;
         public event Action AllWavesCompleted;
         public event Action WaveStopped;
+        public event Action<EnemyController, BossController> BossSpawned;
 
         public void Initialize(EnemyFactory enemyFactory, WaveDefinition[] waves, float defaultPreparationDuration)
         {
@@ -245,6 +246,18 @@ namespace AlienDefense.Waves
 
         private void SpawnOneEnemy(EnemyDefinition definition, int runId)
         {
+            SpawnTrackedEnemy(definition, runId);
+        }
+
+        /// <summary>IEnemySpawnCoordinator entry point: spawns and tracks an enemy outside the normal group-spawn
+        /// schedule (e.g. a Boss's minions), attributed to the currently running wave.</summary>
+        public EnemyController SpawnTrackedEnemy(EnemyDefinition definition)
+        {
+            return SpawnTrackedEnemy(definition, _waveRunId);
+        }
+
+        private EnemyController SpawnTrackedEnemy(EnemyDefinition definition, int runId)
+        {
             Vector3 spawnPosition = _path.GetPoint(0);
             Quaternion spawnRotation = ComputeSpawnRotation();
 
@@ -253,7 +266,7 @@ namespace AlienDefense.Waves
             {
                 _tracker.RecordSpawnFailure();
                 RaiseProgressChanged();
-                return;
+                return null;
             }
 
             _tracker.RecordSpawnSuccess();
@@ -274,6 +287,13 @@ namespace AlienDefense.Waves
             }
 
             enemy.Resolved += HandleResolved;
+
+            if (enemy.BossController != null)
+            {
+                BossSpawned?.Invoke(enemy, enemy.BossController);
+            }
+
+            return enemy;
         }
 
         private Quaternion ComputeSpawnRotation()

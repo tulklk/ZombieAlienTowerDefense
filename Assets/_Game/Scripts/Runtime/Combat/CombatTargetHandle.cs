@@ -17,5 +17,6 @@ namespace AlienDefense.Combat
         public bool IsValid => _target != null && _target.IsTargetable && _target.Generation == _generation;
         public Transform AimPoint => _target?.AimPoint;
         public IDamageable Damageable => _target?.Damageable;
+        public IStatusApplicable StatusController => _target?.StatusController;
     }
 }

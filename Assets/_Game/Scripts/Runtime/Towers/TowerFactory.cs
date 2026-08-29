@@ -12,6 +12,7 @@ namespace AlienDefense.Towers
         private readonly Transform _towerRuntimeParent;
         private readonly EnemyRegistry _enemyRegistry;
         private readonly ProjectileFactory _projectileFactory;
+        private readonly AreaDamageResolver _areaDamageResolver;
         private readonly GameFlowController _gameFlow;
         private readonly VfxService _vfxService;
 
@@ -19,12 +20,14 @@ namespace AlienDefense.Towers
             Transform towerRuntimeParent,
             EnemyRegistry enemyRegistry,
             ProjectileFactory projectileFactory,
+            AreaDamageResolver areaDamageResolver,
             GameFlowController gameFlow,
             VfxService vfxService = null)
         {
             _towerRuntimeParent = towerRuntimeParent;
             _enemyRegistry = enemyRegistry;
             _projectileFactory = projectileFactory;
+            _areaDamageResolver = areaDamageResolver;
             _gameFlow = gameFlow;
             _vfxService = vfxService;
         }
@@ -38,7 +41,7 @@ namespace AlienDefense.Towers
             }
 
             TowerController tower = Object.Instantiate(definition.Prefab, position, rotation, _towerRuntimeParent);
-            tower.Initialize(definition, _enemyRegistry, _projectileFactory, _gameFlow);
+            tower.Initialize(definition, _enemyRegistry, _projectileFactory, _areaDamageResolver, _gameFlow);
             tower.SetMuzzleVfx(_vfxService, definition.MuzzleVfxDefinition);
 
             return tower;

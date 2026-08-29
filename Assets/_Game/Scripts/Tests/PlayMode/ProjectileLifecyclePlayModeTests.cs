@@ -54,6 +54,18 @@ namespace AlienDefense.Tests.PlayMode
             return result;
         }
 
+        /// <summary>Waits real elapsed game seconds (accumulating Time.deltaTime) rather than a fixed frame count,
+        /// so the test stays correct regardless of the Editor's actual frame rate.</summary>
+        private static IEnumerator WaitForGameSeconds(float seconds)
+        {
+            float elapsed = 0f;
+            while (elapsed < seconds)
+            {
+                yield return null;
+                elapsed += Time.deltaTime;
+            }
+        }
+
         private EnemyPath3D CreatePath(params Vector3[] points)
         {
             var pathObject = new GameObject("TestEnemyPath");
@@ -146,19 +158,14 @@ namespace AlienDefense.Tests.PlayMode
 
             float startHealth = target.Health.CurrentHealth;
 
-            for (int i = 0; i < 60; i++)
-            {
-                yield return null;
-            }
+            // 5 units at 10 units/sec needs 0.5s; wait a generous 2s of game time regardless of the Editor's actual frame rate.
+            yield return WaitForGameSeconds(2f);
 
             Assert.AreEqual(startHealth - 25f, target.Health.CurrentHealth, 0.01f);
             Assert.IsFalse(projectile.gameObject.activeSelf);
 
             float healthAfterHit = target.Health.CurrentHealth;
-            for (int i = 0; i < 10; i++)
-            {
-                yield return null;
-            }
+            yield return WaitForGameSeconds(0.2f);
 
             Assert.AreEqual(healthAfterHit, target.Health.CurrentHealth, 0.01f);
         }
@@ -212,10 +219,8 @@ namespace AlienDefense.Tests.PlayMode
             ProjectileController projectile = factory.Spawn(definition, request);
             Assert.IsNotNull(projectile);
 
-            for (int i = 0; i < 30; i++)
-            {
-                yield return null;
-            }
+            // Maximum lifetime is 0.1s; wait a generous 1s of game time regardless of the Editor's actual frame rate.
+            yield return WaitForGameSeconds(1f);
 
             Assert.IsFalse(projectile.gameObject.activeSelf);
         }

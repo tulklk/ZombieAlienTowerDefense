@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a0e5071f671eb3428c1411451f73381, type: 3}
+  m_Name: UFO_TractorBeam
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Player.UFOTractorBeamDefinition
+  _stableId: ufo_tractorbeam_default
+  _displayName: UFO Tractor Beam
+  _attractionRadius: 3.5
+  _scanInterval: 0.1
+  _maxConcurrentCaptures: 8
+  _maxConcurrentEnergyAbsorptions: 16
+  _maxConcurrentPropAbsorptions: 0
+  _pullSpeed: 8
+  _liftSpeed: 6
+  _beamCenterThreshold: 0.2
+  _captureSocketThreshold: 0.15
+  _shrinkDuringLift: 1
+  _minimumVisualScale: 0.25
+  _liftSpinSpeedDegreesPerSecond: 240
+  _beamVisualRadius: 0

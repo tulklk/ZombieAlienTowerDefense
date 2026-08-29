@@ -17,6 +17,9 @@ namespace AlienDefense.Enemies
         private bool _isMoving;
         private bool _destinationReachedFired;
 
+        private float _statusSpeedMultiplier = 1f;
+        private float _behaviorSpeedMultiplier = 1f;
+
         public Vector2 CurrentMoveDirection { get; private set; }
         public float PathProgress { get; private set; }
 
@@ -43,6 +46,8 @@ namespace AlienDefense.Enemies
             PathProgress = 0f;
             CurrentMoveDirection = Vector2.zero;
             _destinationReachedFired = false;
+            _statusSpeedMultiplier = 1f;
+            _behaviorSpeedMultiplier = 1f;
             _isInitialized = true;
             _isMoving = true;
         }
@@ -51,6 +56,18 @@ namespace AlienDefense.Enemies
         {
             _isMoving = false;
             CurrentMoveDirection = Vector2.zero;
+        }
+
+        /// <summary>Driven by EnemyStatusController (e.g. Slow). Not editable directly on EnemyDefinition.</summary>
+        public void SetStatusSpeedMultiplier(float multiplier)
+        {
+            _statusSpeedMultiplier = Mathf.Max(0f, multiplier);
+        }
+
+        /// <summary>Driven by non-status gameplay behavior (e.g. Boss phase-two speed-up).</summary>
+        public void SetBehaviorSpeedMultiplier(float multiplier)
+        {
+            _behaviorSpeedMultiplier = Mathf.Max(0f, multiplier);
         }
 
         private void Update()
@@ -72,7 +89,8 @@ namespace AlienDefense.Enemies
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, _rotationSpeed * Time.deltaTime);
             }
 
-            Vector3 newPosition = Vector3.MoveTowards(currentPosition, targetPosition, _moveSpeed * Time.deltaTime);
+            float effectiveSpeed = _moveSpeed * _statusSpeedMultiplier * _behaviorSpeedMultiplier;
+            Vector3 newPosition = Vector3.MoveTowards(currentPosition, targetPosition, effectiveSpeed * Time.deltaTime);
             transform.position = newPosition;
 
             UpdatePathProgress(newPosition);

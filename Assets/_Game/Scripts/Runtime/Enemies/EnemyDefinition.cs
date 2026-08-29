@@ -43,6 +43,14 @@ namespace AlienDefense.Enemies
         [SerializeField, Min(0f)]
         private float _healthBarHeightOffset = 2f;
 
+        [Header("Tractor Beam")]
+        [SerializeField]
+        private bool _canBeTractorCaptured = true;
+
+        [SerializeField, Min(0.01f)]
+        [Tooltip("Divides the beam's base pull speed. 1 = normal, >1 = resists (pulled slower), <1 = pulled faster.")]
+        private float _tractorResistance = 1f;
+
         [Header("VFX (optional)")]
         [SerializeField]
         private VfxDefinition _defeatedVfxDefinition;
@@ -68,6 +76,8 @@ namespace AlienDefense.Enemies
         public int BaseDamage => _baseDamage;
         public float ArrivalThreshold => _arrivalThreshold;
         public float HealthBarHeightOffset => _healthBarHeightOffset;
+        public bool CanBeTractorCaptured => _canBeTractorCaptured;
+        public float TractorResistance => _tractorResistance;
         public VfxDefinition DefeatedVfxDefinition => _defeatedVfxDefinition;
         public int PoolPrewarmCount => _poolPrewarmCount;
         public int PoolDefaultCapacity => _poolDefaultCapacity;
@@ -118,6 +128,12 @@ namespace AlienDefense.Enemies
             if (_arrivalThreshold <= 0f)
             {
                 _arrivalThreshold = 0.05f;
+            }
+
+            if (_tractorResistance <= 0f)
+            {
+                Debug.LogError($"[EnemyDefinition] '{name}': Tractor Resistance must be > 0, clamped to 0.01.", this);
+                _tractorResistance = 0.01f;
             }
 
             if (_poolPrewarmCount < 0)

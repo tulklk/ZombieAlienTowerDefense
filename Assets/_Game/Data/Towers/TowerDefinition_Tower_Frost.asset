@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e91c1eaa00231b347aa50b5847a67931, type: 3}
+  m_Name: TowerDefinition_Tower_Frost
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Towers.TowerDefinition
+  _id: tower_frost
+  _displayName: Frost Tower
+  _icon: {fileID: 0}
+  _prefab: {fileID: 3891672731294487376, guid: 8cbf3f40d8aeb3e4c8bf6f6513640253, type: 3}
+  _buildCost: 120
+  _sellPercentage: 0.5
+  _defaultTargetingMode: 1
+  _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
+    type: 2}
+  _attackBehavior: 1
+  _statusEffectOnHit: {fileID: 11400000, guid: 65ccd661d71ef7346b565c6bde456de5, type: 2}
+  _splashRadius: 0
+  _muzzleVfxDefinition: {fileID: 11400000, guid: 81f325e45ba233a4c8ab02e246488f70,
+    type: 2}
+  _levels:
+  - _upgradeCost: 0
+    _damage: 6
+    _range: 4.2
+    _attacksPerSecond: 1.1
+    _turretRotationSpeed: 720
+  - _upgradeCost: 130
+    _damage: 9
+    _range: 4.5
+    _attacksPerSecond: 1.2
+    _turretRotationSpeed: 720
+  - _upgradeCost: 210
+    _damage: 13
+    _range: 4.8
+    _attacksPerSecond: 1.35
+    _turretRotationSpeed: 720

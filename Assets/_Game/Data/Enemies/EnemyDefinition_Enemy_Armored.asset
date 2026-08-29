@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1407a406dbac8774ca7fe1e1991bdd80, type: 3}
+  m_Name: EnemyDefinition_Enemy_Armored
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyDefinition
+  _id: enemy_armored
+  _displayName: Armored Enemy
+  _icon: {fileID: 0}
+  _prefab: {fileID: 748636178538619887, guid: 3377fbb825533fd4eb729cb8a55dd5c3, type: 3}
+  _maxHealth: 260
+  _moveSpeed: 1.3
+  _rotationSpeed: 240
+  _rewardResource: 20
+  _baseDamage: 2
+  _arrivalThreshold: 0.1
+  _healthBarHeightOffset: 2
+  _canBeTractorCaptured: 1
+  _tractorResistance: 1.5
+  _defeatedVfxDefinition: {fileID: 0}
+  _poolPrewarmCount: 4
+  _poolDefaultCapacity: 10
+  _poolMaximumSize: 40

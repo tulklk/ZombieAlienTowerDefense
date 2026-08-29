@@ -78,7 +78,7 @@ namespace AlienDefense.Tests.EditMode
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();
             gameFlow.BeginPlayingWave();
-            controller.Initialize(gameFlow, new GameSpeedController(new FakeTimeScaleTarget()), null);
+            controller.Initialize(gameFlow, new GameSpeedController(new FakeTimeScaleTarget()), null, null, null);
 
             gameFlow.Pause();
 
@@ -96,7 +96,7 @@ namespace AlienDefense.Tests.EditMode
             CanvasGroup group = CreateGameplayGroup();
             GameStateUIController controller = CreateController(pausePanel, victoryPanel, defeatPanel, group);
             var gameFlow = new GameFlowController();
-            controller.Initialize(gameFlow, new GameSpeedController(new FakeTimeScaleTarget()), null);
+            controller.Initialize(gameFlow, new GameSpeedController(new FakeTimeScaleTarget()), null, null, null);
 
             gameFlow.ReportVictory();
 
@@ -114,7 +114,7 @@ namespace AlienDefense.Tests.EditMode
             CanvasGroup group = CreateGameplayGroup();
             GameStateUIController controller = CreateController(pausePanel, victoryPanel, defeatPanel, group);
             var gameFlow = new GameFlowController();
-            controller.Initialize(gameFlow, new GameSpeedController(new FakeTimeScaleTarget()), null);
+            controller.Initialize(gameFlow, new GameSpeedController(new FakeTimeScaleTarget()), null, null, null);
 
             gameFlow.BeginPreparingWave();
             Assert.IsTrue(group.interactable);
@@ -139,7 +139,7 @@ namespace AlienDefense.Tests.EditMode
             gameFlow.BeginPlayingWave();
             var gameSpeed = new GameSpeedController(new FakeTimeScaleTarget());
             gameSpeed.Pause();
-            controller.Initialize(gameFlow, gameSpeed, null);
+            controller.Initialize(gameFlow, gameSpeed, null, null, null);
             gameFlow.Pause();
 
             InvokePrivateMethod(controller, "HandleResumeClicked");
@@ -156,7 +156,7 @@ namespace AlienDefense.Tests.EditMode
             GameObject defeatPanel = CreatePanel("DefeatPanel");
             CanvasGroup group = CreateGameplayGroup();
             GameStateUIController controller = CreateController(pausePanel, victoryPanel, defeatPanel, group);
-            controller.Initialize(new GameFlowController(), new GameSpeedController(new FakeTimeScaleTarget()), null);
+            controller.Initialize(new GameFlowController(), new GameSpeedController(new FakeTimeScaleTarget()), null, null, null);
 
             Assert.DoesNotThrow(() => InvokePrivateMethod(controller, "HandleRestartClicked"));
         }
@@ -173,7 +173,7 @@ namespace AlienDefense.Tests.EditMode
             gameFlow.BeginPreparingWave();
             gameFlow.BeginPlayingWave();
             var gameSpeed = new GameSpeedController(new FakeTimeScaleTarget());
-            controller.Initialize(gameFlow, gameSpeed, null);
+            controller.Initialize(gameFlow, gameSpeed, null, null, null);
 
             InvokePrivateMethod(controller, "HandleResumeClicked");
 

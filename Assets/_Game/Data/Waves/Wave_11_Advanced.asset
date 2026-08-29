@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4428f3a20ee44d04db0f486557215b0a, type: 3}
+  m_Name: Wave_11_Advanced
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Waves.WaveDefinition
+  _id: wave_11_advanced
+  _displayName: Wave 11 - Advanced
+  _spawnGroups:
+  - _enemyDefinition: {fileID: 11400000, guid: 43cdf1b094682e5498489602d5005976, type: 2}
+    _count: 4
+    _delayBeforeGroup: 0
+    _spawnInterval: 1.2
+  - _enemyDefinition: {fileID: 11400000, guid: aff01f1bf4fef2940ad14e6a4dbf6391, type: 2}
+    _count: 4
+    _delayBeforeGroup: 1.5
+    _spawnInterval: 1
+  - _enemyDefinition: {fileID: 11400000, guid: 08ba340cee5d86b45ada6126c150fac0, type: 2}
+    _count: 1
+    _delayBeforeGroup: 3
+    _spawnInterval: 0
+  _preparationDurationOverride: 4

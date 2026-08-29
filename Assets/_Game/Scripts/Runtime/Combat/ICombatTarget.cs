@@ -12,5 +12,8 @@ namespace AlienDefense.Combat
 
         Transform AimPoint { get; }
         IDamageable Damageable { get; }
+
+        /// <summary>Optional. Null for targets that never receive status effects.</summary>
+        IStatusApplicable StatusController { get; }
     }
 }

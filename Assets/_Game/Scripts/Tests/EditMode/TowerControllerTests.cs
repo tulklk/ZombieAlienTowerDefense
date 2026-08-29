@@ -102,7 +102,7 @@ namespace AlienDefense.Tests.EditMode
             TowerController tower = CreateTower();
             TowerDefinition definition = CreateDefinition((0, 20f, 4f, 1f, 720f), (90, 32f, 4.4f, 1.2f, 720f));
 
-            tower.Initialize(definition, null, null, null);
+            tower.Initialize(definition, null, null, null, null);
 
             Assert.AreEqual(0, tower.CurrentLevelIndex);
             Assert.AreEqual(20f, tower.CurrentStats.Damage, 0.001f);
@@ -114,7 +114,7 @@ namespace AlienDefense.Tests.EditMode
         {
             TowerController tower = CreateTower();
             TowerDefinition definition = CreateDefinition((0, 20f, 4f, 1f, 720f), (90, 32f, 4.4f, 1.2f, 720f));
-            tower.Initialize(definition, null, null, null);
+            tower.Initialize(definition, null, null, null, null);
 
             bool result = tower.ApplyLevel(1);
 
@@ -129,7 +129,7 @@ namespace AlienDefense.Tests.EditMode
         {
             TowerController tower = CreateTower();
             TowerDefinition definition = CreateDefinition((0, 20f, 4f, 1f, 720f));
-            tower.Initialize(definition, null, null, null);
+            tower.Initialize(definition, null, null, null, null);
 
             LogAssert.Expect(LogType.Warning, "[TowerController] Invalid level index 5.");
             bool result = tower.ApplyLevel(5);

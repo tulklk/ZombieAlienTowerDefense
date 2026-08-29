@@ -186,7 +186,7 @@ namespace AlienDefense.Tests.PlayMode
 
             var runtimeParent = new GameObject("TowerRuntimeParent");
             _spawnedObjects.Add(runtimeParent);
-            var towerFactory = new TowerFactory(runtimeParent.transform, registry, projectileFactory, null);
+            var towerFactory = new TowerFactory(runtimeParent.transform, registry, projectileFactory, null, null);
 
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();

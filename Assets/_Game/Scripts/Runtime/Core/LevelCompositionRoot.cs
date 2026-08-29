@@ -7,7 +7,10 @@ using AlienDefense.Data;
 using AlienDefense.DebugTools;
 using AlienDefense.Economy;
 using AlienDefense.Enemies;
+using AlienDefense.Environment;
+using AlienDefense.Pickups;
 using AlienDefense.Player;
+using AlienDefense.Save;
 using AlienDefense.Towers;
 using AlienDefense.UI;
 using AlienDefense.Vfx;
@@ -17,22 +20,60 @@ using UnityEngine.SceneManagement;
 
 namespace AlienDefense.Core
 {
-    /// <summary>Wires up a level's pure C# services from its LevelDefinition and Scene objects.</summary>
-    public sealed class LevelCompositionRoot : MonoBehaviour
+    /// <summary>Wires up a level's pure C# services from its LevelDefinition and Scene objects. Which LevelDefinition
+    /// to use is resolved from LevelLaunchContext (set by Level Selection) once ApplicationServices arrive; the
+    /// serialized field below is an Editor-only fallback for pressing Play directly on this scene.</summary>
+    public sealed class LevelCompositionRoot : MonoBehaviour, IApplicationServicesReceiver
     {
         [SerializeField]
-        private LevelDefinition _levelDefinition;
+        [Tooltip("Editor-only fallback used when this scene is played directly, with no LevelLaunchContext selection (e.g. no Bootstrap/MainMenu/LevelSelection run first). Ignored in release builds.")]
+        private LevelDefinition _developmentLevelDefinition;
 
         [SerializeField]
         [Tooltip("Optional (not present until Phase 2's Player is in the scene).")]
         private PlayerController _player;
 
         [SerializeField]
+        [Tooltip("Optional. The UFO's continuous multi-enemy tractor beam.")]
+        private UFOTractorBeamController _tractorBeamController;
+
+        [SerializeField]
         [Tooltip("Optional.")]
-        private PlayerAutoAttack _playerAutoAttack;
+        private UFOTractorBeamVisual _tractorBeamVisual;
+
+        [SerializeField]
+        [Tooltip("Optional. Dedicated looping AudioSource for the beam hum; never shared with music.")]
+        private AudioSource _tractorBeamLoopSource;
+
+        [SerializeField]
+        private AudioClip _tractorBeamLoopClip;
+
+        [SerializeField]
+        private AudioClip _tractorBeamCaptureClip;
 
         [SerializeField]
         private Transform _enemyRuntimeParent;
+
+        [SerializeField]
+        [Tooltip("Optional. Enables the Energy Pickup loop (Tower kill → drop → UFO collects → Wallet/XP). " +
+            "Both must be set for it to activate; either left empty means Defeated kills simply grant no Energy Pickup.")]
+        private EnergyPickupController _energyPickupPrefab;
+
+        [SerializeField]
+        [Tooltip("Optional. Pooled EnergyPickup instances are parented here.")]
+        private Transform _energyPickupRuntimeParent;
+
+        [SerializeField, Min(1)]
+        private int _energyPickupPoolDefaultCapacity = 16;
+
+        [SerializeField, Min(1)]
+        private int _energyPickupPoolMaxSize = 64;
+
+        [SerializeField]
+        [Tooltip("Every TractorAbsorbableProp already placed in the scene is collected once here at level start " +
+            "— see TractorAbsorbablePropRegistry's doc comment for why. Uncheck to disable Environment Prop " +
+            "absorption entirely for this level.")]
+        private bool _environmentPropAbsorptionEnabled = true;
 
         [SerializeField]
         private Transform _projectileRuntimeParent;
@@ -50,6 +91,10 @@ namespace AlienDefense.Core
         [SerializeField]
         [Tooltip("Optional.")]
         private WaveDebugControls _waveDebugControls;
+
+        [SerializeField]
+        [Tooltip("Optional. Shown only while a Boss is alive.")]
+        private BossHealthBarPresenter _bossHealthBarPresenter;
 
         [SerializeField]
         [Tooltip("Optional (Phase 6, before the Building system exists).")]
@@ -70,6 +115,10 @@ namespace AlienDefense.Core
         [SerializeField]
         [Tooltip("Optional.")]
         private BuildNodeVisualCoordinator _buildNodeVisualCoordinator;
+
+        [SerializeField]
+        [Tooltip("Optional. Flying the Player onto a BuildNode acts like tapping it.")]
+        private PlayerBuildNodeProximityController _playerBuildNodeProximity;
 
         [SerializeField]
         [Tooltip("Optional (Phase 8, before Selection/Upgrade/Sell exist).")]
@@ -127,6 +176,16 @@ namespace AlienDefense.Core
         private VfxPoolRegistry _vfxPoolRegistry;
         private BuildLifecycleVfxController _buildLifecycleVfx;
         private GameplayAudioController _gameplayAudio;
+        private TractorBeamAudioController _tractorBeamAudio;
+        private ApplicationServices _applicationServices;
+        private LevelDefinition _resolvedLevelDefinition;
+        private string _resolvedLevelId;
+
+        private EnergyPickupPool _energyPickupPool;
+        private EnergyPickupRegistry _energyPickupRegistry;
+        private EnergyPickupFactory _energyPickupSpawner;
+        private EnergyDropService _energyDropService;
+        private TractorAbsorbablePropRegistry _environmentPropRegistry;
 
         public GameFlowController GameFlow { get; private set; }
         public GameSpeedController GameSpeed { get; private set; }
@@ -134,8 +193,16 @@ namespace AlienDefense.Core
         public BaseHealthService BaseHealth { get; private set; }
         public EnemyRegistry Enemies { get; private set; }
         public EnemyFactory EnemySpawner { get; private set; }
+
+        /// <summary>Separate from Economy (which still funds Tower build/upgrade). Increases ONLY through
+        /// EnergyCollection — see AlienDefense.Enemies.EnemyResolutionPolicy for the full reward rule.</summary>
+        public EnergyWalletService EnergyWallet { get; private set; }
+
+        public PlayerLevelProgressionService PlayerLevelProgression { get; private set; }
+        public EnergyCollectionService EnergyCollection { get; private set; }
         public ProjectileFactory ProjectileSpawner { get; private set; }
         public TowerFactory TowerSpawner { get; private set; }
+        public AreaDamageResolver AreaDamage { get; private set; }
         public BuildSelectionService BuildSelection { get; private set; }
         public BuildService BuildService { get; private set; }
         public TowerSelectionService TowerSelection { get; private set; }
@@ -144,43 +211,86 @@ namespace AlienDefense.Core
         public LevelRestartService RestartService { get; private set; }
         public VfxService Vfx { get; private set; }
 
-        private void Awake()
+        /// <summary>Pushed by ApplicationRuntime after this scene's Awake phase but before Start,
+        /// so ResolveLevelDefinition() (called from Start) always sees it in time.</summary>
+        public void ReceiveApplicationServices(ApplicationServices services)
         {
-            if (_levelDefinition == null)
+            _applicationServices = services;
+        }
+
+        private void Start()
+        {
+            LevelDefinition levelDefinition = ResolveLevelDefinition();
+            if (levelDefinition == null)
             {
-                Debug.LogError("[LevelCompositionRoot] No LevelDefinition assigned. Level will not start.", this);
+                Debug.LogError("[LevelCompositionRoot] No LevelDefinition could be resolved. Level will not start.", this);
                 enabled = false;
                 return;
             }
 
+            BuildLevel(levelDefinition);
+            GameFlow.BeginPreparingWave();
+        }
+
+        private LevelDefinition ResolveLevelDefinition()
+        {
+            if (_applicationServices != null && _applicationServices.LevelLaunchContext.HasSelection)
+            {
+                string levelId = _applicationServices.LevelLaunchContext.SelectedLevelId;
+                if (_applicationServices.LevelCatalog != null && _applicationServices.LevelCatalog.TryResolve(levelId, out LevelCatalogEntry entry))
+                {
+                    _resolvedLevelId = entry.LevelId;
+                    return entry.LevelDefinition;
+                }
+
+                Debug.LogError($"[LevelCompositionRoot] LevelLaunchContext selected '{levelId}' but the LevelCatalog could not resolve it. Not falling back silently.", this);
+                return null;
+            }
+
+#if UNITY_EDITOR
+            if (_developmentLevelDefinition != null)
+            {
+                Debug.LogWarning("[LevelCompositionRoot] No LevelLaunchContext selection found; using the Development Level Definition fallback (Editor-only, stripped from release builds).", this);
+                _resolvedLevelId = _developmentLevelDefinition.LevelId;
+                return _developmentLevelDefinition;
+            }
+#endif
+
+            return null;
+        }
+
+        private void BuildLevel(LevelDefinition levelDefinition)
+        {
+            _resolvedLevelDefinition = levelDefinition;
+
             GameFlow = new GameFlowController();
             GameSpeed = new GameSpeedController(new UnityTimeScaleTarget());
-            Economy = new EconomyService(_levelDefinition.StartingResource);
-            BaseHealth = new BaseHealthService(_levelDefinition.BaseMaxHealth);
+            Economy = new EconomyService(levelDefinition.StartingResource);
+            BaseHealth = new BaseHealthService(levelDefinition.BaseMaxHealth);
 
-            Application.targetFrameRate = _levelDefinition.TargetFrameRate;
+            // Separate currency/progression from Economy — see EnergyWalletService's doc comment. Constructed
+            // here (not inside InitializeEnergyEconomySystem) so they exist even if the EnergyPickup prefab/
+            // runtime parent were left unassigned; only the pickup-spawning half of the loop is optional.
+            EnergyWallet = new EnergyWalletService();
+            PlayerLevelProgression = new PlayerLevelProgressionService();
+            EnergyCollection = new EnergyCollectionService(EnergyWallet, PlayerLevelProgression);
+
+            Application.targetFrameRate = levelDefinition.TargetFrameRate;
 
             BaseHealth.Destroyed += HandleBaseDestroyed;
             GameFlow.GameStateChanged += HandleGameStateChanged;
 
             InitializeVfxSystem();
+            InitializeEnergyEconomySystem();
+            InitializeEnvironmentPropSystem();
             InitializeEnemySystem();
             InitializeCombatSystem();
+            InitializeTractorBeamSystem();
             InitializeTowerSystem();
             InitializeBuildSystem();
             InitializeWaveSystem();
             InitializeAudioSystem();
             InitializeGameFlowUI();
-        }
-
-        private void Start()
-        {
-            if (!enabled)
-            {
-                return;
-            }
-
-            GameFlow.BeginPreparingWave();
         }
 
         private void OnDestroy()
@@ -200,15 +310,22 @@ namespace AlienDefense.Core
                 _waveController.WaveStarted -= HandleWaveStarted;
                 _waveController.WaveCompleted -= HandleWaveCompletedForFlow;
                 _waveController.AllWavesCompleted -= HandleAllWavesCompleted;
+                _waveController.BossSpawned -= HandleBossSpawned;
             }
 
             _buildLifecycleVfx?.Unsubscribe();
             _gameplayAudio?.Unsubscribe();
+            _tractorBeamAudio?.Unsubscribe();
+            _tractorBeamVisual?.Unsubscribe();
+            _applicationServices?.SettingsService?.DetachAudioService(_audioService);
 
             Enemies?.Clear();
             _enemyPoolRegistry?.Clear();
             _projectilePoolRegistry?.Clear();
             _vfxPoolRegistry?.Clear();
+            _energyPickupRegistry?.Clear();
+            _energyPickupPool?.Clear();
+            _environmentPropRegistry?.Clear();
         }
 
         private void InitializeVfxSystem()
@@ -222,6 +339,46 @@ namespace AlienDefense.Core
             Vfx = new VfxService(_vfxPoolRegistry);
         }
 
+        /// <summary>Wallet/Progression themselves are always constructed (see BuildLevel) — this only wires the
+        /// EnergyPickup spawn/collect loop that feeds them. Runs before InitializeEnemySystem (EnemyFactory needs
+        /// EnergyDropService) and InitializeTractorBeamSystem (the beam needs EnergyPickupRegistry).</summary>
+        private void InitializeEnergyEconomySystem()
+        {
+            if (_energyPickupPrefab == null || _energyPickupRuntimeParent == null)
+            {
+                Debug.LogWarning("[LevelCompositionRoot] No Energy Pickup prefab/runtime parent assigned; " +
+                    "Tower kills will not drop Energy Pickups (EnergyWallet/PlayerLevelProgression still exist, " +
+                    "just nothing feeds them). Assign both to enable the loop.", this);
+                return;
+            }
+
+            _energyPickupPool = new EnergyPickupPool(
+                _energyPickupPrefab, _energyPickupRuntimeParent, _energyPickupPoolDefaultCapacity, _energyPickupPoolMaxSize,
+                collectionChecks: Debug.isDebugBuild);
+            _energyPickupRegistry = new EnergyPickupRegistry();
+            _energyPickupSpawner = new EnergyPickupFactory(_energyPickupPool, _energyPickupRegistry, EnergyCollection);
+            _energyDropService = new EnergyDropService(_energyPickupSpawner);
+        }
+
+        /// <summary>One-time collection of every TractorAbsorbableProp already placed in the scene — see
+        /// TractorAbsorbablePropRegistry's doc comment for why this is a single FindObjectsByType at level start
+        /// rather than per-prop OnEnable/OnDisable self-registration. Must run before InitializeTractorBeamSystem.</summary>
+        private void InitializeEnvironmentPropSystem()
+        {
+            if (!_environmentPropAbsorptionEnabled)
+            {
+                return;
+            }
+
+            _environmentPropRegistry = new TractorAbsorbablePropRegistry();
+
+            TractorAbsorbableProp[] props = FindObjectsByType<TractorAbsorbableProp>(FindObjectsSortMode.None);
+            for (int i = 0; i < props.Length; i++)
+            {
+                props[i].Register(_environmentPropRegistry);
+            }
+        }
+
         private void InitializeEnemySystem()
         {
             if (_enemyRuntimeParent == null)
@@ -232,7 +389,7 @@ namespace AlienDefense.Core
 
             Enemies = new EnemyRegistry();
             _enemyPoolRegistry = new EnemyPoolRegistry(_enemyRuntimeParent);
-            EnemySpawner = new EnemyFactory(_enemyPoolRegistry, Enemies, Economy, BaseHealth, _cameraTransform, Vfx);
+            EnemySpawner = new EnemyFactory(_enemyPoolRegistry, Enemies, Economy, BaseHealth, _cameraTransform, Vfx, _energyDropService);
 
             if (_debugSpawner != null)
             {
@@ -250,13 +407,22 @@ namespace AlienDefense.Core
 
             _projectilePoolRegistry = new ProjectilePoolRegistry(_projectileRuntimeParent);
             ProjectileSpawner = new ProjectileFactory(_projectilePoolRegistry, Vfx);
+        }
 
-            if (_playerAutoAttack == null || _player == null || Enemies == null)
+        /// <summary>UFO combat is a continuous multi-enemy tractor beam, not a shooting weapon; see
+        /// UFOTractorBeamController for the admission/capture flow.</summary>
+        private void InitializeTractorBeamSystem()
+        {
+            if (_tractorBeamController == null || Enemies == null)
             {
                 return;
             }
 
-            _playerAutoAttack.Initialize(_player.Definition, Enemies, ProjectileSpawner);
+            _tractorBeamController.Initialize(Enemies, _energyPickupRegistry, _environmentPropRegistry);
+            _tractorBeamVisual?.Initialize(_tractorBeamController);
+
+            _tractorBeamAudio = new TractorBeamAudioController(_audioService, _tractorBeamLoopSource, _tractorBeamLoopClip, _tractorBeamCaptureClip);
+            _tractorBeamAudio.Initialize(_tractorBeamController);
         }
 
         private void InitializeTowerSystem()
@@ -271,7 +437,8 @@ namespace AlienDefense.Core
                 return;
             }
 
-            TowerSpawner = new TowerFactory(_towerRuntimeParent, Enemies, ProjectileSpawner, GameFlow, Vfx);
+            AreaDamage = new AreaDamageResolver(new EnemyRegistrySplashProvider(Enemies));
+            TowerSpawner = new TowerFactory(_towerRuntimeParent, Enemies, ProjectileSpawner, AreaDamage, GameFlow, Vfx);
 
             if (_towerDebugSpawner != null)
             {
@@ -313,6 +480,11 @@ namespace AlienDefense.Core
                 _buildNodeVisualCoordinator.Initialize(BuildSelection);
             }
 
+            if (_playerBuildNodeProximity != null && _player != null)
+            {
+                _playerBuildNodeProximity.Initialize(_player.transform, BuildService, TowerSelection);
+            }
+
             if (_towerDetailsPresenter != null)
             {
                 _towerDetailsPresenter.Initialize(TowerSelection, Economy, TowerUpgrade, TowerSell);
@@ -333,7 +505,7 @@ namespace AlienDefense.Core
                 return;
             }
 
-            if (_levelDefinition.WaveCount == 0)
+            if (_resolvedLevelDefinition.WaveCount == 0)
             {
                 Debug.LogError("[LevelCompositionRoot] LevelDefinition has no waves; Wave system will not start.", this);
                 return;
@@ -341,17 +513,23 @@ namespace AlienDefense.Core
 
             PrewarmPoolsForWaves();
 
-            var waves = new WaveDefinition[_levelDefinition.WaveCount];
+            var waves = new WaveDefinition[_resolvedLevelDefinition.WaveCount];
             for (int i = 0; i < waves.Length; i++)
             {
-                waves[i] = _levelDefinition.GetWave(i);
+                waves[i] = _resolvedLevelDefinition.GetWave(i);
             }
 
-            _waveController.Initialize(EnemySpawner, waves, _levelDefinition.PreparationDuration);
+            _waveController.Initialize(EnemySpawner, waves, _resolvedLevelDefinition.PreparationDuration);
 
             _waveController.WaveStarted += HandleWaveStarted;
             _waveController.WaveCompleted += HandleWaveCompletedForFlow;
             _waveController.AllWavesCompleted += HandleAllWavesCompleted;
+            _waveController.BossSpawned += HandleBossSpawned;
+
+            if (_bossHealthBarPresenter != null)
+            {
+                _bossHealthBarPresenter.Initialize(_waveController);
+            }
 
             if (_waveDebugControls != null)
             {
@@ -362,9 +540,9 @@ namespace AlienDefense.Core
         private void PrewarmPoolsForWaves()
         {
             var seenDefinitions = new HashSet<EnemyDefinition>();
-            for (int w = 0; w < _levelDefinition.WaveCount; w++)
+            for (int w = 0; w < _resolvedLevelDefinition.WaveCount; w++)
             {
-                WaveDefinition wave = _levelDefinition.GetWave(w);
+                WaveDefinition wave = _resolvedLevelDefinition.GetWave(w);
                 if (wave == null)
                 {
                     continue;
@@ -391,6 +569,8 @@ namespace AlienDefense.Core
             _gameplayAudio = new GameplayAudioController(
                 _audioService, _buildClip, _upgradeClip, _sellClip, _waveStartClip, _victoryClip, _defeatClip);
             _gameplayAudio.Initialize(BuildService, TowerUpgrade, TowerSell, _waveController, GameFlow);
+
+            _applicationServices?.SettingsService?.AttachAudioService(_audioService);
         }
 
         private void InitializeGameFlowUI()
@@ -404,7 +584,7 @@ namespace AlienDefense.Core
 
             if (_gameStateUIController != null)
             {
-                _gameStateUIController.Initialize(GameFlow, GameSpeed, RestartService);
+                _gameStateUIController.Initialize(GameFlow, GameSpeed, RestartService, _applicationServices, _resolvedLevelId);
             }
         }
 
@@ -430,6 +610,11 @@ namespace AlienDefense.Core
                 }
 
                 DespawnAllEnemies();
+
+                if (current == GameState.Victory)
+                {
+                    _applicationServices?.PlayerProfileService?.SetLevelCompleted(BuildLevelCompletedResult());
+                }
             }
 
             if (_player != null)
@@ -438,9 +623,6 @@ namespace AlienDefense.Core
                     && current != GameState.Victory
                     && current != GameState.Defeat;
                 _player.SetMovementEnabled(movementEnabled);
-
-                bool combatEnabled = current == GameState.PlayingWave;
-                _player.SetCombatEnabled(combatEnabled);
             }
 
             if (_worldSelectionController != null)
@@ -450,6 +632,35 @@ namespace AlienDefense.Core
                     && current != GameState.Defeat;
                 _worldSelectionController.SetInputEnabled(buildInputEnabled);
             }
+
+            if (_playerBuildNodeProximity != null)
+            {
+                bool buildInputEnabled = current != GameState.Paused
+                    && current != GameState.Victory
+                    && current != GameState.Defeat;
+                _playerBuildNodeProximity.SetInputEnabled(buildInputEnabled);
+            }
+        }
+
+        /// <summary>Placeholder star formula for Phase 13's save foundation: 3 stars for undamaged base, 2 for
+        /// at least half base health remaining, 1 for a plain win. Phase 14 may replace this with richer rules;
+        /// PlayerProfileService never computes stars itself, only stores whatever this returns.</summary>
+        private LevelCompletedResult BuildLevelCompletedResult()
+        {
+            int remaining = BaseHealth.CurrentHealth;
+            int max = BaseHealth.MaxHealth;
+
+            int stars = 1;
+            if (remaining >= max)
+            {
+                stars = 3;
+            }
+            else if (max > 0 && remaining >= max / 2)
+            {
+                stars = 2;
+            }
+
+            return new LevelCompletedResult(_resolvedLevelId, stars, remaining);
         }
 
         private void DespawnAllEnemies()
@@ -482,6 +693,11 @@ namespace AlienDefense.Core
         private void HandleAllWavesCompleted()
         {
             GameFlow.ReportVictory();
+        }
+
+        private void HandleBossSpawned(EnemyController boss, BossController bossController)
+        {
+            bossController.Initialize(_waveController);
         }
     }
 }

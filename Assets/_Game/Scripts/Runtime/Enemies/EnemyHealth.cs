@@ -10,12 +10,15 @@ namespace AlienDefense.Enemies
         public float CurrentHealth { get; private set; }
         public float MaximumHealth { get; private set; }
         public bool IsDead => CurrentHealth <= 0f;
-        public bool IsDamageable => !IsDead;
+        public bool IsDamageable => !IsDead && !_isCaptureImmune;
 
         public event Action<float, float> HealthChanged;
         public event Action Died;
 
         private bool _diedFired;
+        private bool _isCaptureImmune;
+        private EnemyDefense _defense;
+        private EnemyShield _shield;
 
         public void Initialize(float maximumHealth)
         {
@@ -23,10 +26,25 @@ namespace AlienDefense.Enemies
             ResetState();
         }
 
+        /// <summary>Optional. Wires the sibling defense/shield components consulted by the DamageInfo overload.</summary>
+        public void SetDefenseAndShield(EnemyDefense defense, EnemyShield shield)
+        {
+            _defense = defense;
+            _shield = shield;
+        }
+
+        /// <summary>Driven by EnemyController while a tractor beam capture is in progress. No damage source may
+        /// bypass this — the raw float overload consults it too.</summary>
+        public void SetCaptureImmune(bool value)
+        {
+            _isCaptureImmune = value;
+        }
+
         public void ResetState()
         {
             CurrentHealth = MaximumHealth;
             _diedFired = false;
+            _isCaptureImmune = false;
             HealthChanged?.Invoke(CurrentHealth, MaximumHealth);
         }
 
@@ -37,7 +55,7 @@ namespace AlienDefense.Enemies
                 return false;
             }
 
-            if (IsDead)
+            if (!IsDamageable)
             {
                 return false;
             }
@@ -56,7 +74,19 @@ namespace AlienDefense.Enemies
 
         public bool TryApplyDamage(in DamageInfo damageInfo)
         {
-            return TryApplyDamage(damageInfo.Amount);
+            float amount = damageInfo.Amount;
+
+            if (_defense != null)
+            {
+                amount = _defense.ModifyIncomingDamage(amount, damageInfo.DamageType);
+            }
+
+            if (_shield != null && damageInfo.DamageType != DamageType.True)
+            {
+                amount = _shield.Absorb(amount);
+            }
+
+            return TryApplyDamage(amount);
         }
     }
 }

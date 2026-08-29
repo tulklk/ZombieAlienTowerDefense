@@ -40,6 +40,13 @@ namespace AlienDefense.UI
             }
         }
 
+        /// <summary>Force-hides the bar (e.g. while this enemy is being tractor-beam captured). The next real
+        /// HealthChanged event (including the one ResetState fires on pool reuse) recomputes normal visibility.</summary>
+        public void Hide()
+        {
+            SetVisible(false);
+        }
+
         private void HandleHealthChanged(float current, float max)
         {
             float ratio = max > 0f ? current / max : 0f;

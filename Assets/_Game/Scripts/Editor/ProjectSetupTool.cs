@@ -70,13 +70,45 @@ namespace AlienDefense.EditorTools
             Debug.Log("[AlienDefense Setup] TextMeshPro Essential Resources imported into Assets/TextMesh Pro/.");
         }
 
-        [MenuItem("AlienDefense/Setup/0. Run Full Setup (URP + TMP + Level_01)")]
+        [MenuItem("AlienDefense/Setup/0. Run Full Setup (URP + TMP + Full App Flow)")]
         public static void RunFullSetup()
         {
             ConfigureRenderPipeline();
             ImportTmpEssentials();
             LevelSceneScaffolder.BuildLevel01SceneSkeleton();
-            Debug.Log("[AlienDefense Setup] Full Phase 1 setup complete.");
+            LevelCatalogBuilder.CreateOrLoad();
+            BootstrapSceneScaffolder.BuildBootstrapScene();
+            MainMenuSceneScaffolder.BuildMainMenuScene();
+            LevelSelectionSceneScaffolder.BuildLevelSelectionScene();
+            UpdateBuildSettingsSceneList();
+            Debug.Log("[AlienDefense Setup] Full setup complete: URP + TMP + Bootstrap/MainMenu/LevelSelection/Level_01.");
+        }
+
+        [MenuItem("AlienDefense/Setup/16. Add Application Scenes To Build Settings")]
+        public static void UpdateBuildSettingsSceneList()
+        {
+            string[] scenePaths =
+            {
+                "Assets/_Game/Scenes/Bootstrap/Bootstrap.unity",
+                "Assets/_Game/Scenes/Menu/MainMenu.unity",
+                "Assets/_Game/Scenes/Menu/LevelSelection.unity",
+                "Assets/_Game/Scenes/Levels/Level_01.unity"
+            };
+
+            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+            foreach (string path in scenePaths)
+            {
+                if (!System.IO.File.Exists(path))
+                {
+                    Debug.LogWarning("[AlienDefense Setup] Scene not found, skipped: " + path);
+                    continue;
+                }
+
+                scenes.Add(new EditorBuildSettingsScene(path, true));
+            }
+
+            EditorBuildSettings.scenes = scenes.ToArray();
+            Debug.Log("[AlienDefense Setup] Build Settings scene list updated (" + scenes.Count + " scene(s)), Bootstrap first.");
         }
     }
 }

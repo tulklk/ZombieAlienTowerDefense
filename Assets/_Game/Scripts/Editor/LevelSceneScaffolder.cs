@@ -7,6 +7,7 @@ using AlienDefense.Core;
 using AlienDefense.Data;
 using AlienDefense.DebugTools;
 using AlienDefense.Enemies;
+using AlienDefense.Pickups;
 using AlienDefense.Player;
 using AlienDefense.Towers;
 using AlienDefense.UI;
@@ -90,7 +91,7 @@ namespace AlienDefense.EditorTools
             EnemyDefinition normalEnemyDefinition = EnemyPrefabBuilder.CreateAll();
             WaveDefinition[] waves = WaveDefinitionBuilder.CreateAll();
             ProjectileDefinition projectileDefinition = ProjectilePrefabBuilder.CreateOrLoad();
-            TowerDefinition[] towerDefinitions = TowerPrefabBuilder.CreateAll();
+            TowerDefinition[] towerDefinitions = CombineTowerCatalog(TowerPrefabBuilder.CreateAll(), AdvancedTowerPrefabBuilder.CreateAll());
             GameObject buildNodePrefab = BuildNodePrefabBuilder.CreateOrLoad();
             VfxPrefabBuilder.CreateAll();
             playerDefinition = WirePlayerDefinitionProjectile(playerDefinition, projectileDefinition);
@@ -105,36 +106,233 @@ namespace AlienDefense.EditorTools
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            LevelCompositionRoot compositionRoot = BuildCompositionRoot();
+            (LevelCompositionRoot compositionRoot, BackNavigationController backNavigation) = BuildCompositionRoot();
             GameObject playerInstance = BuildPlayer(playerPrefab, playerDefinition);
             (LevelBounds levelBounds, EnemyPath3D enemyPath, Transform towerSpawnPoint) = BuildEnvironment();
             Transform cameraTransform = BuildCameraRig(playerInstance, levelBounds);
-            (Transform enemyRuntimeParent, Transform projectileRuntimeParent, Transform towerRuntimeParent, Transform vfxRuntimeParent) = BuildRuntimeContainers();
+            (Transform enemyRuntimeParent, Transform projectileRuntimeParent, Transform towerRuntimeParent, Transform vfxRuntimeParent, Transform energyPickupRuntimeParent) = BuildRuntimeContainers();
             AudioService audioService = BuildAudioService();
             BuildNode[] buildNodes = BuildBuildNodes(buildNodePrefab);
-            towerDefinitions = TowerPrefabBuilder.LoadAll();
+            towerDefinitions = CombineTowerCatalog(TowerPrefabBuilder.LoadAll(), AdvancedTowerPrefabBuilder.LoadAll());
             (EnemyDebugSpawner debugSpawner, WaveController waveController, WaveDebugControls waveDebugControls, TowerDebugSpawner towerDebugSpawner,
-                WorldSelectionController worldSelectionController, BuildNodeVisualCoordinator buildNodeVisualCoordinator) =
+                WorldSelectionController worldSelectionController, BuildNodeVisualCoordinator buildNodeVisualCoordinator,
+                PlayerBuildNodeProximityController playerBuildNodeProximity) =
                 BuildSystems(normalEnemyDefinition, enemyPath, towerDefinitions[0], towerSpawnPoint, cameraTransform, buildNodes);
-            towerDefinitions = TowerPrefabBuilder.LoadAll();
+            towerDefinitions = CombineTowerCatalog(TowerPrefabBuilder.LoadAll(), AdvancedTowerPrefabBuilder.LoadAll());
             (BuildBarPresenter buildBarPresenter, TowerDetailsPresenter towerDetailsPresenter, GameHUDPresenter gameHUDPresenter, GameStateUIController gameStateUIController) =
-                BuildCanvas(waveController, towerDefinitions);
+                BuildCanvas(waveController, towerDefinitions, backNavigation);
             BuildEventSystem();
 
             WirePlayerLevelBounds(playerInstance, levelBounds);
+            WirePlayerCameraTransform(playerInstance, cameraTransform);
             WireCompositionRootPlayer(compositionRoot, playerInstance);
             WireCompositionRootEnemySystem(compositionRoot, enemyRuntimeParent, cameraTransform, debugSpawner);
             WireCompositionRootWaveSystem(compositionRoot, waveController, waveDebugControls);
-            WireCompositionRootCombatSystem(compositionRoot, playerInstance, projectileRuntimeParent);
+            WireCompositionRootCombatSystem(compositionRoot, projectileRuntimeParent);
+            WireCompositionRootTractorBeamSystem(compositionRoot, playerInstance);
+            WireCompositionRootEnergyEconomySystem(compositionRoot, energyPickupRuntimeParent);
             WireCompositionRootTowerSystem(compositionRoot, towerRuntimeParent, towerDebugSpawner);
-            WireCompositionRootBuildSystem(compositionRoot, worldSelectionController, buildBarPresenter, buildNodeVisualCoordinator, towerDetailsPresenter);
+            WireCompositionRootBuildSystem(compositionRoot, worldSelectionController, buildBarPresenter, buildNodeVisualCoordinator, playerBuildNodeProximity, towerDetailsPresenter);
             WireCompositionRootVfxSystem(compositionRoot, vfxRuntimeParent);
             WireCompositionRootAudioSystem(compositionRoot, audioService);
             WireCompositionRootGameFlowUI(compositionRoot, gameHUDPresenter, gameStateUIController);
 
+            SceneServicesHostScaffolder.EnsureInActiveScene(includeSaveDebugControls: false);
+
             EditorSceneManager.SaveScene(scene, LevelScenePath);
 
             Debug.Log("[AlienDefense Setup] Saved scene skeleton to " + LevelScenePath + ".");
+        }
+
+        /// <summary>Order matters: index 0/1/2 map 1:1 to BuildBar's 3 fixed buttons (Blaster/Frost/Mortar =
+        /// "Súng trụ"/"Dao Băng"/"Cối").</summary>
+        private static TowerDefinition[] CombineTowerCatalog(TowerDefinition[] basicTowers, TowerDefinition[] advancedTowers)
+        {
+            var combined = new TowerDefinition[basicTowers.Length + advancedTowers.Length];
+            basicTowers.CopyTo(combined, 0);
+            advancedTowers.CopyTo(combined, basicTowers.Length);
+            return combined;
+        }
+
+        /// <summary>Rewires an already-built Level_01 scene's BuildBarPresenter to the current 3-tower catalog
+        /// (Blaster/Frost/Mortar) without touching anything else in the scene — unlike "4. Build Level_01 Scene
+        /// Skeleton", which regenerates the whole scene from scratch and would discard manual wiring/placement.
+        /// Requires Level_01 to be the currently open scene. Save the scene (Ctrl+S) after running this.</summary>
+        [MenuItem("AlienDefense/Setup/25. Update Existing Scene's BuildBar To 3-Tower Catalog")]
+        public static void UpdateOpenSceneBuildBarTowerCatalog()
+        {
+            var presenter = Object.FindFirstObjectByType<BuildBarPresenter>(FindObjectsInactive.Include);
+            if (presenter == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No BuildBarPresenter found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            TowerDefinition[] towerDefinitions = CombineTowerCatalog(TowerPrefabBuilder.LoadAll(), AdvancedTowerPrefabBuilder.LoadAll());
+
+            var serialized = new SerializedObject(presenter);
+            SerializedProperty definitionsProperty = serialized.FindProperty("_towerDefinitions");
+            definitionsProperty.arraySize = towerDefinitions.Length;
+            for (int i = 0; i < towerDefinitions.Length; i++)
+            {
+                definitionsProperty.GetArrayElementAtIndex(i).objectReferenceValue = towerDefinitions[i];
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorSceneManager.MarkSceneDirty(presenter.gameObject.scene);
+
+            Debug.Log("[AlienDefense Setup] BuildBarPresenter now points at Blaster/Frost/Mortar. Save the scene (Ctrl+S) to keep this.");
+        }
+
+        /// <summary>LevelBounds (used to clamp both Player and TopDownCameraController on the XZ plane) was left at
+        /// its scaffolded default (center 0,0 / extents 25,25) from when the level still had a small placeholder
+        /// ground. After the bigger Polytope Studio terrain + "colliders" boundary walls were added, the Player
+        /// could sit outside that old rectangle — and PlayerMovement.ApplyMovement re-clamps to LevelBounds every
+        /// single frame (even with zero input), so the very first frame after entering Play snaps the Player back
+        /// inside the stale rectangle. This looks like "the Player jumps to a new position on Play".
+        /// Recomputes LevelBounds from the actual "colliders" boundary-wall GameObject already in the scene, so
+        /// re-running this after moving the walls keeps it correct. Requires Level_01 to be the currently open
+        /// scene. Save the scene (Ctrl+S) after running this.</summary>
+        [MenuItem("AlienDefense/Setup/26. Fix LevelBounds To Match Boundary Colliders")]
+        public static void FixLevelBoundsToMatchBoundaryColliders()
+        {
+            var cameraController = Object.FindFirstObjectByType<TopDownCameraController>(FindObjectsInactive.Include);
+            if (cameraController == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No TopDownCameraController found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            var levelBounds = new SerializedObject(cameraController).FindProperty("_levelBounds").objectReferenceValue as LevelBounds;
+            if (levelBounds == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] TopDownCameraController has no LevelBounds assigned; nothing to update.");
+                return;
+            }
+
+            GameObject collidersRoot = GameObject.Find("colliders");
+            if (collidersRoot == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No 'colliders' boundary GameObject found in the scene; leaving LevelBounds unchanged.");
+                return;
+            }
+
+            Bounds combined = default;
+            bool hasBounds = false;
+            foreach (Collider boundaryCollider in collidersRoot.GetComponentsInChildren<Collider>())
+            {
+                if (!hasBounds)
+                {
+                    combined = boundaryCollider.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    combined.Encapsulate(boundaryCollider.bounds);
+                }
+            }
+
+            if (!hasBounds)
+            {
+                Debug.LogWarning("[AlienDefense Setup] 'colliders' has no Collider components; leaving LevelBounds unchanged.");
+                return;
+            }
+
+            // Pull the usable rectangle in a little from the wall colliders' own outer face so the Player/camera
+            // don't clip into the boundary wall mesh.
+            const float inwardPadding = 2f;
+            var center = new Vector2(combined.center.x, combined.center.z);
+            var extents = new Vector2(
+                Mathf.Max(1f, combined.extents.x - inwardPadding),
+                Mathf.Max(1f, combined.extents.z - inwardPadding));
+
+            var boundsSerialized = new SerializedObject(levelBounds);
+            boundsSerialized.FindProperty("_center").vector2Value = center;
+            boundsSerialized.FindProperty("_extents").vector2Value = extents;
+            boundsSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(levelBounds.gameObject.scene);
+
+            Debug.Log($"[AlienDefense Setup] LevelBounds updated to center=({center.x:0.#}, {center.y:0.#}) extents=({extents.x:0.#}, {extents.y:0.#}), matching the 'colliders' boundary walls. Save the scene (Ctrl+S) to keep this.");
+        }
+
+        // Captured from a Play Mode Inspector screenshot 2026-08-14 — the spot on the new terrain the UFO should
+        // start at. Y is set for edit-mode visual placement only: PlayerMovement.Initialize() always overwrites
+        // Y to PlayerDefinition.HoverHeight (currently 1.5) the instant Play starts, so this Y has no runtime effect.
+        private static readonly Vector3 PlayerFixedStartPosition = new Vector3(51.39f, 4.67f, 62.72f);
+        private static readonly Vector3 PlayerFixedStartEulerRotation = new Vector3(0f, -85.838f, 0f);
+
+        /// <summary>Sets the Player GameObject's edit-mode Transform to the position/rotation from the given
+        /// screenshot. Must run OUTSIDE Play Mode — Unity discards Transform edits made during Play once you stop,
+        /// so running this while Playing would silently do nothing useful.</summary>
+        [MenuItem("AlienDefense/Setup/27. Set Player Start Position")]
+        public static void SetPlayerStartPosition()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[AlienDefense Setup] Exit Play Mode first (Transform changes made while Playing are discarded on Stop), then run this again.");
+                return;
+            }
+
+            var playerController = Object.FindFirstObjectByType<PlayerController>(FindObjectsInactive.Include);
+            if (playerController == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No Player found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            Transform playerTransform = playerController.transform;
+            Undo.RecordObject(playerTransform, "Set Player Start Position");
+            playerTransform.position = PlayerFixedStartPosition;
+            playerTransform.rotation = Quaternion.Euler(PlayerFixedStartEulerRotation);
+
+            EditorSceneManager.MarkSceneDirty(playerTransform.gameObject.scene);
+            Debug.Log("[AlienDefense Setup] Player start Transform set to " + PlayerFixedStartPosition + ", rotation Y=" + PlayerFixedStartEulerRotation.y + ". Save the scene (Ctrl+S) to keep this.");
+        }
+
+        /// <summary>Yaws the whole follow-camera composition -90° around world Y: rotates
+        /// TopDownCameraController's _positionOffset (so it orbits the target from a different compass direction)
+        /// and the assigned camera Transform's own rotation by the same amount (so its pitch/tilt stays identical,
+        /// just viewed from the new side) — rather than hand-picking new numbers, this always derives an exact
+        /// result from whatever the current offset/rotation happen to be. Must run OUTSIDE Play Mode; component
+        /// edits made while Playing are discarded on Stop.</summary>
+        [MenuItem("AlienDefense/Setup/28. Rotate Camera Follow Angle By -90")]
+        public static void RotateCameraFollowAngleByMinus90()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[AlienDefense Setup] Exit Play Mode first (component edits made while Playing are discarded on Stop), then run this again.");
+                return;
+            }
+
+            var cameraController = Object.FindFirstObjectByType<TopDownCameraController>(FindObjectsInactive.Include);
+            if (cameraController == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No TopDownCameraController found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            var serialized = new SerializedObject(cameraController);
+            SerializedProperty offsetProperty = serialized.FindProperty("_positionOffset");
+            var cameraTransform = serialized.FindProperty("_cameraTransform").objectReferenceValue as Transform;
+
+            Quaternion yaw = Quaternion.Euler(0f, -90f, 0f);
+            Undo.RecordObject(cameraController, "Rotate Camera Follow Angle");
+            offsetProperty.vector3Value = yaw * offsetProperty.vector3Value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            if (cameraTransform != null)
+            {
+                Undo.RecordObject(cameraTransform, "Rotate Camera Follow Angle");
+                cameraTransform.localRotation = yaw * cameraTransform.localRotation;
+            }
+            else
+            {
+                Debug.LogWarning("[AlienDefense Setup] TopDownCameraController has no Camera Transform assigned; only _positionOffset was rotated.");
+            }
+
+            EditorSceneManager.MarkSceneDirty(cameraController.gameObject.scene);
+            Debug.Log("[AlienDefense Setup] Camera follow angle rotated -90° around Y. Save the scene (Ctrl+S) to keep this.");
         }
 
         private static PlayerDefinition WirePlayerDefinitionProjectile(PlayerDefinition playerDefinition, ProjectileDefinition projectileDefinition)
@@ -163,29 +361,30 @@ namespace AlienDefense.EditorTools
             return AssetDatabase.LoadAssetAtPath<LevelDefinition>(LevelDefinitionPath);
         }
 
-        private static LevelCompositionRoot BuildCompositionRoot()
+        private static (LevelCompositionRoot compositionRoot, BackNavigationController backNavigation) BuildCompositionRoot()
         {
             LevelDefinition levelDefinition = AssetDatabase.LoadAssetAtPath<LevelDefinition>(LevelDefinitionPath);
 
             var rootObject = new GameObject("CompositionRoot");
             var compositionRoot = rootObject.AddComponent<LevelCompositionRoot>();
+            var backNavigation = rootObject.AddComponent<BackNavigationController>();
 
             var serializedRoot = new SerializedObject(compositionRoot);
             serializedRoot.Update();
-            serializedRoot.FindProperty("_levelDefinition").objectReferenceValue = levelDefinition;
+            serializedRoot.FindProperty("_developmentLevelDefinition").objectReferenceValue = levelDefinition;
             serializedRoot.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(compositionRoot);
 
             var verifyRoot = new SerializedObject(compositionRoot);
-            if (verifyRoot.FindProperty("_levelDefinition").objectReferenceValue == null)
+            if (verifyRoot.FindProperty("_developmentLevelDefinition").objectReferenceValue == null)
             {
                 string assetName = levelDefinition != null ? levelDefinition.name : "the LevelDefinition asset";
-                Debug.LogError("[AlienDefense Setup] CompositionRoot's Level Definition failed to wire. " +
+                Debug.LogError("[AlienDefense Setup] CompositionRoot's Development Level Definition failed to wire. " +
                     "Select CompositionRoot in the Hierarchy and drag " + assetName +
-                    " into the Level Definition field manually, then save the scene.", rootObject);
+                    " into the Development Level Definition field manually, then save the scene.", rootObject);
             }
 
-            return compositionRoot;
+            return (compositionRoot, backNavigation);
         }
 
         private static GameObject BuildPlayer(GameObject playerPrefab, PlayerDefinition playerDefinition)
@@ -333,7 +532,7 @@ namespace AlienDefense.EditorTools
             return path;
         }
 
-        private static (Transform enemies, Transform projectiles, Transform towers, Transform vfx) BuildRuntimeContainers()
+        private static (Transform enemies, Transform projectiles, Transform towers, Transform vfx, Transform energyPickups) BuildRuntimeContainers()
         {
             var runtime = new GameObject("Runtime");
 
@@ -349,7 +548,10 @@ namespace AlienDefense.EditorTools
             var vfx = new GameObject("VFX");
             vfx.transform.SetParent(runtime.transform, false);
 
-            return (enemies.transform, projectiles.transform, towers.transform, vfx.transform);
+            var energyPickups = new GameObject("EnergyPickups");
+            energyPickups.transform.SetParent(runtime.transform, false);
+
+            return (enemies.transform, projectiles.transform, towers.transform, vfx.transform, energyPickups.transform);
         }
 
         private static BuildNode[] BuildBuildNodes(GameObject buildNodePrefab)
@@ -376,7 +578,8 @@ namespace AlienDefense.EditorTools
         }
 
         private static (EnemyDebugSpawner debugSpawner, WaveController waveController, WaveDebugControls waveDebugControls, TowerDebugSpawner towerDebugSpawner,
-            WorldSelectionController worldSelectionController, BuildNodeVisualCoordinator buildNodeVisualCoordinator) BuildSystems(
+            WorldSelectionController worldSelectionController, BuildNodeVisualCoordinator buildNodeVisualCoordinator,
+            PlayerBuildNodeProximityController playerBuildNodeProximity) BuildSystems(
             EnemyDefinition debugDefinition, EnemyPath3D path, TowerDefinition towerDefinition, Transform towerSpawnPoint,
             Transform cameraTransform, BuildNode[] buildNodes)
         {
@@ -451,30 +654,26 @@ namespace AlienDefense.EditorTools
             }
             serializedCoordinator.ApplyModifiedPropertiesWithoutUndo();
 
-            return (spawner, waveController, waveDebugControls, towerSpawner, worldSelectionController, buildNodeVisualCoordinator);
+            var proximityObject = new GameObject("PlayerBuildNodeProximityController");
+            proximityObject.transform.SetParent(systems.transform, false);
+            var playerBuildNodeProximity = proximityObject.AddComponent<PlayerBuildNodeProximityController>();
+
+            var serializedProximity = new SerializedObject(playerBuildNodeProximity);
+            SerializedProperty proximityNodesProperty = serializedProximity.FindProperty("_nodes");
+            proximityNodesProperty.arraySize = buildNodes.Length;
+            for (int i = 0; i < buildNodes.Length; i++)
+            {
+                proximityNodesProperty.GetArrayElementAtIndex(i).objectReferenceValue = buildNodes[i];
+            }
+            serializedProximity.ApplyModifiedPropertiesWithoutUndo();
+
+            return (spawner, waveController, waveDebugControls, towerSpawner, worldSelectionController, buildNodeVisualCoordinator, playerBuildNodeProximity);
         }
 
-        private static (BuildBarPresenter buildBarPresenter, TowerDetailsPresenter towerDetailsPresenter, GameHUDPresenter gameHUDPresenter, GameStateUIController gameStateUIController) BuildCanvas(WaveController waveController, TowerDefinition[] towerDefinitions)
+        private static (BuildBarPresenter buildBarPresenter, TowerDetailsPresenter towerDetailsPresenter, GameHUDPresenter gameHUDPresenter, GameStateUIController gameStateUIController) BuildCanvas(WaveController waveController, TowerDefinition[] towerDefinitions, BackNavigationController backNavigation)
         {
-            var canvasObject = new GameObject("Canvas");
-            var canvas = canvasObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            var scaler = canvasObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080f, 1920f);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
-
-            canvasObject.AddComponent<GraphicRaycaster>();
-
-            var safeAreaObject = new GameObject("SafeArea", typeof(RectTransform), typeof(SafeAreaFitter));
-            safeAreaObject.transform.SetParent(canvasObject.transform, false);
-            var safeAreaRect = safeAreaObject.GetComponent<RectTransform>();
-            safeAreaRect.anchorMin = Vector2.zero;
-            safeAreaRect.anchorMax = Vector2.one;
-            safeAreaRect.offsetMin = Vector2.zero;
-            safeAreaRect.offsetMax = Vector2.zero;
+            (GameObject _, Transform safeArea) = EditorCanvasUtility.BuildCanvasWithSafeArea("Canvas");
+            GameObject safeAreaObject = safeArea.gameObject;
 
             var topHUD = new GameObject("TopHUD", typeof(RectTransform));
             topHUD.transform.SetParent(safeAreaObject.transform, false);
@@ -514,15 +713,16 @@ namespace AlienDefense.EditorTools
             TowerDetailsPresenter towerDetailsPresenter = BuildTowerDetailsPanel(gameplayInteractionObject.transform);
 
             PausePanelView pausePanelView = BuildPausePanel(safeAreaObject.transform);
-            GameResultView victoryResultView = BuildGameResultPanel(safeAreaObject.transform, "VictoryPanel", "Victory!", new Color(0.3f, 0.85f, 0.35f));
-            GameResultView defeatResultView = BuildGameResultPanel(safeAreaObject.transform, "DefeatPanel", "Defeat", new Color(0.85f, 0.3f, 0.3f));
+            GameResultView victoryResultView = BuildGameResultPanel(safeAreaObject.transform, "VictoryPanel", "Victory!", new Color(0.3f, 0.85f, 0.35f), includeNextLevelButton: true);
+            GameResultView defeatResultView = BuildGameResultPanel(safeAreaObject.transform, "DefeatPanel", "Defeat", new Color(0.85f, 0.3f, 0.3f), includeNextLevelButton: false);
 
             GameStateUIController gameStateUIController = BuildGameStateUIController(
                 safeAreaObject.transform,
                 pausePanelView.gameObject, pausePanelView,
                 victoryResultView.gameObject, victoryResultView,
                 defeatResultView.gameObject, defeatResultView,
-                gameplayInteractionGroup);
+                gameplayInteractionGroup,
+                backNavigation);
 
             return (buildBarPresenter, towerDetailsPresenter, gameHUDPresenter, gameStateUIController);
         }
@@ -559,7 +759,7 @@ namespace AlienDefense.EditorTools
             return view;
         }
 
-        private static TMP_Text CreateAnchoredTMPText(Transform parent, string name, string initialText,
+        internal static TMP_Text CreateAnchoredTMPText(Transform parent, string name, string initialText,
             Vector2 anchor, Vector2 anchoredPosition, Vector2 sizeDelta, float fontSize, TextAlignmentOptions alignment)
         {
             var textObject = new GameObject(name, typeof(RectTransform));
@@ -661,13 +861,13 @@ namespace AlienDefense.EditorTools
 
             Button resumeButton = BuildDetailsButton(panel.transform, "ResumeButton", "Resume", 0f, -140f, new Color(0.15f, 0.35f, 0.15f, 0.9f));
             Button restartButton = BuildDetailsButton(panel.transform, "RestartButton", "Restart", 0f, -250f, new Color(0.2f, 0.2f, 0.35f, 0.9f));
-            Button quitButton = BuildDetailsButton(panel.transform, "QuitButton", "Quit", 0f, -360f, new Color(0.3f, 0.1f, 0.1f, 0.9f));
+            Button mainMenuButton = BuildDetailsButton(panel.transform, "MainMenuButton", "Main Menu", 0f, -360f, new Color(0.3f, 0.1f, 0.1f, 0.9f));
 
             var view = panel.AddComponent<PausePanelView>();
             var serializedView = new SerializedObject(view);
             serializedView.FindProperty("_resumeButton").objectReferenceValue = resumeButton;
             serializedView.FindProperty("_restartButton").objectReferenceValue = restartButton;
-            serializedView.FindProperty("_quitButton").objectReferenceValue = quitButton;
+            serializedView.FindProperty("_mainMenuButton").objectReferenceValue = mainMenuButton;
             serializedView.ApplyModifiedPropertiesWithoutUndo();
 
             panel.SetActive(false);
@@ -675,7 +875,7 @@ namespace AlienDefense.EditorTools
             return view;
         }
 
-        private static GameResultView BuildGameResultPanel(Transform parent, string name, string titleText, Color accentColor)
+        private static GameResultView BuildGameResultPanel(Transform parent, string name, string titleText, Color accentColor, bool includeNextLevelButton)
         {
             var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(parent, false);
@@ -684,17 +884,27 @@ namespace AlienDefense.EditorTools
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(560f, 420f);
+            panelRect.sizeDelta = new Vector2(560f, 520f);
             panel.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 0.92f);
 
             TMP_Text title = CreateTMPText(panel.transform, "TitleText", titleText, -40f, 70f, 46f, TextAlignmentOptions.Center);
             title.color = accentColor;
 
-            Button restartButton = BuildDetailsButton(panel.transform, "RestartButton", "Restart", 0f, -220f, new Color(0.2f, 0.2f, 0.35f, 0.9f));
+            Button nextLevelButton = null;
+            if (includeNextLevelButton)
+            {
+                nextLevelButton = BuildDetailsButton(panel.transform, "NextLevelButton", "Next Level", 0f, -220f, new Color(0.15f, 0.35f, 0.15f, 0.9f));
+            }
+
+            float restartY = includeNextLevelButton ? -330f : -220f;
+            Button restartButton = BuildDetailsButton(panel.transform, "RestartButton", "Restart", 0f, restartY, new Color(0.2f, 0.2f, 0.35f, 0.9f));
+            Button levelSelectionButton = BuildDetailsButton(panel.transform, "LevelSelectionButton", "Level Selection", 0f, restartY - 110f, new Color(0.3f, 0.1f, 0.1f, 0.9f));
 
             var view = panel.AddComponent<GameResultView>();
             var serializedView = new SerializedObject(view);
             serializedView.FindProperty("_restartButton").objectReferenceValue = restartButton;
+            serializedView.FindProperty("_levelSelectionButton").objectReferenceValue = levelSelectionButton;
+            serializedView.FindProperty("_nextLevelButton").objectReferenceValue = nextLevelButton;
             serializedView.ApplyModifiedPropertiesWithoutUndo();
 
             panel.SetActive(false);
@@ -707,7 +917,8 @@ namespace AlienDefense.EditorTools
             GameObject pausePanel, PausePanelView pausePanelView,
             GameObject victoryPanel, GameResultView victoryResultView,
             GameObject defeatPanel, GameResultView defeatResultView,
-            CanvasGroup gameplayInteractionGroup)
+            CanvasGroup gameplayInteractionGroup,
+            BackNavigationController backNavigation)
         {
             var controllerObject = new GameObject("GameStateUIController");
             controllerObject.transform.SetParent(parent, false);
@@ -721,6 +932,7 @@ namespace AlienDefense.EditorTools
             serialized.FindProperty("_defeatPanel").objectReferenceValue = defeatPanel;
             serialized.FindProperty("_defeatResultView").objectReferenceValue = defeatResultView;
             serialized.FindProperty("_gameplayInteractionGroup").objectReferenceValue = gameplayInteractionGroup;
+            serialized.FindProperty("_backNavigation").objectReferenceValue = backNavigation;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return controller;
@@ -754,7 +966,7 @@ namespace AlienDefense.EditorTools
             return view;
         }
 
-        private static TMP_Text CreateTMPText(Transform parent, string name, string initialText, float yOffset, float height, float fontSize, TextAlignmentOptions alignment)
+        internal static TMP_Text CreateTMPText(Transform parent, string name, string initialText, float yOffset, float height, float fontSize, TextAlignmentOptions alignment)
         {
             var textObject = new GameObject(name, typeof(RectTransform));
             textObject.transform.SetParent(parent, false);
@@ -774,7 +986,7 @@ namespace AlienDefense.EditorTools
             return text;
         }
 
-        private static Image BuildProgressBar(Transform parent, float yOffset)
+        internal static Image BuildProgressBar(Transform parent, float yOffset)
         {
             var background = new GameObject("WaveProgressBar", typeof(RectTransform), typeof(Image));
             background.transform.SetParent(parent, false);
@@ -1047,7 +1259,7 @@ namespace AlienDefense.EditorTools
             return presenter;
         }
 
-        private static Button BuildDetailsButton(Transform parent, string name, string label, float x, float y, Color color)
+        internal static Button BuildDetailsButton(Transform parent, string name, string label, float x, float y, Color color)
         {
             var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
@@ -1064,11 +1276,12 @@ namespace AlienDefense.EditorTools
             return buttonObject.GetComponent<Button>();
         }
 
-        private static void BuildEventSystem()
+        internal static GameObject BuildEventSystem()
         {
             var eventSystemObject = new GameObject("EventSystem");
             eventSystemObject.AddComponent<EventSystem>();
             eventSystemObject.AddComponent<InputSystemUIInputModule>();
+            return eventSystemObject;
         }
 
         private static AudioService BuildAudioService()
@@ -1120,6 +1333,272 @@ namespace AlienDefense.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static void WirePlayerCameraTransform(GameObject playerInstance, Transform cameraTransform)
+        {
+            var playerController = playerInstance.GetComponent<PlayerController>();
+            if (playerController == null || cameraTransform == null)
+            {
+                return;
+            }
+
+            var serialized = new SerializedObject(playerController);
+            serialized.FindProperty("_cameraTransform").objectReferenceValue = cameraTransform;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Wires the already-open scene's Player to the follow camera for camera-relative joystick input
+        /// (see PlayerMovement.ComputeWorldDirection). Needed on scenes built before this field existed. Must run
+        /// OUTSIDE Play Mode; component edits made while Playing are discarded on Stop.</summary>
+        [MenuItem("AlienDefense/Setup/29. Wire Player's Joystick To Camera-Relative Movement")]
+        public static void WirePlayerCameraRelativeMovement()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[AlienDefense Setup] Exit Play Mode first (component edits made while Playing are discarded on Stop), then run this again.");
+                return;
+            }
+
+            var playerController = Object.FindFirstObjectByType<PlayerController>(FindObjectsInactive.Include);
+            if (playerController == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No Player found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            var cameraController = Object.FindFirstObjectByType<TopDownCameraController>(FindObjectsInactive.Include);
+            var cameraTransform = cameraController != null
+                ? new SerializedObject(cameraController).FindProperty("_cameraTransform").objectReferenceValue as Transform
+                : null;
+
+            if (cameraTransform == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No TopDownCameraController/Camera Transform found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            var serialized = new SerializedObject(playerController);
+            serialized.FindProperty("_cameraTransform").objectReferenceValue = cameraTransform;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(playerController.gameObject.scene);
+            Debug.Log("[AlienDefense Setup] Player's joystick input is now camera-relative. Save the scene (Ctrl+S) to keep this.");
+        }
+
+        /// <summary>Two independent fixes for the active EnemyPath3D (see comments below): (1) its parent
+        /// Transform currently carries a stray ~-87° Y rotation, which makes every waypoint's Inspector position
+        /// values confusing to reason about / drag by hand — this is un-rotated using Unity's own world-position
+        /// getter/setter so no waypoint actually moves. (2) A single empty waypoint is inserted at the midpoint of
+        /// every existing segment, giving enough points to drag into a curve that hugs the terrain's dirt road —
+        /// tracing that road's exact shape needs eyes on the live Scene view, which isn't something derivable from
+        /// a screenshot, so this tool prepares the points rather than guessing their final position. Must run
+        /// OUTSIDE Play Mode; hierarchy/component edits made while Playing are discarded on Stop.</summary>
+        [MenuItem("AlienDefense/Setup/30. Fix EnemyPath Rotation And Add Curve Points")]
+        public static void FixEnemyPathRotationAndAddCurvePoints()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[AlienDefense Setup] Exit Play Mode first (hierarchy/component edits made while Playing are discarded on Stop), then run this again.");
+                return;
+            }
+
+            var path = Object.FindFirstObjectByType<EnemyPath3D>(FindObjectsInactive.Include);
+            if (path == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No EnemyPath3D found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            Transform pathTransform = path.transform;
+            var serializedPath = new SerializedObject(path);
+            SerializedProperty waypointsProperty = serializedPath.FindProperty("_waypoints");
+
+            int originalCount = waypointsProperty.arraySize;
+            if (originalCount < 2)
+            {
+                Debug.LogWarning("[AlienDefense Setup] EnemyPath3D has fewer than 2 waypoints; nothing to update.");
+                return;
+            }
+
+            var originalWaypoints = new Transform[originalCount];
+            for (int i = 0; i < originalCount; i++)
+            {
+                originalWaypoints[i] = waypointsProperty.GetArrayElementAtIndex(i).objectReferenceValue as Transform;
+                if (originalWaypoints[i] == null)
+                {
+                    Debug.LogWarning($"[AlienDefense Setup] EnemyPath3D waypoint index {i} is missing/null; aborting to avoid a broken path.");
+                    return;
+                }
+            }
+
+            // (1) Un-rotate the path container without moving any waypoint in world space.
+            if (pathTransform.rotation != Quaternion.identity)
+            {
+                var worldPositions = new Vector3[originalCount];
+                for (int i = 0; i < originalCount; i++)
+                {
+                    worldPositions[i] = originalWaypoints[i].position;
+                }
+
+                Undo.RecordObject(pathTransform, "Fix EnemyPath Rotation");
+                pathTransform.rotation = Quaternion.identity;
+
+                for (int i = 0; i < originalCount; i++)
+                {
+                    Undo.RecordObject(originalWaypoints[i], "Fix EnemyPath Rotation");
+                    originalWaypoints[i].position = worldPositions[i];
+                }
+            }
+
+            // (2) Insert one empty waypoint at the midpoint of every existing segment.
+            var newWaypoints = new System.Collections.Generic.List<Transform>();
+            for (int i = 0; i < originalCount; i++)
+            {
+                newWaypoints.Add(originalWaypoints[i]);
+                if (i + 1 < originalCount)
+                {
+                    Vector3 midpoint = Vector3.Lerp(originalWaypoints[i].position, originalWaypoints[i + 1].position, 0.5f);
+                    var midObject = new GameObject("Waypoint_Mid");
+                    Undo.RegisterCreatedObjectUndo(midObject, "Fix EnemyPath Rotation");
+                    midObject.transform.SetParent(pathTransform, false);
+                    midObject.transform.position = midpoint;
+                    newWaypoints.Add(midObject.transform);
+                }
+            }
+
+            for (int i = 0; i < newWaypoints.Count; i++)
+            {
+                newWaypoints[i].name = i == newWaypoints.Count - 1 ? "Waypoint_End" : $"Waypoint_{i:00}";
+                newWaypoints[i].SetSiblingIndex(i);
+            }
+
+            waypointsProperty.arraySize = newWaypoints.Count;
+            for (int i = 0; i < newWaypoints.Count; i++)
+            {
+                waypointsProperty.GetArrayElementAtIndex(i).objectReferenceValue = newWaypoints[i];
+            }
+            serializedPath.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(pathTransform.gameObject.scene);
+            Debug.Log($"[AlienDefense Setup] EnemyPath rotation fixed (no waypoint moved) and {newWaypoints.Count - originalCount} extra waypoint(s) inserted " +
+                $"({newWaypoints.Count} total: {string.Join(", ", newWaypoints.ConvertAll(t => t.name))}). Drag each one in the Scene view onto the dirt road, in order, then save the scene (Ctrl+S).");
+        }
+
+        /// <summary>Adds PlayerBuildNodeProximityController to the already-open scene (built before this feature
+        /// existed): flying the Player onto a BuildNode now does exactly what tapping it does — build the
+        /// selected tower on an empty node, or open TowerDetailsPanel on an occupied one. Reuses the exact same
+        /// BuildNode list already wired on BuildNodeVisualCoordinator. Must run OUTSIDE Play Mode; hierarchy/
+        /// component edits made while Playing are discarded on Stop.</summary>
+        [MenuItem("AlienDefense/Setup/31. Add Player-Proximity BuildNode Interaction")]
+        public static void AddPlayerBuildNodeProximityInteraction()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[AlienDefense Setup] Exit Play Mode first (hierarchy/component edits made while Playing are discarded on Stop), then run this again.");
+                return;
+            }
+
+            var compositionRoot = Object.FindFirstObjectByType<LevelCompositionRoot>(FindObjectsInactive.Include);
+            if (compositionRoot == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No LevelCompositionRoot found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            var playerController = Object.FindFirstObjectByType<PlayerController>(FindObjectsInactive.Include);
+            var coordinator = Object.FindFirstObjectByType<BuildNodeVisualCoordinator>(FindObjectsInactive.Include);
+            if (playerController == null || coordinator == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No Player and/or BuildNodeVisualCoordinator found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            var existing = Object.FindFirstObjectByType<PlayerBuildNodeProximityController>(FindObjectsInactive.Include);
+            if (existing == null)
+            {
+                var systemsParent = coordinator.transform.parent;
+                var proximityObject = new GameObject("PlayerBuildNodeProximityController");
+                Undo.RegisterCreatedObjectUndo(proximityObject, "Add Player-Proximity BuildNode Interaction");
+                if (systemsParent != null)
+                {
+                    proximityObject.transform.SetParent(systemsParent, false);
+                }
+
+                existing = proximityObject.AddComponent<PlayerBuildNodeProximityController>();
+            }
+
+            SerializedProperty coordinatorNodesProperty = new SerializedObject(coordinator).FindProperty("_nodes");
+            var serializedProximity = new SerializedObject(existing);
+            SerializedProperty proximityNodesProperty = serializedProximity.FindProperty("_nodes");
+            proximityNodesProperty.arraySize = coordinatorNodesProperty.arraySize;
+            for (int i = 0; i < coordinatorNodesProperty.arraySize; i++)
+            {
+                proximityNodesProperty.GetArrayElementAtIndex(i).objectReferenceValue =
+                    coordinatorNodesProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+            }
+            serializedProximity.ApplyModifiedPropertiesWithoutUndo();
+
+            var serializedRoot = new SerializedObject(compositionRoot);
+            serializedRoot.FindProperty("_playerBuildNodeProximity").objectReferenceValue = existing;
+            serializedRoot.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(compositionRoot.gameObject.scene);
+            Debug.Log("[AlienDefense Setup] Flying the Player onto a BuildNode now builds/opens details just like tapping it. Save the scene (Ctrl+S) to keep this.");
+        }
+
+        /// <summary>Adds the Enemy-kill → EnergyPickup → UFO-collects → Wallet/XP loop to the already-open scene
+        /// (built before this refactor existed): creates/loads the EnergyPickup prefab, creates a runtime parent
+        /// for pooled instances next to the existing Enemies/Projectiles/VFX containers, and wires both onto
+        /// LevelCompositionRoot. Environment Prop absorption needs no scene wiring — LevelCompositionRoot already
+        /// collects every TractorAbsorbableProp in the scene itself at level start; use "Tools/Alien Defense/
+        /// Tractor Beam/Mark Selected As Absorbable" to actually mark props first. Must run OUTSIDE Play Mode.</summary>
+        [MenuItem("AlienDefense/Setup/33. Wire Energy Pickup Economy Into Existing Scene")]
+        public static void WireEnergyEconomyIntoExistingScene()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[AlienDefense Setup] Exit Play Mode first (hierarchy/component edits made while Playing are discarded on Stop), then run this again.");
+                return;
+            }
+
+            var compositionRoot = Object.FindFirstObjectByType<LevelCompositionRoot>(FindObjectsInactive.Include);
+            if (compositionRoot == null)
+            {
+                Debug.LogWarning("[AlienDefense Setup] No LevelCompositionRoot found in the currently open scene; nothing to update.");
+                return;
+            }
+
+            EnergyPickupController energyPickupPrefab = EnergyPickupPrefabBuilder.CreateOrLoadPrefab();
+
+            GameObject runtimeContainer = GameObject.Find("Runtime");
+            Transform energyPickupParent;
+            Transform existingParent = runtimeContainer != null ? runtimeContainer.transform.Find("EnergyPickups") : null;
+            if (existingParent != null)
+            {
+                energyPickupParent = existingParent;
+            }
+            else
+            {
+                var energyPickupsObject = new GameObject("EnergyPickups");
+                Undo.RegisterCreatedObjectUndo(energyPickupsObject, "Wire Energy Pickup Economy");
+                if (runtimeContainer != null)
+                {
+                    energyPickupsObject.transform.SetParent(runtimeContainer.transform, false);
+                }
+
+                energyPickupParent = energyPickupsObject.transform;
+            }
+
+            var serialized = new SerializedObject(compositionRoot);
+            serialized.FindProperty("_energyPickupPrefab").objectReferenceValue = energyPickupPrefab;
+            serialized.FindProperty("_energyPickupRuntimeParent").objectReferenceValue = energyPickupParent;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(compositionRoot.gameObject.scene);
+            Debug.Log("[AlienDefense Setup] Energy Pickup economy wired: Tower kills will now drop a pickup the UFO must tractor-beam in " +
+                "to grant Energy/XP. Save the scene (Ctrl+S) to keep this. Remember to mark some Environment Props absorbable via " +
+                "Tools/Alien Defense/Tractor Beam/Mark Selected As Absorbable if you want that part active too.");
+        }
+
         private static void WireCompositionRootPlayer(LevelCompositionRoot compositionRoot, GameObject playerInstance)
         {
             var playerController = playerInstance.GetComponent<PlayerController>();
@@ -1148,14 +1627,36 @@ namespace AlienDefense.EditorTools
 
         private static void WireCompositionRootCombatSystem(
             LevelCompositionRoot compositionRoot,
-            GameObject playerInstance,
             Transform projectileRuntimeParent)
         {
-            var autoAttack = playerInstance.GetComponent<PlayerAutoAttack>();
+            var serialized = new SerializedObject(compositionRoot);
+            serialized.FindProperty("_projectileRuntimeParent").objectReferenceValue = projectileRuntimeParent;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Wires the UFO's continuous tractor beam (Controller + Visual, both live on the prefab's
+        /// TractorBeamRoot) into the level's CompositionRoot.</summary>
+        private static void WireCompositionRootTractorBeamSystem(LevelCompositionRoot compositionRoot, GameObject playerInstance)
+        {
+            var beamController = playerInstance.GetComponentInChildren<AlienDefense.Player.UFOTractorBeamController>(true);
+            var beamVisual = playerInstance.GetComponentInChildren<AlienDefense.Player.UFOTractorBeamVisual>(true);
 
             var serialized = new SerializedObject(compositionRoot);
-            serialized.FindProperty("_playerAutoAttack").objectReferenceValue = autoAttack;
-            serialized.FindProperty("_projectileRuntimeParent").objectReferenceValue = projectileRuntimeParent;
+            serialized.FindProperty("_tractorBeamController").objectReferenceValue = beamController;
+            serialized.FindProperty("_tractorBeamVisual").objectReferenceValue = beamVisual;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Wires the Enemy-kill → EnergyPickup → UFO-collects → Wallet/XP loop. The Environment Prop
+        /// side needs no scene wiring here — LevelCompositionRoot.InitializeEnvironmentPropSystem collects every
+        /// TractorAbsorbableProp in the scene itself at level start (see that method's doc comment).</summary>
+        private static void WireCompositionRootEnergyEconomySystem(LevelCompositionRoot compositionRoot, Transform energyPickupRuntimeParent)
+        {
+            EnergyPickupController energyPickupPrefab = EnergyPickupPrefabBuilder.CreateOrLoadPrefab();
+
+            var serialized = new SerializedObject(compositionRoot);
+            serialized.FindProperty("_energyPickupPrefab").objectReferenceValue = energyPickupPrefab;
+            serialized.FindProperty("_energyPickupRuntimeParent").objectReferenceValue = energyPickupRuntimeParent;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -1186,12 +1687,14 @@ namespace AlienDefense.EditorTools
             WorldSelectionController worldSelectionController,
             BuildBarPresenter buildBarPresenter,
             BuildNodeVisualCoordinator buildNodeVisualCoordinator,
+            PlayerBuildNodeProximityController playerBuildNodeProximity,
             TowerDetailsPresenter towerDetailsPresenter)
         {
             var serialized = new SerializedObject(compositionRoot);
             serialized.FindProperty("_worldSelectionController").objectReferenceValue = worldSelectionController;
             serialized.FindProperty("_buildBarPresenter").objectReferenceValue = buildBarPresenter;
             serialized.FindProperty("_buildNodeVisualCoordinator").objectReferenceValue = buildNodeVisualCoordinator;
+            serialized.FindProperty("_playerBuildNodeProximity").objectReferenceValue = playerBuildNodeProximity;
             serialized.FindProperty("_towerDetailsPresenter").objectReferenceValue = towerDetailsPresenter;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }

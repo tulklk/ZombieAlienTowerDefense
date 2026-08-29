@@ -104,7 +104,7 @@ namespace AlienDefense.Tests.EditMode
 
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();
-            controller.Initialize(definition, null, null, gameFlow);
+            controller.Initialize(definition, null, null, null, gameFlow);
             controller.RegisterInvestment(75);
 
             return controller;

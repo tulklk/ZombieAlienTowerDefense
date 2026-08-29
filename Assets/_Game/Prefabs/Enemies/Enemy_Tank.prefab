@@ -439,6 +439,8 @@ GameObject:
   - component: {fileID: 8351104841123127574}
   - component: {fileID: 4824288359572252285}
   - component: {fileID: 3875839926730969246}
+  - component: {fileID: 6065474066723633406}
+  - component: {fileID: 6881074357880099418}
   m_Layer: 10
   m_Name: Enemy_Tank
   m_TagString: Untagged
@@ -527,3 +529,35 @@ MonoBehaviour:
   _movement: {fileID: 4824288359572252285}
   _targetPoint: {fileID: 8976703914233964262}
   _healthBarView: {fileID: 6601325845664338442}
+  _defense: {fileID: 0}
+  _shield: {fileID: 0}
+  _statusController: {fileID: 6065474066723633406}
+  _bossController: {fileID: 0}
+  _captureController: {fileID: 6881074357880099418}
+--- !u!114 &6065474066723633406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9077707574343960434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53beb792ae3c7d7429b13fa88e78148b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyStatusController
+  _movement: {fileID: 4824288359572252285}
+  _health: {fileID: 8351104841123127574}
+--- !u!114 &6881074357880099418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9077707574343960434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19e4b7ea2973dea4681df46ccd7881d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyCaptureController
+  _visualRoot: {fileID: 4660342706717254187}

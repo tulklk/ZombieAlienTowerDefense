@@ -72,7 +72,7 @@ namespace AlienDefense.Tests.EditMode
         {
             var runtimeParent = new GameObject("TowerRuntimeParent");
             _spawnedObjects.Add(runtimeParent);
-            return new TowerFactory(runtimeParent.transform, new EnemyRegistry(), null, null);
+            return new TowerFactory(runtimeParent.transform, new EnemyRegistry(), null, null, null);
         }
 
         /// <summary>Builds a tower and assigns it to a node the same way BuildService would, including investment.</summary>
@@ -108,7 +108,7 @@ namespace AlienDefense.Tests.EditMode
             SetPrivateField(definition, "_levels", new[] { level });
             SetPrivateField(definition, "_sellPercentage", sellPercentage);
 
-            controller.Initialize(definition, null, null, CreatePreparingWaveGameFlow());
+            controller.Initialize(definition, null, null, null, CreatePreparingWaveGameFlow());
             controller.RegisterInvestment(buildCost);
 
             BuildNode node = CreateBuildNode();
@@ -259,7 +259,7 @@ namespace AlienDefense.Tests.EditMode
             SetPrivateField(level, "_attacksPerSecond", 1f);
             SetPrivateField(level, "_turretRotationSpeed", 360f);
             SetPrivateField(definition, "_levels", new[] { level });
-            controller.Initialize(definition, null, null, CreatePreparingWaveGameFlow());
+            controller.Initialize(definition, null, null, null, CreatePreparingWaveGameFlow());
             // Deliberately not calling SetBuildNodeOwner.
 
             var economy = new EconomyService(0);

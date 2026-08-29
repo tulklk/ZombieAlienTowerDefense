@@ -83,7 +83,7 @@ namespace AlienDefense.Tests.PlayMode
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();
             gameFlow.BeginPlayingWave();
-            controller.Initialize(definition, new EnemyRegistry(), CreateProjectileFactory(out _), gameFlow);
+            controller.Initialize(definition, new EnemyRegistry(), CreateProjectileFactory(out _), null, gameFlow);
 
             return controller;
         }

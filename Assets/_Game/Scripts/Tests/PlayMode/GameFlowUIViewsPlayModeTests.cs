@@ -71,7 +71,7 @@ namespace AlienDefense.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator PausePanelView_ResumeAndRestartClicks_FireEvents_QuitButtonIsDisabled()
+        public IEnumerator PausePanelView_ResumeRestartAndMainMenuClicks_FireEvents()
         {
             var go = new GameObject("TestPausePanelView");
             go.SetActive(false);
@@ -80,29 +80,32 @@ namespace AlienDefense.Tests.PlayMode
             var view = go.AddComponent<PausePanelView>();
             Button resumeButton = CreateChildButton(go.transform, "ResumeButton");
             Button restartButton = CreateChildButton(go.transform, "RestartButton");
-            Button quitButton = CreateChildButton(go.transform, "QuitButton");
+            Button mainMenuButton = CreateChildButton(go.transform, "MainMenuButton");
             SetPrivateField(view, "_resumeButton", resumeButton);
             SetPrivateField(view, "_restartButton", restartButton);
-            SetPrivateField(view, "_quitButton", quitButton);
+            SetPrivateField(view, "_mainMenuButton", mainMenuButton);
 
             go.SetActive(true);
             yield return null;
 
             bool resumeClicked = false;
             bool restartClicked = false;
+            bool mainMenuClicked = false;
             view.ResumeClicked += () => resumeClicked = true;
             view.RestartClicked += () => restartClicked = true;
+            view.MainMenuClicked += () => mainMenuClicked = true;
 
             resumeButton.onClick.Invoke();
             restartButton.onClick.Invoke();
+            mainMenuButton.onClick.Invoke();
 
             Assert.IsTrue(resumeClicked, "ResumeButton click should fire ResumeClicked.");
             Assert.IsTrue(restartClicked, "RestartButton click should fire RestartClicked.");
-            Assert.IsFalse(quitButton.interactable, "QuitButton must stay disabled; no Main Menu exists yet.");
+            Assert.IsTrue(mainMenuClicked, "MainMenuButton click should fire MainMenuClicked.");
         }
 
         [UnityTest]
-        public IEnumerator GameResultView_RestartClick_FiresEvent()
+        public IEnumerator GameResultView_RestartLevelSelectionAndNextLevelClicks_FireEvents()
         {
             var go = new GameObject("TestGameResultView");
             go.SetActive(false);
@@ -110,17 +113,29 @@ namespace AlienDefense.Tests.PlayMode
 
             var view = go.AddComponent<GameResultView>();
             Button restartButton = CreateChildButton(go.transform, "RestartButton");
+            Button levelSelectionButton = CreateChildButton(go.transform, "LevelSelectionButton");
+            Button nextLevelButton = CreateChildButton(go.transform, "NextLevelButton");
             SetPrivateField(view, "_restartButton", restartButton);
+            SetPrivateField(view, "_levelSelectionButton", levelSelectionButton);
+            SetPrivateField(view, "_nextLevelButton", nextLevelButton);
 
             go.SetActive(true);
             yield return null;
 
             bool restartClicked = false;
+            bool levelSelectionClicked = false;
+            bool nextLevelClicked = false;
             view.RestartClicked += () => restartClicked = true;
+            view.LevelSelectionClicked += () => levelSelectionClicked = true;
+            view.NextLevelClicked += () => nextLevelClicked = true;
 
             restartButton.onClick.Invoke();
+            levelSelectionButton.onClick.Invoke();
+            nextLevelButton.onClick.Invoke();
 
             Assert.IsTrue(restartClicked, "RestartButton click should fire RestartClicked.");
+            Assert.IsTrue(levelSelectionClicked, "LevelSelectionButton click should fire LevelSelectionClicked.");
+            Assert.IsTrue(nextLevelClicked, "NextLevelButton click should fire NextLevelClicked.");
         }
     }
 }

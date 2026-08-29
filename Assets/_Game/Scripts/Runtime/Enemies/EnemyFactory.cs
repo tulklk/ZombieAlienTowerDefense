@@ -1,5 +1,6 @@
 using AlienDefense.Base;
 using AlienDefense.Economy;
+using AlienDefense.Pickups;
 using AlienDefense.Vfx;
 using UnityEngine;
 
@@ -14,6 +15,7 @@ namespace AlienDefense.Enemies
         private readonly BaseHealthService _baseHealth;
         private readonly Transform _cameraTransform;
         private readonly VfxService _vfxService;
+        private readonly EnergyDropService _energyDrop;
 
         public EnemyFactory(
             EnemyPoolRegistry poolRegistry,
@@ -21,7 +23,8 @@ namespace AlienDefense.Enemies
             EconomyService economy,
             BaseHealthService baseHealth,
             Transform cameraTransform,
-            VfxService vfxService = null)
+            VfxService vfxService = null,
+            EnergyDropService energyDrop = null)
         {
             _poolRegistry = poolRegistry;
             _enemyRegistry = enemyRegistry;
@@ -29,6 +32,7 @@ namespace AlienDefense.Enemies
             _baseHealth = baseHealth;
             _cameraTransform = cameraTransform;
             _vfxService = vfxService;
+            _energyDrop = energyDrop;
         }
 
         public EnemyController Spawn(EnemyDefinition definition, EnemyPath3D path, Vector3 position, Quaternion rotation)
@@ -70,12 +74,15 @@ namespace AlienDefense.Enemies
 
         private void HandleEnemyResolved(EnemyController enemy, EnemyResolveReason reason)
         {
-            if (reason != EnemyResolveReason.Defeated || _vfxService == null)
+            if (reason == EnemyResolveReason.Defeated && _vfxService != null)
             {
-                return;
+                _vfxService.Play(enemy.Definition.DefeatedVfxDefinition, enemy.transform.position, Quaternion.identity);
             }
 
-            _vfxService.Play(enemy.Definition.DefeatedVfxDefinition, enemy.transform.position, Quaternion.identity);
+            if (_energyDrop != null && EnemyResolutionPolicy.ShouldDropEnergy(reason))
+            {
+                _energyDrop.Spawn(enemy.transform.position, enemy.Definition.RewardResource);
+            }
         }
     }
 }

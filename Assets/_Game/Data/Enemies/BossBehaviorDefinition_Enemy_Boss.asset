@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02cdf8e739178394daaf85b4b891fe20, type: 3}
+  m_Name: BossBehaviorDefinition_Enemy_Boss
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.BossBehaviorDefinition
+  _phaseTwoHealthThreshold: 0.5
+  _minionDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+  _minionCountPerBurst: 2
+  _minionSpawnInterval: 8
+  _phaseTwoMinionIntervalMultiplier: 0.6
+  _phaseTwoSpeedMultiplier: 1.4
+  _phaseOneDamageReductionPercent: 0.1
+  _phaseTwoDamageReductionPercent: 0.3

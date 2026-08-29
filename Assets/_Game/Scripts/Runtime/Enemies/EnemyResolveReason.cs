@@ -6,6 +6,7 @@ namespace AlienDefense.Enemies
         Defeated = 0,
         ReachedBase = 1,
         Removed = 2,
-        LevelEnded = 3
+        LevelEnded = 3,
+        Captured = 4
     }
 }

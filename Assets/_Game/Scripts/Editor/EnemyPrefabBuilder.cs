@@ -28,6 +28,7 @@ namespace AlienDefense.EditorTools
             public int PoolMax;
             public Vector3 Scale;
             public Color Color;
+            public float TractorResistance;
         }
 
         private static readonly EnemySpec NormalSpec = new EnemySpec
@@ -36,7 +37,8 @@ namespace AlienDefense.EditorTools
             MaxHealth = 100f, MoveSpeed = 1.8f, RotationSpeed = 360f,
             Reward = 10, BaseDamage = 1,
             PoolPrewarm = 10, PoolDefault = 20, PoolMax = 100,
-            Scale = new Vector3(0.8f, 0.9f, 0.8f), Color = new Color(0.6f, 0.6f, 0.65f)
+            Scale = new Vector3(0.8f, 0.9f, 0.8f), Color = new Color(0.6f, 0.6f, 0.65f),
+            TractorResistance = 1.0f
         };
 
         private static readonly EnemySpec RunnerSpec = new EnemySpec
@@ -45,7 +47,8 @@ namespace AlienDefense.EditorTools
             MaxHealth = 60f, MoveSpeed = 3f, RotationSpeed = 540f,
             Reward = 9, BaseDamage = 1,
             PoolPrewarm = 8, PoolDefault = 16, PoolMax = 100,
-            Scale = new Vector3(0.6f, 0.7f, 0.6f), Color = new Color(0.2f, 0.7f, 0.9f)
+            Scale = new Vector3(0.6f, 0.7f, 0.6f), Color = new Color(0.2f, 0.7f, 0.9f),
+            TractorResistance = 0.8f
         };
 
         private static readonly EnemySpec TankSpec = new EnemySpec
@@ -54,7 +57,8 @@ namespace AlienDefense.EditorTools
             MaxHealth = 350f, MoveSpeed = 1.1f, RotationSpeed = 240f,
             Reward = 25, BaseDamage = 2,
             PoolPrewarm = 5, PoolDefault = 10, PoolMax = 60,
-            Scale = new Vector3(1.15f, 1.2f, 1.15f), Color = new Color(0.55f, 0.15f, 0.15f)
+            Scale = new Vector3(1.15f, 1.2f, 1.15f), Color = new Color(0.55f, 0.15f, 0.15f),
+            TractorResistance = 1.7f
         };
 
         [MenuItem("AlienDefense/Setup/5. Create Enemy Definitions And Prefabs")]
@@ -96,6 +100,8 @@ namespace AlienDefense.EditorTools
             serializedDefinition.FindProperty("_poolPrewarmCount").intValue = spec.PoolPrewarm;
             serializedDefinition.FindProperty("_poolDefaultCapacity").intValue = spec.PoolDefault;
             serializedDefinition.FindProperty("_poolMaximumSize").intValue = spec.PoolMax;
+            serializedDefinition.FindProperty("_canBeTractorCaptured").boolValue = true;
+            serializedDefinition.FindProperty("_tractorResistance").floatValue = spec.TractorResistance;
             serializedDefinition.FindProperty("_prefab").objectReferenceValue =
                 prefab != null ? prefab.GetComponent<EnemyController>() : null;
             serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
@@ -113,6 +119,8 @@ namespace AlienDefense.EditorTools
             {
                 MigrateRepairBrokenModelMaterial(existing, spec, prefabPath);
                 MigrateFixHealthBarFillSprite(existing, prefabPath);
+                MigrateAddStatusController(existing, prefabPath);
+                MigrateAddCaptureController(existing, prefabPath);
                 return existing;
             }
 
@@ -172,6 +180,72 @@ namespace AlienDefense.EditorTools
             PrefabUtility.UnloadPrefabContents(contents);
         }
 
+        /// <summary>Adds EnemyStatusController (Phase 15) to prefabs built before it existed, so Slow/Burn work on every enemy.</summary>
+        private static void MigrateAddStatusController(GameObject prefabAsset, string prefabPath)
+        {
+            if (prefabAsset.GetComponent<EnemyStatusController>() != null)
+            {
+                return;
+            }
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+
+            var health = contents.GetComponent<EnemyHealth>();
+            var movement = contents.GetComponent<EnemyMovement>();
+            var controller = contents.GetComponent<EnemyController>();
+            EnemyStatusController statusController = AddStatusController(contents, health, movement);
+
+            var controllerSerialized = new SerializedObject(controller);
+            controllerSerialized.FindProperty("_statusController").objectReferenceValue = statusController;
+            controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+            PrefabUtility.UnloadPrefabContents(contents);
+            Debug.Log("[AlienDefense Setup] Migrated " + prefabPath + ": added EnemyStatusController.");
+        }
+
+        private static EnemyStatusController AddStatusController(GameObject root, EnemyHealth health, EnemyMovement movement)
+        {
+            var statusController = root.AddComponent<EnemyStatusController>();
+            var serialized = new SerializedObject(statusController);
+            serialized.FindProperty("_health").objectReferenceValue = health;
+            serialized.FindProperty("_movement").objectReferenceValue = movement;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return statusController;
+        }
+
+        /// <summary>Adds EnemyCaptureController (Tractor Beam) to prefabs built before it existed.</summary>
+        private static void MigrateAddCaptureController(GameObject prefabAsset, string prefabPath)
+        {
+            if (prefabAsset.GetComponent<EnemyCaptureController>() != null)
+            {
+                return;
+            }
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+
+            var controller = contents.GetComponent<EnemyController>();
+            Transform visualRoot = contents.transform.Find("VisualRoot");
+            EnemyCaptureController captureController = AddCaptureController(contents, visualRoot);
+
+            var controllerSerialized = new SerializedObject(controller);
+            controllerSerialized.FindProperty("_captureController").objectReferenceValue = captureController;
+            controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+            PrefabUtility.UnloadPrefabContents(contents);
+            Debug.Log("[AlienDefense Setup] Migrated " + prefabPath + ": added EnemyCaptureController.");
+        }
+
+        internal static EnemyCaptureController AddCaptureController(GameObject root, Transform visualRoot)
+        {
+            var captureController = root.AddComponent<EnemyCaptureController>();
+            var serialized = new SerializedObject(captureController);
+            serialized.FindProperty("_visualRoot").objectReferenceValue = visualRoot;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return captureController;
+        }
+
         private static GameObject BuildHierarchy(EnemySpec spec)
         {
             var root = new GameObject(spec.PrefabName);
@@ -220,12 +294,16 @@ namespace AlienDefense.EditorTools
             healthBarAnchor.transform.localPosition = new Vector3(0f, spec.Scale.y + 0.6f, 0f);
 
             EnemyHealthBarView healthBarView = BuildHealthBar(healthBarAnchor.transform, health);
+            EnemyStatusController statusController = AddStatusController(root, health, movement);
+            EnemyCaptureController captureController = AddCaptureController(root, visualRoot.transform);
 
             var controllerSerialized = new SerializedObject(controller);
             controllerSerialized.FindProperty("_health").objectReferenceValue = health;
             controllerSerialized.FindProperty("_movement").objectReferenceValue = movement;
             controllerSerialized.FindProperty("_targetPoint").objectReferenceValue = targetPoint.transform;
             controllerSerialized.FindProperty("_healthBarView").objectReferenceValue = healthBarView;
+            controllerSerialized.FindProperty("_statusController").objectReferenceValue = statusController;
+            controllerSerialized.FindProperty("_captureController").objectReferenceValue = captureController;
             controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             return root;

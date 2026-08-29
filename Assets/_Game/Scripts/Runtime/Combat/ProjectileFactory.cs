@@ -43,7 +43,18 @@ namespace AlienDefense.Combat
             }
 
             projectile.transform.SetPositionAndRotation(request.SpawnPosition, request.SpawnRotation);
-            projectile.Initialize(request.Target, request.Damage, definition.Speed, definition.MaximumLifetime, definition.HitDistance, pool.Release, _vfxService, definition.HitVfxDefinition);
+            projectile.Initialize(
+                request.Target,
+                request.Damage,
+                definition.Speed,
+                definition.MaximumLifetime,
+                definition.HitDistance,
+                pool.Release,
+                _vfxService,
+                definition.HitVfxDefinition,
+                request.StatusEffectOnHit,
+                request.AreaDamageResolver,
+                request.SplashRadius);
             projectile.gameObject.SetActive(true);
 
             return projectile;

@@ -113,7 +113,7 @@ namespace AlienDefense.Tests.EditMode
         {
             var runtimeParent = new GameObject("TowerRuntimeParent");
             _spawnedObjects.Add(runtimeParent);
-            return new TowerFactory(runtimeParent.transform, new EnemyRegistry(), null, null);
+            return new TowerFactory(runtimeParent.transform, new EnemyRegistry(), null, null, null);
         }
 
         private static GameFlowController CreatePreparingWaveGameFlow()

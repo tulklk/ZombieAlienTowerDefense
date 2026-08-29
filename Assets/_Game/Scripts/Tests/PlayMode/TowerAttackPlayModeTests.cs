@@ -56,6 +56,18 @@ namespace AlienDefense.Tests.PlayMode
             return result;
         }
 
+        /// <summary>Waits real elapsed game seconds (accumulating Time.deltaTime) rather than a fixed frame count,
+        /// so the test stays correct regardless of the Editor's actual frame rate.</summary>
+        private static IEnumerator WaitForGameSeconds(float seconds)
+        {
+            float elapsed = 0f;
+            while (elapsed < seconds)
+            {
+                yield return null;
+                elapsed += Time.deltaTime;
+            }
+        }
+
         private EnemyPath3D CreatePath(params Vector3[] points)
         {
             var pathObject = new GameObject("TestEnemyPath");
@@ -178,14 +190,13 @@ namespace AlienDefense.Tests.PlayMode
             gameFlow.BeginPreparingWave();
             gameFlow.BeginPlayingWave();
 
-            tower.Initialize(towerDefinition, registry, factory, gameFlow);
+            tower.Initialize(towerDefinition, registry, factory, null, gameFlow);
 
             float startHealth = enemy.Health.CurrentHealth;
 
-            for (int i = 0; i < 90; i++)
-            {
-                yield return null;
-            }
+            // First shot fires immediately and travels 2 units at 30 units/sec (~0.07s); wait a generous 2s of
+            // game time regardless of the Editor's actual frame rate.
+            yield return WaitForGameSeconds(2f);
 
             Assert.Less(enemy.Health.CurrentHealth, startHealth);
         }
@@ -204,14 +215,11 @@ namespace AlienDefense.Tests.PlayMode
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();
 
-            tower.Initialize(towerDefinition, registry, factory, gameFlow);
+            tower.Initialize(towerDefinition, registry, factory, null, gameFlow);
 
             float startHealth = enemy.Health.CurrentHealth;
 
-            for (int i = 0; i < 60; i++)
-            {
-                yield return null;
-            }
+            yield return WaitForGameSeconds(1f);
 
             Assert.AreEqual(startHealth, enemy.Health.CurrentHealth, 0.01f);
         }
@@ -231,20 +239,17 @@ namespace AlienDefense.Tests.PlayMode
             gameFlow.BeginPreparingWave();
             gameFlow.BeginPlayingWave();
 
-            tower.Initialize(towerDefinition, registry, factory, gameFlow);
+            tower.Initialize(towerDefinition, registry, factory, null, gameFlow);
 
-            for (int i = 0; i < 5; i++)
-            {
-                yield return null;
-            }
+            // First shot fires immediately and travels 2 units at 30 units/sec (~0.07s); wait a generous 0.5s of
+            // game time so it has already landed (and this overkill hit already resolved the enemy at 0 health)
+            // before the pause checkpoint, regardless of the Editor's actual frame rate.
+            yield return WaitForGameSeconds(0.5f);
 
             gameFlow.Pause();
             float healthAfterPause = enemy.Health.CurrentHealth;
 
-            for (int i = 0; i < 30; i++)
-            {
-                yield return null;
-            }
+            yield return WaitForGameSeconds(1f);
 
             Assert.AreEqual(healthAfterPause, enemy.Health.CurrentHealth, 0.01f);
         }

@@ -47,7 +47,7 @@ namespace AlienDefense.Towers
             }
         }
 
-        public void Initialize(TowerDefinition definition, EnemyRegistry enemyRegistry, ProjectileFactory projectileFactory, GameFlowController gameFlow)
+        public void Initialize(TowerDefinition definition, EnemyRegistry enemyRegistry, ProjectileFactory projectileFactory, AreaDamageResolver areaDamageResolver, GameFlowController gameFlow)
         {
             if (_gameFlow != null)
             {
@@ -60,7 +60,7 @@ namespace AlienDefense.Towers
             IsSold = false;
 
             ITargetingStrategy targetingStrategy = TargetingStrategyFactory.Create(definition.DefaultTargetingMode);
-            var attackStrategy = new ProjectileAttackStrategy(projectileFactory, definition.ProjectileDefinition);
+            IAttackStrategy attackStrategy = AttackStrategyFactory.Create(definition, projectileFactory, areaDamageResolver);
 
             _targeting.Initialize(enemyRegistry, targetingStrategy, definition.GetLevel(0).Range);
             _attack.Initialize(attackStrategy, gameObject);

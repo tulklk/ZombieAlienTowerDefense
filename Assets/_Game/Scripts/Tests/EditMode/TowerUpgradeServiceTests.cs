@@ -89,7 +89,7 @@ namespace AlienDefense.Tests.EditMode
 
             SetPrivateField(definition, "_levels", levelDataArray);
 
-            controller.Initialize(definition, null, null, CreatePreparingWaveGameFlow());
+            controller.Initialize(definition, null, null, null, CreatePreparingWaveGameFlow());
             return controller;
         }
 

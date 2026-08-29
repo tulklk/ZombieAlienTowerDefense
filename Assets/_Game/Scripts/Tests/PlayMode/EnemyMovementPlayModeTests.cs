@@ -38,6 +38,18 @@ namespace AlienDefense.Tests.PlayMode
             field.SetValue(target, value);
         }
 
+        /// <summary>Waits real elapsed game seconds (accumulating Time.deltaTime) rather than a fixed frame count,
+        /// so the test stays correct regardless of the Editor's actual frame rate.</summary>
+        private static IEnumerator WaitForGameSeconds(float seconds)
+        {
+            float elapsed = 0f;
+            while (elapsed < seconds)
+            {
+                yield return null;
+                elapsed += Time.deltaTime;
+            }
+        }
+
         private EnemyPath3D CreatePath(params Vector3[] points)
         {
             _pathObject = new GameObject("TestEnemyPath");
@@ -137,10 +149,8 @@ namespace AlienDefense.Tests.PlayMode
 
             movement.Initialize(path, 5f, 360f, 0.1f);
 
-            for (int i = 0; i < 60; i++)
-            {
-                yield return null;
-            }
+            // 1 unit at 5 units/sec needs 0.2s; wait a generous 2s of game time regardless of the Editor's actual frame rate.
+            yield return WaitForGameSeconds(2f);
 
             Assert.AreEqual(1, reachedCount);
         }

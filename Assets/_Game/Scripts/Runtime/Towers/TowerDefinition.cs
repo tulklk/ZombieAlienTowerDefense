@@ -35,6 +35,18 @@ namespace AlienDefense.Towers
         [SerializeField]
         private ProjectileDefinition _projectileDefinition;
 
+        [Header("Advanced Attack (optional)")]
+        [SerializeField]
+        private TowerAttackBehavior _attackBehavior = TowerAttackBehavior.Standard;
+
+        [SerializeField]
+        [Tooltip("Required when Attack Behavior is Status.")]
+        private StatusEffectDefinition _statusEffectOnHit;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("Required when Attack Behavior is Splash.")]
+        private float _splashRadius;
+
         [Header("VFX (optional)")]
         [SerializeField]
         private VfxDefinition _muzzleVfxDefinition;
@@ -52,6 +64,9 @@ namespace AlienDefense.Towers
         public float SellPercentage => _sellPercentage;
         public TargetingMode DefaultTargetingMode => _defaultTargetingMode;
         public ProjectileDefinition ProjectileDefinition => _projectileDefinition;
+        public TowerAttackBehavior AttackBehavior => _attackBehavior;
+        public StatusEffectDefinition StatusEffectOnHit => _statusEffectOnHit;
+        public float SplashRadius => _splashRadius;
         public VfxDefinition MuzzleVfxDefinition => _muzzleVfxDefinition;
         public int LevelCount => _levels?.Length ?? 0;
 
@@ -80,6 +95,16 @@ namespace AlienDefense.Towers
             if (_projectileDefinition == null)
             {
                 Debug.LogError($"[TowerDefinition] '{name}' has no Projectile Definition assigned.", this);
+            }
+
+            if (_attackBehavior == TowerAttackBehavior.Status && _statusEffectOnHit == null)
+            {
+                Debug.LogError($"[TowerDefinition] '{name}' uses Status attack behavior but has no Status Effect On Hit assigned.", this);
+            }
+
+            if (_attackBehavior == TowerAttackBehavior.Splash && _splashRadius <= 0f)
+            {
+                Debug.LogError($"[TowerDefinition] '{name}' uses Splash attack behavior but Splash Radius is 0.", this);
             }
 
             if (_levels == null || _levels.Length == 0)

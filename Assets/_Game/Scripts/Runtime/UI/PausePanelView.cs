@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace AlienDefense.UI
 {
-    /// <summary>Pause panel buttons: Resume and Restart. Quit/Main Menu is a disabled placeholder (out of scope this phase).</summary>
+    /// <summary>Pause panel buttons: Resume, Restart, and Main Menu.</summary>
     public sealed class PausePanelView : MonoBehaviour
     {
         [SerializeField]
@@ -14,11 +14,12 @@ namespace AlienDefense.UI
         private Button _restartButton;
 
         [SerializeField]
-        [Tooltip("Optional placeholder. Disabled: no Main Menu exists yet.")]
-        private Button _quitButton;
+        [Tooltip("Optional.")]
+        private Button _mainMenuButton;
 
         public event Action ResumeClicked;
         public event Action RestartClicked;
+        public event Action MainMenuClicked;
 
         private void Awake()
         {
@@ -32,9 +33,9 @@ namespace AlienDefense.UI
                 _restartButton.onClick.AddListener(HandleRestartClicked);
             }
 
-            if (_quitButton != null)
+            if (_mainMenuButton != null)
             {
-                _quitButton.interactable = false;
+                _mainMenuButton.onClick.AddListener(HandleMainMenuClicked);
             }
         }
 
@@ -48,6 +49,11 @@ namespace AlienDefense.UI
             RestartClicked?.Invoke();
         }
 
+        private void HandleMainMenuClicked()
+        {
+            MainMenuClicked?.Invoke();
+        }
+
         private void OnDestroy()
         {
             if (_resumeButton != null)
@@ -58,6 +64,11 @@ namespace AlienDefense.UI
             if (_restartButton != null)
             {
                 _restartButton.onClick.RemoveListener(HandleRestartClicked);
+            }
+
+            if (_mainMenuButton != null)
+            {
+                _mainMenuButton.onClick.RemoveListener(HandleMainMenuClicked);
             }
         }
     }
