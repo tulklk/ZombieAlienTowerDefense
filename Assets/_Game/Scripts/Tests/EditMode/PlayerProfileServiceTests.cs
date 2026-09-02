@@ -82,6 +82,141 @@ namespace AlienDefense.Tests.EditMode
         }
 
         [Test]
+        public void TrySpendMetaCurrency_SufficientFunds_DeductsAndReturnsTrue()
+        {
+            PlayerProfileService service = CreateService(out _);
+            service.AddMetaCurrency(500);
+
+            bool spent = service.TrySpendMetaCurrency(200);
+
+            Assert.IsTrue(spent);
+            Assert.AreEqual(300, service.MetaCurrency);
+        }
+
+        [Test]
+        public void TrySpendMetaCurrency_InsufficientFunds_RejectsWithoutPartialSpend()
+        {
+            PlayerProfileService service = CreateService(out _);
+            service.AddMetaCurrency(50);
+
+            bool spent = service.TrySpendMetaCurrency(200);
+
+            Assert.IsFalse(spent);
+            Assert.AreEqual(50, service.MetaCurrency, "A rejected spend must not partially deduct.");
+        }
+
+        [Test]
+        public void TrySpendMetaCurrency_NonPositiveAmount_IsRejected()
+        {
+            PlayerProfileService service = CreateService(out _);
+            service.AddMetaCurrency(100);
+
+            Assert.IsFalse(service.TrySpendMetaCurrency(0));
+            Assert.IsFalse(service.TrySpendMetaCurrency(-10));
+            Assert.AreEqual(100, service.MetaCurrency);
+        }
+
+        [Test]
+        public void AddMetaCurrency_AccumulatesAcrossCalls()
+        {
+            PlayerProfileService service = CreateService(out _);
+
+            service.AddMetaCurrency(100);
+            service.AddMetaCurrency(50);
+
+            Assert.AreEqual(150, service.MetaCurrency);
+        }
+
+        [Test]
+        public void TryClaimDailyReward_FirstClaim_GrantsDayOneCoinAndStreak()
+        {
+            PlayerProfileService service = CreateService(out _);
+            var now = new System.DateTime(2026, 1, 1, 8, 0, 0, System.DateTimeKind.Utc);
+
+            bool claimed = service.TryClaimDailyReward(now, out int coin, out int gems);
+
+            Assert.IsTrue(claimed);
+            Assert.AreEqual(DailyRewardCalculator.CoinRewardByDay[0], coin);
+            Assert.AreEqual(0, gems);
+            Assert.AreEqual(1, service.DailyRewardStreakDay);
+            Assert.AreEqual(DailyRewardCalculator.CoinRewardByDay[0], service.MetaCurrency);
+        }
+
+        [Test]
+        public void TryClaimDailyReward_SameDayTwice_SecondFails()
+        {
+            PlayerProfileService service = CreateService(out _);
+            var now = new System.DateTime(2026, 1, 1, 8, 0, 0, System.DateTimeKind.Utc);
+            service.TryClaimDailyReward(now, out _, out _);
+
+            bool claimedAgain = service.TryClaimDailyReward(now.AddHours(2), out _, out _);
+
+            Assert.IsFalse(claimedAgain);
+            Assert.AreEqual(1, service.DailyRewardStreakDay);
+        }
+
+        [Test]
+        public void TryClaimDailyReward_NextDay_AdvancesStreak()
+        {
+            PlayerProfileService service = CreateService(out _);
+            var day1 = new System.DateTime(2026, 1, 1, 8, 0, 0, System.DateTimeKind.Utc);
+            service.TryClaimDailyReward(day1, out _, out _);
+
+            bool claimed = service.TryClaimDailyReward(day1.AddDays(1), out int coin, out int gems);
+
+            Assert.IsTrue(claimed);
+            Assert.AreEqual(2, service.DailyRewardStreakDay);
+            Assert.AreEqual(DailyRewardCalculator.CoinRewardByDay[1], coin);
+        }
+
+        [Test]
+        public void MarkDailyQuestCompleted_ThenClaim_GrantsRewardOnce()
+        {
+            PlayerProfileService service = CreateService(out _);
+            var now = new System.DateTime(2026, 1, 1, 8, 0, 0, System.DateTimeKind.Utc);
+
+            Assert.IsFalse(service.IsDailyQuestCompleted(now));
+            service.MarkDailyQuestCompleted(now);
+            Assert.IsTrue(service.IsDailyQuestCompleted(now));
+
+            bool claimed = service.TryClaimDailyQuest(now, 30, out int granted);
+            Assert.IsTrue(claimed);
+            Assert.AreEqual(30, granted);
+            Assert.AreEqual(30, service.MetaCurrency);
+
+            bool claimedTwice = service.TryClaimDailyQuest(now, 30, out int grantedAgain);
+            Assert.IsFalse(claimedTwice);
+            Assert.AreEqual(0, grantedAgain);
+            Assert.AreEqual(30, service.MetaCurrency, "Claiming twice must not double-grant.");
+        }
+
+        [Test]
+        public void TryClaimDailyQuest_NotCompletedYet_Fails()
+        {
+            PlayerProfileService service = CreateService(out _);
+            var now = new System.DateTime(2026, 1, 1, 8, 0, 0, System.DateTimeKind.Utc);
+
+            bool claimed = service.TryClaimDailyQuest(now, 30, out int granted);
+
+            Assert.IsFalse(claimed);
+            Assert.AreEqual(0, granted);
+        }
+
+        [Test]
+        public void DailyQuest_NewDay_ResetsCompletionState()
+        {
+            PlayerProfileService service = CreateService(out _);
+            var day1 = new System.DateTime(2026, 1, 1, 8, 0, 0, System.DateTimeKind.Utc);
+            service.MarkDailyQuestCompleted(day1);
+            service.TryClaimDailyQuest(day1, 30, out _);
+
+            var day2 = day1.AddDays(1);
+
+            Assert.IsFalse(service.IsDailyQuestCompleted(day2));
+            Assert.IsFalse(service.IsDailyQuestClaimed(day2));
+        }
+
+        [Test]
         public void UnlockTower_TwiceForSameId_DoesNotDuplicate()
         {
             PlayerProfileService service = CreateService(out _);

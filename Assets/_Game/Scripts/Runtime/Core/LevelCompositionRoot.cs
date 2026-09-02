@@ -10,6 +10,7 @@ using AlienDefense.Enemies;
 using AlienDefense.Environment;
 using AlienDefense.Pickups;
 using AlienDefense.Player;
+using AlienDefense.Progression;
 using AlienDefense.Save;
 using AlienDefense.Towers;
 using AlienDefense.UI;
@@ -438,7 +439,12 @@ namespace AlienDefense.Core
             }
 
             AreaDamage = new AreaDamageResolver(new EnemyRegistrySplashProvider(Enemies));
-            TowerSpawner = new TowerFactory(_towerRuntimeParent, Enemies, ProjectileSpawner, AreaDamage, GameFlow, Vfx);
+
+            TowerMetaUpgradeService metaUpgradeService = _applicationServices?.PlayerProfileService != null
+                ? new TowerMetaUpgradeService(_applicationServices.PlayerProfileService)
+                : null;
+
+            TowerSpawner = new TowerFactory(_towerRuntimeParent, Enemies, ProjectileSpawner, AreaDamage, GameFlow, Vfx, metaUpgradeService);
 
             if (_towerDebugSpawner != null)
             {
@@ -613,7 +619,7 @@ namespace AlienDefense.Core
 
                 if (current == GameState.Victory)
                 {
-                    _applicationServices?.PlayerProfileService?.SetLevelCompleted(BuildLevelCompletedResult());
+                    GrantVictoryRewardsAndProgress();
                 }
             }
 
@@ -640,6 +646,34 @@ namespace AlienDefense.Core
                     && current != GameState.Defeat;
                 _playerBuildNodeProximity.SetInputEnabled(buildInputEnabled);
             }
+        }
+
+        /// <summary>Computes the win result, then grants Coin (+ a rare first-time-perfect Gem bonus, both
+        /// scaled by VipTierTable's Coin bonus) and marks the daily quest complete — all via PlayerProfileService's
+        /// own validated mutators, never touching save data directly here.</summary>
+        private void GrantVictoryRewardsAndProgress()
+        {
+            PlayerProfileService profile = _applicationServices?.PlayerProfileService;
+            if (profile == null)
+            {
+                return;
+            }
+
+            LevelCompletedResult completionResult = BuildLevelCompletedResult();
+            bool isFirstCompletion = !profile.GetLevelProgress(completionResult.LevelId).IsCompleted;
+
+            float vipCoinBonus = VipTierTable.GetMultiplierForTier(profile.VipTier);
+            int coinReward = LevelRewardCalculator.CalculateCoinReward(completionResult.Stars, vipCoinBonus);
+            int gemReward = LevelRewardCalculator.CalculateGemReward(completionResult.Stars, isFirstCompletion);
+
+            profile.SetLevelCompleted(completionResult);
+            profile.AddMetaCurrency(coinReward);
+            if (gemReward > 0)
+            {
+                profile.AddGems(gemReward);
+            }
+
+            profile.MarkDailyQuestCompleted(System.DateTime.UtcNow);
         }
 
         /// <summary>Placeholder star formula for Phase 13's save foundation: 3 stars for undamaged base, 2 for

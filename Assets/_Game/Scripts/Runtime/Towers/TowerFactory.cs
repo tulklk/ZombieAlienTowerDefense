@@ -15,6 +15,7 @@ namespace AlienDefense.Towers
         private readonly AreaDamageResolver _areaDamageResolver;
         private readonly GameFlowController _gameFlow;
         private readonly VfxService _vfxService;
+        private readonly TowerMetaUpgradeService _metaUpgradeService;
 
         public TowerFactory(
             Transform towerRuntimeParent,
@@ -22,7 +23,8 @@ namespace AlienDefense.Towers
             ProjectileFactory projectileFactory,
             AreaDamageResolver areaDamageResolver,
             GameFlowController gameFlow,
-            VfxService vfxService = null)
+            VfxService vfxService = null,
+            TowerMetaUpgradeService metaUpgradeService = null)
         {
             _towerRuntimeParent = towerRuntimeParent;
             _enemyRegistry = enemyRegistry;
@@ -30,6 +32,7 @@ namespace AlienDefense.Towers
             _areaDamageResolver = areaDamageResolver;
             _gameFlow = gameFlow;
             _vfxService = vfxService;
+            _metaUpgradeService = metaUpgradeService;
         }
 
         public TowerController Create(TowerDefinition definition, Vector3 position, Quaternion rotation)
@@ -40,8 +43,10 @@ namespace AlienDefense.Towers
                 return null;
             }
 
+            int startingLevelIndex = _metaUpgradeService?.GetCurrentLevelIndex(definition) ?? 0;
+
             TowerController tower = Object.Instantiate(definition.Prefab, position, rotation, _towerRuntimeParent);
-            tower.Initialize(definition, _enemyRegistry, _projectileFactory, _areaDamageResolver, _gameFlow);
+            tower.Initialize(definition, _enemyRegistry, _projectileFactory, _areaDamageResolver, _gameFlow, startingLevelIndex);
             tower.SetMuzzleVfx(_vfxService, definition.MuzzleVfxDefinition);
 
             return tower;

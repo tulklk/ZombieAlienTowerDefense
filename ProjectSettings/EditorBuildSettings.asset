@@ -17,6 +17,18 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Game/Scenes/Levels/Level_01.unity
     guid: e8e3473addd2f614682476d9cbb0f450
+  - enabled: 1
+    path: Assets/_Game/Scenes/Menu/Upgrade.unity
+    guid: 23ecd58a54167d8409741e6e2ae98460
+  - enabled: 1
+    path: Assets/_Game/Scenes/Menu/Base.unity
+    guid: 15fe697d82adc424e8543cfe68a0e6d1
+  - enabled: 1
+    path: Assets/_Game/Scenes/Menu/Defense.unity
+    guid: 52febe925d5ad0b47820dd7559833d66
+  - enabled: 1
+    path: Assets/_Game/Scenes/Menu/Shop.unity
+    guid: 0a7268b686b8c314eac8806976790842
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f,
       type: 2}

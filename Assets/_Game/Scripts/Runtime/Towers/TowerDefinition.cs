@@ -28,6 +28,11 @@ namespace AlienDefense.Towers
         [SerializeField, Range(0f, 1f)]
         private float _sellPercentage = 0.5f;
 
+        [SerializeField, Min(0)]
+        [Tooltip("One-time Coin (MetaCurrency) cost to permanently unlock this tower type on the Defense screen. " +
+            "0 for towers meant to be unlocked from the start (see PlayerProfileDefaults.DefaultUnlockedTowerIds).")]
+        private int _unlockCost = 200;
+
         [Header("Combat")]
         [SerializeField]
         private TargetingMode _defaultTargetingMode = TargetingMode.First;
@@ -62,6 +67,7 @@ namespace AlienDefense.Towers
         public TowerController Prefab => _prefab;
         public int BuildCost => _buildCost;
         public float SellPercentage => _sellPercentage;
+        public int UnlockCost => _unlockCost;
         public TargetingMode DefaultTargetingMode => _defaultTargetingMode;
         public ProjectileDefinition ProjectileDefinition => _projectileDefinition;
         public TowerAttackBehavior AttackBehavior => _attackBehavior;

@@ -4,8 +4,11 @@ using UnityEngine;
 
 namespace AlienDefense.Core
 {
-    /// <summary>Per-scene host for SceneTransitionService. Binds the transition service into ApplicationRuntime
-    /// and ticks profile saves while this scene is active.</summary>
+    /// <summary>Per-scene host that exposes this scene's SceneTransitionService (and optional save-debug
+    /// controls) to ApplicationCompositionRoot. The root discovers this host itself, through a scene-scoped
+    /// GetComponentInChildren scan right after this scene finishes loading (see
+    /// ApplicationCompositionRoot.HandleSceneLoaded) — this host never reaches upward via a global
+    /// Find/FindObjectOfType, it only responds when the root calls BindApplicationRoot.</summary>
     public sealed class SceneServicesHost : MonoBehaviour
     {
         [SerializeField]
@@ -14,6 +17,8 @@ namespace AlienDefense.Core
         [SerializeField]
         [Tooltip("Optional. Development-only save testing controls.")]
         private SaveDebugControls _saveDebugControls;
+
+        public SceneTransitionService SceneTransition => _sceneTransition;
 
         private void Awake()
         {
@@ -27,12 +32,7 @@ namespace AlienDefense.Core
             if (_sceneTransition == null)
             {
                 Debug.LogError("[SceneServicesHost] No SceneTransitionService assigned.", this);
-                return;
             }
-
-            ApplicationRuntime.BindSceneTransition(_sceneTransition);
-            ApplicationRuntime.InitializeSaveDebugControls(_saveDebugControls);
-            ApplicationRuntime.InjectScene(gameObject.scene);
         }
 
         private void Start()
@@ -40,9 +40,16 @@ namespace AlienDefense.Core
             LoadingOverlayCleanup.DestroyAllRuntimeInstances();
         }
 
-        private void Update()
+        /// <summary>Called by ApplicationCompositionRoot right after this scene finishes loading.</summary>
+        public void BindApplicationRoot(ApplicationCompositionRoot root)
         {
-            ApplicationRuntime.Tick(Time.unscaledDeltaTime);
+            if (root == null || _sceneTransition == null)
+            {
+                return;
+            }
+
+            root.BindSceneTransition(_sceneTransition);
+            root.InitializeSaveDebugControls(_saveDebugControls);
         }
     }
 }

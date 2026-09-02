@@ -1,5 +1,6 @@
 using System.Collections;
 using AlienDefense.Save;
+using AlienDefense.Towers;
 using AlienDefense.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,12 +8,13 @@ using UnityEngine.SceneManagement;
 namespace AlienDefense.Core
 {
     /// <summary>Bootstrap entry point. Drives the embedded LoadingOverlay progress bar, optionally initializes
-    /// ApplicationRuntime on cold boot, then loads the target scene from BootstrapLoadContext.</summary>
+    /// ApplicationCompositionRoot on cold boot, then loads the target scene from BootstrapLoadContext.</summary>
     [DisallowMultipleComponent]
     public sealed class BootstrapLoadingController : MonoBehaviour
     {
         private const string LevelCatalogAssetPath = "Assets/_Game/Data/Levels/LevelCatalog.asset";
         private const string PlayerProfileDefaultsAssetPath = "Assets/_Game/Data/Save/PlayerProfileDefaults.asset";
+        private const string TowerCatalogAssetPath = "Assets/_Game/Data/Towers/TowerCatalog.asset";
 
         [SerializeField, Min(0f)]
         private float _minimumLoadDurationSeconds = 6f;
@@ -25,6 +27,10 @@ namespace AlienDefense.Core
 
         [SerializeField]
         private PlayerProfileDefaults _playerProfileDefaults;
+
+        [SerializeField]
+        [Tooltip("Optional. Needed only for screens that enumerate every tower (e.g. the Upgrade screen).")]
+        private TowerCatalog _towerCatalog;
 
         [SerializeField]
         private Camera _bootstrapUICamera;
@@ -86,7 +92,7 @@ namespace AlienDefense.Core
             string targetSceneName = BootstrapLoadContext.TargetSceneName;
             if (BootstrapLoadContext.ShouldInitializeApplication)
             {
-                ApplicationRuntime.Initialize(_levelCatalog, _playerProfileDefaults);
+                ApplicationCompositionRoot.EnsureInitialized(_levelCatalog, _playerProfileDefaults, _towerCatalog);
             }
 
             AsyncOperation operation;
@@ -154,6 +160,11 @@ namespace AlienDefense.Core
             if (_playerProfileDefaults == null)
             {
                 _playerProfileDefaults = UnityEditor.AssetDatabase.LoadAssetAtPath<PlayerProfileDefaults>(PlayerProfileDefaultsAssetPath);
+            }
+
+            if (_towerCatalog == null)
+            {
+                _towerCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<TowerCatalog>(TowerCatalogAssetPath);
             }
 #endif
 

@@ -42,6 +42,16 @@ namespace AlienDefense.Save
                 data.Tutorial = new TutorialProgressSaveData();
             }
 
+            if (data.DailyReward == null)
+            {
+                data.DailyReward = new DailyRewardSaveData();
+            }
+
+            if (data.DailyQuest == null)
+            {
+                data.DailyQuest = new DailyQuestSaveData();
+            }
+
             RepairLevelProgress(data);
             RepairUnlockedTowers(data);
             RepairTowerUpgrades(data);
@@ -50,6 +60,21 @@ namespace AlienDefense.Save
             if (data.MetaCurrency < 0)
             {
                 data.MetaCurrency = 0;
+            }
+
+            if (data.Gems < 0)
+            {
+                data.Gems = 0;
+            }
+
+            if (data.VipTier < 0)
+            {
+                data.VipTier = 0;
+            }
+
+            if (data.DailyReward.StreakDay < 0 || data.DailyReward.StreakDay > 7)
+            {
+                data.DailyReward.StreakDay = 0;
             }
 
             return true;

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace AlienDefense.Save
@@ -24,6 +25,8 @@ namespace AlienDefense.Save
         public string ProfileId => _data.ProfileId;
         public string HighestUnlockedLevelId => _data.HighestUnlockedLevelId;
         public int MetaCurrency => _data.MetaCurrency;
+        public int Gems => _data.Gems;
+        public int VipTier => _data.VipTier;
         public bool IsTutorialCompleted => _data.Tutorial.IsCompleted;
 
         public GameSettings CurrentSettings => GameSettings.From(_data.Settings);
@@ -107,6 +110,175 @@ namespace AlienDefense.Save
             _data.UnlockedTowerIds.Add(towerId);
             RequestImmediateSave();
         }
+
+        /// <summary>Spends MetaCurrency if, and only if, the full amount can be afforded. Same all-or-nothing
+        /// contract as EconomyService.TrySpend, so callers (e.g. TowerMetaUpgradeService) never need to check
+        /// affordability themselves first.</summary>
+        public bool TrySpendMetaCurrency(int amount)
+        {
+            if (amount <= 0 || _data.MetaCurrency < amount)
+            {
+                return false;
+            }
+
+            _data.MetaCurrency -= amount;
+            RequestImmediateSave();
+            return true;
+        }
+
+        public void AddMetaCurrency(int amount)
+        {
+            if (amount <= 0)
+            {
+                Debug.LogError($"[PlayerProfileService] Ignored AddMetaCurrency({amount}); amount must be positive.");
+                return;
+            }
+
+            _data.MetaCurrency += amount;
+            RequestImmediateSave();
+        }
+
+        public bool TrySpendGems(int amount)
+        {
+            if (amount <= 0 || _data.Gems < amount)
+            {
+                return false;
+            }
+
+            _data.Gems -= amount;
+            RequestImmediateSave();
+            return true;
+        }
+
+        public void AddGems(int amount)
+        {
+            if (amount <= 0)
+            {
+                Debug.LogError($"[PlayerProfileService] Ignored AddGems({amount}); amount must be positive.");
+                return;
+            }
+
+            _data.Gems += amount;
+            RequestImmediateSave();
+        }
+
+        /// <summary>VIP tier only ever goes up — a lower tier is silently ignored rather than downgrading a purchase.</summary>
+        public void SetVipTier(int tier)
+        {
+            if (tier <= _data.VipTier)
+            {
+                return;
+            }
+
+            _data.VipTier = tier;
+            RequestImmediateSave();
+        }
+
+        public DateTime? LastDailyRewardClaimUtc => _data.DailyReward.LastClaimUtcTicks > 0
+            ? new DateTime(_data.DailyReward.LastClaimUtcTicks, DateTimeKind.Utc)
+            : (DateTime?)null;
+
+        public int DailyRewardStreakDay => _data.DailyReward.StreakDay;
+
+        /// <summary>Validates via DailyRewardCalculator, grants Coin (+Gems on day 7), and persists the new
+        /// streak — all-or-nothing. Returns the granted amounts so the caller can show them without recomputing.</summary>
+        public bool TryClaimDailyReward(DateTime nowUtc, out int coinReward, out int gemReward)
+        {
+            if (!DailyRewardCalculator.CanClaim(LastDailyRewardClaimUtc, nowUtc))
+            {
+                coinReward = 0;
+                gemReward = 0;
+                return false;
+            }
+
+            int nextStreakDay = DailyRewardCalculator.ComputeNextStreakDay(LastDailyRewardClaimUtc, _data.DailyReward.StreakDay, nowUtc);
+            coinReward = DailyRewardCalculator.CoinReward(nextStreakDay);
+            gemReward = DailyRewardCalculator.GemReward(nextStreakDay);
+
+            _data.DailyReward.LastClaimUtcTicks = nowUtc.Ticks;
+            _data.DailyReward.StreakDay = nextStreakDay;
+            _data.MetaCurrency += coinReward;
+            _data.Gems += gemReward;
+            RequestImmediateSave();
+            return true;
+        }
+
+        public bool IsDailyQuestCompleted(DateTime nowUtc) => IsSameDailyQuestDay(nowUtc) && _data.DailyQuest.CompletedToday;
+        public bool IsDailyQuestClaimed(DateTime nowUtc) => IsSameDailyQuestDay(nowUtc) && _data.DailyQuest.ClaimedToday;
+
+        /// <summary>Intended caller: LevelCompositionRoot, right when a level is won.</summary>
+        public void MarkDailyQuestCompleted(DateTime nowUtc)
+        {
+            EnsureDailyQuestDay(nowUtc);
+            if (_data.DailyQuest.CompletedToday)
+            {
+                return;
+            }
+
+            _data.DailyQuest.CompletedToday = true;
+            RequestImmediateSave();
+        }
+
+        public bool TryClaimDailyQuest(DateTime nowUtc, int coinReward, out int grantedCoin)
+        {
+            EnsureDailyQuestDay(nowUtc);
+            if (!_data.DailyQuest.CompletedToday || _data.DailyQuest.ClaimedToday || coinReward <= 0)
+            {
+                grantedCoin = 0;
+                return false;
+            }
+
+            _data.DailyQuest.ClaimedToday = true;
+            _data.MetaCurrency += coinReward;
+            grantedCoin = coinReward;
+            RequestImmediateSave();
+            return true;
+        }
+
+        private bool IsSameDailyQuestDay(DateTime nowUtc)
+        {
+            return _data.DailyQuest.DayResetUtcTicks > 0
+                && new DateTime(_data.DailyQuest.DayResetUtcTicks, DateTimeKind.Utc).Date == nowUtc.Date;
+        }
+
+        private void EnsureDailyQuestDay(DateTime nowUtc)
+        {
+            if (IsSameDailyQuestDay(nowUtc))
+            {
+                return;
+            }
+
+            _data.DailyQuest.DayResetUtcTicks = nowUtc.Ticks;
+            _data.DailyQuest.CompletedToday = false;
+            _data.DailyQuest.ClaimedToday = false;
+        }
+
+        public int GetTotalStarsEarned()
+        {
+            int total = 0;
+            for (int i = 0; i < _data.LevelProgress.Count; i++)
+            {
+                total += _data.LevelProgress[i].BestStars;
+            }
+
+            return total;
+        }
+
+        public int GetCompletedLevelCount()
+        {
+            int count = 0;
+            for (int i = 0; i < _data.LevelProgress.Count; i++)
+            {
+                if (_data.LevelProgress[i].IsCompleted)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public int GetUnlockedTowerCount() => _data.UnlockedTowerIds.Count;
 
         public void SetTowerUpgradeLevel(string towerId, int level)
         {

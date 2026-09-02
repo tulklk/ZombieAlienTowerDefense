@@ -47,7 +47,11 @@ namespace AlienDefense.Towers
             }
         }
 
-        public void Initialize(TowerDefinition definition, EnemyRegistry enemyRegistry, ProjectileFactory projectileFactory, AreaDamageResolver areaDamageResolver, GameFlowController gameFlow)
+        /// <param name="startingLevelIndex">0 = build at Level 1 as always. A caller may pass a tower's saved
+        /// permanent meta-upgrade level (TowerMetaUpgradeService/PlayerProfileService.GetTowerUpgradeLevel) so a
+        /// permanently-upgraded tower type starts higher on its own TowerDefinition._levels curve — no separate
+        /// stat-multiplier system needed. Clamped to a valid index regardless of what's passed in.</param>
+        public void Initialize(TowerDefinition definition, EnemyRegistry enemyRegistry, ProjectileFactory projectileFactory, AreaDamageResolver areaDamageResolver, GameFlowController gameFlow, int startingLevelIndex = 0)
         {
             if (_gameFlow != null)
             {
@@ -59,14 +63,16 @@ namespace AlienDefense.Towers
             TotalInvestedResource = 0;
             IsSold = false;
 
+            int clampedStartIndex = Mathf.Clamp(startingLevelIndex, 0, definition.LevelCount - 1);
+
             ITargetingStrategy targetingStrategy = TargetingStrategyFactory.Create(definition.DefaultTargetingMode);
             IAttackStrategy attackStrategy = AttackStrategyFactory.Create(definition, projectileFactory, areaDamageResolver);
 
-            _targeting.Initialize(enemyRegistry, targetingStrategy, definition.GetLevel(0).Range);
+            _targeting.Initialize(enemyRegistry, targetingStrategy, definition.GetLevel(clampedStartIndex).Range);
             _attack.Initialize(attackStrategy, gameObject);
 
             _isInitialized = true;
-            ApplyLevel(0);
+            ApplyLevel(clampedStartIndex);
 
             if (_gameFlow != null)
             {

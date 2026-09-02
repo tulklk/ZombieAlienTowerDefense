@@ -3,7 +3,7 @@ using UnityEngine;
 namespace AlienDefense.Core
 {
     /// <summary>Application-scope holder for which level Stable ID Gameplay should load next. Plain C# (no
-    /// ScriptableObject, no static Instance) so it can be owned and passed explicitly by ApplicationRuntime.</summary>
+    /// ScriptableObject, no static Instance) so it can be owned and passed explicitly by ApplicationCompositionRoot.</summary>
     public sealed class LevelLaunchContext
     {
         public string SelectedLevelId { get; private set; }

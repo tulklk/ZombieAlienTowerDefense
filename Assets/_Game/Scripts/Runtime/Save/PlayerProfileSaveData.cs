@@ -17,6 +17,10 @@ namespace AlienDefense.Save
         public List<string> UnlockedTowerIds = new List<string>();
         public List<PermanentTowerUpgradeSaveData> TowerUpgrades = new List<PermanentTowerUpgradeSaveData>();
         public int MetaCurrency;
+        public int Gems;
+        public int VipTier;
+        public DailyRewardSaveData DailyReward = new DailyRewardSaveData();
+        public DailyQuestSaveData DailyQuest = new DailyQuestSaveData();
         public SettingsSaveData Settings = new SettingsSaveData();
         public TutorialProgressSaveData Tutorial = new TutorialProgressSaveData();
     }

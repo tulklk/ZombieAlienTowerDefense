@@ -115,6 +115,52 @@ namespace AlienDefense.Tests.EditMode
         }
 
         [Test]
+        public void TryGetPrevious_MiddleEntry_ReturnsPrecedingEntry()
+        {
+            LevelCatalog catalog = CreateCatalog(
+                CreateEntry("level_01", "Level_01"),
+                CreateEntry("level_02", "Level_02"),
+                CreateEntry("level_03", "Level_03"));
+
+            bool found = catalog.TryGetPrevious("level_02", out LevelCatalogEntry previous);
+
+            Assert.IsTrue(found);
+            Assert.AreEqual("level_01", previous.LevelId);
+        }
+
+        [Test]
+        public void TryGetPrevious_FirstEntry_ReturnsFalse()
+        {
+            LevelCatalog catalog = CreateCatalog(CreateEntry("level_01", "Level_01"), CreateEntry("level_02", "Level_02"));
+
+            bool found = catalog.TryGetPrevious("level_01", out LevelCatalogEntry previous);
+
+            Assert.IsFalse(found);
+            Assert.IsNull(previous);
+        }
+
+        [Test]
+        public void IndexOf_KnownId_ReturnsZeroBasedPosition()
+        {
+            LevelCatalog catalog = CreateCatalog(
+                CreateEntry("level_01", "Level_01"),
+                CreateEntry("level_02", "Level_02"),
+                CreateEntry("level_03", "Level_03"));
+
+            Assert.AreEqual(2, catalog.IndexOf("level_03"));
+        }
+
+        [Test]
+        public void IndexOf_UnknownOrEmptyId_ReturnsNegativeOne()
+        {
+            LevelCatalog catalog = CreateCatalog(CreateEntry("level_01", "Level_01"));
+
+            Assert.AreEqual(-1, catalog.IndexOf("does_not_exist"));
+            Assert.AreEqual(-1, catalog.IndexOf(null));
+            Assert.AreEqual(-1, catalog.IndexOf(""));
+        }
+
+        [Test]
         public void Count_ReflectsEntryArrayLength()
         {
             LevelCatalog catalog = CreateCatalog(CreateEntry("level_01", "Level_01"), CreateEntry("level_02", "Level_02"));

@@ -1,65 +1,67 @@
-using System;
+using AlienDefense.UI.MainMenu;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace AlienDefense.UI
 {
-    /// <summary>Main Menu buttons. Dumb view: forwards clicks as events, never loads a scene itself.</summary>
+    /// <summary>MainMenu's top-level view. Owns references to each nested section's own dumb view (never 30+
+    /// individual widget fields itself) — MainMenuPresenter and its child presenters read these and drive the
+    /// nested views directly.</summary>
     public sealed class MainMenuView : MonoBehaviour
     {
+        [Header("Level Selection & Play")]
         [SerializeField]
-        private Button _playButton;
-
-        [SerializeField]
-        [Tooltip("Optional placeholder. Disabled: Settings UI is Phase 17.")]
-        private Button _settingsButton;
+        private MainMenuLevelSelectionView _levelSelectionView;
 
         [SerializeField]
-        [Tooltip("Optional. Not meaningful on every platform.")]
-        private Button _exitButton;
+        private LevelPreviewView _levelPreviewView;
 
-        public event Action PlayClicked;
-        public event Action ExitClicked;
+        [SerializeField]
+        private PlayButtonView _playButtonView;
 
-        private void Awake()
-        {
-            if (_playButton != null)
-            {
-                _playButton.onClick.AddListener(HandlePlayClicked);
-            }
+        [Header("Top HUD")]
+        [SerializeField]
+        private PlayerProfileWidgetView _playerProfileWidget;
 
-            if (_settingsButton != null)
-            {
-                _settingsButton.interactable = false;
-            }
+        [SerializeField]
+        private ResourceWidgetView _energyWidget;
 
-            if (_exitButton != null)
-            {
-                _exitButton.onClick.AddListener(HandleExitClicked);
-            }
-        }
+        [SerializeField]
+        private ResourceWidgetView _premiumCurrencyWidget;
 
-        private void HandlePlayClicked()
-        {
-            PlayClicked?.Invoke();
-        }
+        [SerializeField]
+        private ResourceWidgetView _coinWidget;
 
-        private void HandleExitClicked()
-        {
-            ExitClicked?.Invoke();
-        }
+        [Header("Feature Rails")]
+        [SerializeField]
+        private FeatureButtonView[] _leftFeatureButtons = System.Array.Empty<FeatureButtonView>();
 
-        private void OnDestroy()
-        {
-            if (_playButton != null)
-            {
-                _playButton.onClick.RemoveListener(HandlePlayClicked);
-            }
+        [SerializeField]
+        private FeatureButtonView _dailyButton;
 
-            if (_exitButton != null)
-            {
-                _exitButton.onClick.RemoveListener(HandleExitClicked);
-            }
-        }
+        [SerializeField]
+        private FeatureButtonView _freeRewardButton;
+
+        [Header("Quest & Navigation")]
+        [SerializeField]
+        private QuestBannerView _questBanner;
+
+        [SerializeField]
+        private BottomNavigationView _bottomNavigation;
+
+        public MainMenuLevelSelectionView LevelSelectionView => _levelSelectionView;
+        public LevelPreviewView LevelPreviewView => _levelPreviewView;
+        public PlayButtonView PlayButtonView => _playButtonView;
+
+        public PlayerProfileWidgetView PlayerProfileWidget => _playerProfileWidget;
+        public ResourceWidgetView EnergyWidget => _energyWidget;
+        public ResourceWidgetView PremiumCurrencyWidget => _premiumCurrencyWidget;
+        public ResourceWidgetView CoinWidget => _coinWidget;
+
+        public FeatureButtonView[] LeftFeatureButtons => _leftFeatureButtons;
+        public FeatureButtonView DailyButton => _dailyButton;
+        public FeatureButtonView FreeRewardButton => _freeRewardButton;
+
+        public QuestBannerView QuestBanner => _questBanner;
+        public BottomNavigationView BottomNavigation => _bottomNavigation;
     }
 }

@@ -58,6 +58,47 @@ namespace AlienDefense.Core
             return false;
         }
 
+        public bool TryGetPrevious(string currentLevelId, out LevelCatalogEntry previousEntry)
+        {
+            if (_entries != null)
+            {
+                for (int i = 0; i < _entries.Length; i++)
+                {
+                    if (_entries[i] != null && _entries[i].LevelId == currentLevelId)
+                    {
+                        if (i - 1 >= 0)
+                        {
+                            previousEntry = _entries[i - 1];
+                            return true;
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            previousEntry = null;
+            return false;
+        }
+
+        /// <summary>0-based position of a level in the catalog, or -1 if not found. Used for "Màn chơi {index+1}"
+        /// style display titles so callers never hard-code level numbering.</summary>
+        public int IndexOf(string levelId)
+        {
+            if (_entries != null && !string.IsNullOrEmpty(levelId))
+            {
+                for (int i = 0; i < _entries.Length; i++)
+                {
+                    if (_entries[i] != null && _entries[i].LevelId == levelId)
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        }
+
         private void OnValidate()
         {
             if (_entries == null || _entries.Length == 0)
