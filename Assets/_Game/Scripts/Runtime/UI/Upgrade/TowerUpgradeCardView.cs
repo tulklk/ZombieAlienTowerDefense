@@ -52,12 +52,12 @@ namespace AlienDefense.UI.Upgrade
 
             if (_levelText != null)
             {
-                _levelText.text = $"Cấp {currentLevelNumber}/{maxLevelNumber}";
+                _levelText.text = $"Lv {currentLevelNumber}/{maxLevelNumber}";
             }
 
             if (_costText != null)
             {
-                _costText.text = isMaxLevel ? "Tối đa" : nextLevelCost.ToString();
+                _costText.text = isMaxLevel ? "Max" : nextLevelCost.ToString();
             }
 
             if (_lockedOverlay != null)

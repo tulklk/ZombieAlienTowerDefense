@@ -162,7 +162,8 @@ namespace AlienDefense.UI.MainMenu
             _navigationDirection = 0;
 
             bool canPlay = isUnlocked;
-            _playButtonView?.SetLabel("CHƠI");
+            _playButtonView?.SetPlayedBefore(progress.IsCompleted);
+            _playButtonView?.ShowEnergyCost(5);
             _playButtonView?.SetInteractable(canPlay);
         }
 
@@ -177,9 +178,9 @@ namespace AlienDefense.UI.MainMenu
             }
 
             var objectives = new LevelObjectivePresentation[3];
-            objectives[0] = new LevelObjectivePresentation("Hoàn thành màn", progress.IsCompleted ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
-            objectives[1] = new LevelObjectivePresentation("Base còn ≥50% máu", progress.BestStars >= 2 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
-            objectives[2] = new LevelObjectivePresentation("Hoàn hảo (Base nguyên vẹn)", progress.BestStars >= 3 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
+            objectives[0] = new LevelObjectivePresentation("Complete level", progress.IsCompleted ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
+            objectives[1] = new LevelObjectivePresentation("Base HP 50%+", progress.BestStars >= 2 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
+            objectives[2] = new LevelObjectivePresentation("Perfect (Base untouched)", progress.BestStars >= 3 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
             return objectives;
         }
 

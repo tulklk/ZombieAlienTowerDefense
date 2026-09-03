@@ -5,10 +5,12 @@ using UnityEngine.UI;
 
 namespace AlienDefense.UI.MainMenu
 {
-    /// <summary>Large center-bottom CTA. Dumb view: forwards clicks, never loads a scene itself. The energy-cost
-    /// slot is kept but hidden by default (see MainMenuLevelSelectionPresenter's doc comment) — this project has
-    /// no lobby/play-stamina system distinct from the in-level UFO tractor Energy, so Play never actually spends
-    /// anything on click; ShowEnergyCost exists only for a future real stamina system to opt into.</summary>
+    /// <summary>Large center-bottom CTA. Dumb view: forwards clicks, never loads a scene itself. Swaps its own
+    /// background sprite + label between "Start" (StartBtn, never completed this level before) and "Play"
+    /// (PlayBtn, already completed it at least once) — purely cosmetic, matches the reference composition.
+    /// The energy-cost slot (icon + amount) is shown by MainMenuLevelSelectionPresenter as a flat cosmetic
+    /// "cost 5" display — no lobby/play-stamina system exists in this project, so nothing is ever actually
+    /// deducted on click; see ShowEnergyCost's own doc comment.</summary>
     public sealed class PlayButtonView : MonoBehaviour
     {
         [SerializeField]
@@ -18,7 +20,18 @@ namespace AlienDefense.UI.MainMenu
         private TMP_Text _label;
 
         [SerializeField]
-        [Tooltip("Optional. Hidden unless ShowEnergyCost is called — no lobby stamina system exists yet.")]
+        [Tooltip("The button's own background — swapped between the Start/Play sprites below.")]
+        private Image _backgroundImage;
+
+        [SerializeField]
+        private Sprite _startSprite;
+
+        [SerializeField]
+        private Sprite _playSprite;
+
+        [SerializeField]
+        [Tooltip("Optional. Hidden unless ShowEnergyCost is called — no lobby stamina system exists yet, this " +
+            "is a flat cosmetic display only, nothing is ever actually spent on click.")]
         private GameObject _energyCostRoot;
 
         [SerializeField]
@@ -47,6 +60,22 @@ namespace AlienDefense.UI.MainMenu
             }
         }
 
+        /// <summary>true = this level has been completed before ("Play" + PlayBtn sprite), false = never
+        /// completed yet ("Start" + StartBtn sprite). Purely visual — doesn't touch save data.</summary>
+        public void SetPlayedBefore(bool hasCompletedBefore)
+        {
+            SetLabel(hasCompletedBefore ? "Play" : "Start");
+
+            if (_backgroundImage != null)
+            {
+                Sprite target = hasCompletedBefore ? _playSprite : _startSprite;
+                if (target != null)
+                {
+                    _backgroundImage.sprite = target;
+                }
+            }
+        }
+
         public void SetInteractable(bool interactable)
         {
             if (_button != null)
@@ -55,7 +84,8 @@ namespace AlienDefense.UI.MainMenu
             }
         }
 
-        /// <summary>Only call once a real lobby-stamina system exists and Play genuinely costs something.</summary>
+        /// <summary>Only ever a flat cosmetic "cost" display next to the lightning icon — no lobby-stamina
+        /// system exists in this project, so nothing is actually deducted when Play is clicked.</summary>
         public void ShowEnergyCost(int cost)
         {
             if (_energyCostRoot != null)

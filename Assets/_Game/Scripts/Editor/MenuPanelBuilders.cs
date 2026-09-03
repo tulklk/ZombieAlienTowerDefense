@@ -76,13 +76,13 @@ namespace AlienDefense.EditorTools
             GameObject panel = EditorMenuShellLayout.CreateTabPanel(contentRoot, "ShopPanel", false);
             (_, RectTransform scrollContent) = EditorMenuShellLayout.BuildScrollPanel(panel.transform, "ShopScroll");
 
-            AddSectionTitle(scrollContent, "Cửa Hàng");
-            AddSectionTitle(scrollContent, "Đổi Gem lấy Coin", 26f);
+            AddSectionTitle(scrollContent, "Shop");
+            AddSectionTitle(scrollContent, "Exchange Gems for Coins", 26f);
 
             Transform exchangeRow = BuildHorizontalCardRow(scrollContent, "ExchangeCardContainer", 280f, 260f);
             ShopExchangeCardView cardPrefab = AssetDatabase.LoadAssetAtPath<ShopExchangeCardView>("Assets/_Game/Prefabs/UI/Shop/ShopExchangeCard.prefab");
 
-            AddSectionTitle(scrollContent, "Nạp Gem (cần tích hợp thanh toán thật)", 22f);
+            AddSectionTitle(scrollContent, "Buy Gems (requires real payment integration)", 22f);
             Transform iapRow = BuildHorizontalCardRow(scrollContent, "IapCardRow", 280f, 200f);
             string[] iapLabels = { "100 Gem", "500 Gem", "1200 Gem" };
             foreach (string label in iapLabels)
@@ -103,7 +103,7 @@ namespace AlienDefense.EditorTools
             GameObject panel = EditorMenuShellLayout.CreateTabPanel(contentRoot, "UpgradePanel", false);
             (_, RectTransform scrollContent) = EditorMenuShellLayout.BuildScrollPanel(panel.transform, "UpgradeScroll");
 
-            AddSectionTitle(scrollContent, "Nâng Cấp Tower");
+            AddSectionTitle(scrollContent, "Upgrade Tower");
 
             Transform cardContainer = BuildGridContainer(scrollContent, "CardContainer", 300f, 340f);
             TowerUpgradeCardView cardPrefab = AssetDatabase.LoadAssetAtPath<TowerUpgradeCardView>("Assets/_Game/Prefabs/UI/Upgrade/TowerUpgradeCard.prefab");
@@ -121,7 +121,7 @@ namespace AlienDefense.EditorTools
             GameObject panel = EditorMenuShellLayout.CreateTabPanel(contentRoot, "DefensePanel", false);
             (_, RectTransform scrollContent) = EditorMenuShellLayout.BuildScrollPanel(panel.transform, "DefenseScroll");
 
-            AddSectionTitle(scrollContent, "Mở Khoá Tower");
+            AddSectionTitle(scrollContent, "Unlock Towers");
 
             Transform cardContainer = BuildGridContainer(scrollContent, "CardContainer", 300f, 300f);
             TowerUnlockCardView cardPrefab = AssetDatabase.LoadAssetAtPath<TowerUnlockCardView>("Assets/_Game/Prefabs/UI/Defense/TowerUnlockCard.prefab");
@@ -139,7 +139,7 @@ namespace AlienDefense.EditorTools
             GameObject panel = EditorMenuShellLayout.CreateTabPanel(contentRoot, "BasePanel", false);
             (_, RectTransform scrollContent) = EditorMenuShellLayout.BuildScrollPanel(panel.transform, "BaseScroll");
 
-            AddSectionTitle(scrollContent, "Căn Cứ");
+            AddSectionTitle(scrollContent, "Base");
 
             var statsPanel = new GameObject("StatsPanel", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             statsPanel.transform.SetParent(scrollContent, false);
@@ -154,10 +154,10 @@ namespace AlienDefense.EditorTools
             layout.childForceExpandHeight = false;
             layout.childControlHeight = false;
 
-            TMP_Text completedLevelsText = BuildStatRow(statsPanel.transform, "CompletedLevelsText", "Màn đã hoàn thành: 0");
-            TMP_Text totalStarsText = BuildStatRow(statsPanel.transform, "TotalStarsText", "Tổng sao: 0");
-            TMP_Text unlockedTowersText = BuildStatRow(statsPanel.transform, "UnlockedTowersText", "Tower đã mở: 0");
-            TMP_Text vipTierText = BuildStatRow(statsPanel.transform, "VipTierText", "VIP: Chưa có");
+            TMP_Text completedLevelsText = BuildStatRow(statsPanel.transform, "CompletedLevelsText", "Levels completed: 0");
+            TMP_Text totalStarsText = BuildStatRow(statsPanel.transform, "TotalStarsText", "Total stars: 0");
+            TMP_Text unlockedTowersText = BuildStatRow(statsPanel.transform, "UnlockedTowersText", "Towers unlocked: 0");
+            TMP_Text vipTierText = BuildStatRow(statsPanel.transform, "VipTierText", "VIP: None");
             TMP_Text coinText = BuildStatRow(statsPanel.transform, "CoinText", "Coin: 0");
             TMP_Text gemText = BuildStatRow(statsPanel.transform, "GemText", "Gem: 0");
 
@@ -230,7 +230,7 @@ namespace AlienDefense.EditorTools
             layoutElement.preferredHeight = 200f;
 
             BuildAnchoredText(card.transform, "Label", label, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 20f), new Vector2(240f, 40f), 24f, TextAlignmentOptions.Center);
-            BuildAnchoredText(card.transform, "Notice", "Chưa khả dụng", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(240f, 30f), 16f, TextAlignmentOptions.Center);
+            BuildAnchoredText(card.transform, "Notice", "Not available", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(240f, 30f), 16f, TextAlignmentOptions.Center);
 
             Button disabledButton = card.AddComponent<Button>();
             disabledButton.interactable = false;

@@ -1,0 +1,16 @@
+=== Font Migration Report ===
+Generated: 9/3/2026 8:01:29 PM
+Target font: Fredoka-Bold SDF
+Scope: Assets/_Game
+
+TMP_Settings.defaultFontAsset: Fredoka-Bold SDF -> Fredoka-Bold SDF (affects only newly-created TMP objects in this project; the TextMesh Pro package itself is untouched)
+
+Scenes scanned: 12 (changed: 0)
+Prefabs scanned: 40 (changed: 0)
+Total TMP_Text found: 221
+Texts changed: 0
+Texts with a special material (font asset changed only, material preset left alone): 0
+Texts where Font Style's Bold flag was cleared to Normal: 0
+Errors: 0
+
+-- Per-object detail (only objects that actually changed) --

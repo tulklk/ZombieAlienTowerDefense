@@ -30,7 +30,7 @@ namespace AlienDefense.EditorTools
             (GameObject canvasObject, Transform safeArea) = EditorCanvasUtility.BuildCanvasWithSafeArea("Canvas");
             EditorScreenBuildingBlocks.BuildFullScreenImage(canvasObject.transform, "BackgroundOverlay", BackgroundColor).transform.SetAsFirstSibling();
 
-            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Căn Cứ", 40f, 90f, 48f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Base", 40f, 90f, 48f, TextAlignmentOptions.Center);
             Button backButton = EditorScreenBuildingBlocks.BuildTopLeftButton(safeArea, "BackButton", "<", PanelColor);
 
             var statsPanel = new GameObject("StatsPanel", typeof(RectTransform), typeof(Image));
@@ -51,10 +51,10 @@ namespace AlienDefense.EditorTools
             layout.childForceExpandHeight = false;
             layout.childControlHeight = false;
 
-            TMP_Text completedLevelsText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "CompletedLevelsText", "Màn đã hoàn thành: 0");
-            TMP_Text totalStarsText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "TotalStarsText", "Tổng sao: 0");
-            TMP_Text unlockedTowersText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "UnlockedTowersText", "Tower đã mở: 0");
-            TMP_Text vipTierText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "VipTierText", "VIP: Chưa có");
+            TMP_Text completedLevelsText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "CompletedLevelsText", "Levels completed: 0");
+            TMP_Text totalStarsText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "TotalStarsText", "Total stars: 0");
+            TMP_Text unlockedTowersText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "UnlockedTowersText", "Towers unlocked: 0");
+            TMP_Text vipTierText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "VipTierText", "VIP: None");
             TMP_Text coinText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "CoinText", "Coin: 0");
             TMP_Text gemText = EditorScreenBuildingBlocks.BuildStatRow(statsPanel.transform, "GemText", "Gem: 0");
 

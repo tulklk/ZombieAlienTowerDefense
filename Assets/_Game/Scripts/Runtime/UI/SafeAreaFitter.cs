@@ -46,6 +46,20 @@ namespace AlienDefense.UI
                 return;
             }
 
+#if UNITY_EDITOR
+            // The Editor's Device Simulator reports a real notch/status-bar inset while Playing (e.g. Note10),
+            // but a plain (non-simulated) Edit-mode preview never does — so authoring a layout by eye in Edit
+            // mode and then pressing Play used to visibly shift every SafeArea-nested element. Skipping the
+            // inset in the Editor entirely keeps Edit and Play pixel-identical for iteration; real builds
+            // (this #if is compiled out) still get the full dynamic safe-area protection below.
+            _rectTransform.anchorMin = Vector2.zero;
+            _rectTransform.anchorMax = Vector2.one;
+            _lastSafeArea = Screen.safeArea;
+            _lastScreenSize = new Vector2Int(Screen.width, Screen.height);
+            _lastOrientation = Screen.orientation;
+            _hasAppliedOnce = true;
+            return;
+#else
             Rect safeArea = Screen.safeArea;
 
             Vector2 anchorMin = safeArea.position;
@@ -62,6 +76,7 @@ namespace AlienDefense.UI
             _lastScreenSize = new Vector2Int(Screen.width, Screen.height);
             _lastOrientation = Screen.orientation;
             _hasAppliedOnce = true;
+#endif
         }
     }
 }

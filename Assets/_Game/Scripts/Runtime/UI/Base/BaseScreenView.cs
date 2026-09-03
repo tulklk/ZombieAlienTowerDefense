@@ -27,22 +27,22 @@ namespace AlienDefense.UI.Base
         {
             if (_completedLevelsText != null)
             {
-                _completedLevelsText.text = $"Màn đã hoàn thành: {completedLevels}";
+                _completedLevelsText.text = $"Levels completed: {completedLevels}";
             }
 
             if (_totalStarsText != null)
             {
-                _totalStarsText.text = $"Tổng sao: {totalStars}";
+                _totalStarsText.text = $"Total stars: {totalStars}";
             }
 
             if (_unlockedTowersText != null)
             {
-                _unlockedTowersText.text = $"Tower đã mở: {unlockedTowers}";
+                _unlockedTowersText.text = $"Towers unlocked: {unlockedTowers}";
             }
 
             if (_vipTierText != null)
             {
-                _vipTierText.text = vipTier > 0 ? $"VIP: {vipTier}" : "VIP: Chưa có";
+                _vipTierText.text = vipTier > 0 ? $"VIP: {vipTier}" : "VIP: None";
             }
 
             if (_coinText != null)

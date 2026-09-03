@@ -8,8 +8,8 @@ namespace AlienDefense.UI.MainMenu
     /// and never touches save data itself, only the already-fetched LevelProgressSnapshot.</summary>
     public static class LevelStatusFormatter
     {
-        private const string NotStartedText = "Chưa hoàn thành";
-        private const string PerfectText = "Hoàn hảo";
+        private const string NotStartedText = "Not completed";
+        private const string PerfectText = "Perfect";
         private const int PerfectStars = 3;
 
         /// <param name="maxBaseHealth">The level's LevelDefinition.BaseMaxHealth, needed to turn the saved
@@ -30,14 +30,14 @@ namespace AlienDefense.UI.MainMenu
                 ? Mathf.Clamp(Mathf.RoundToInt(100f * progress.BestRemainingBaseHealth / maxBaseHealth), 0, 100)
                 : 0;
 
-            return $"HP còn lại: {percent}%";
+            return $"HP remaining: {percent}%";
         }
 
         public static string FormatLockedRequirement(string previousLevelTitle)
         {
             return string.IsNullOrEmpty(previousLevelTitle)
-                ? "Đã khoá"
-                : $"Hoàn thành {previousLevelTitle} để mở.";
+                ? "Locked"
+                : $"Complete {previousLevelTitle} to unlock.";
         }
     }
 }

@@ -11,7 +11,7 @@ namespace AlienDefense.Tests.EditMode
         {
             LevelProgressSnapshot progress = LevelProgressSnapshot.NotStarted("level_01");
 
-            Assert.AreEqual("Chưa hoàn thành", LevelStatusFormatter.Format(progress, 20));
+            Assert.AreEqual("Not completed", LevelStatusFormatter.Format(progress, 20));
         }
 
         [Test]
@@ -19,7 +19,7 @@ namespace AlienDefense.Tests.EditMode
         {
             var progress = new LevelProgressSnapshot("level_01", true, 3, 1, 20);
 
-            Assert.AreEqual("Hoàn hảo", LevelStatusFormatter.Format(progress, 20));
+            Assert.AreEqual("Perfect", LevelStatusFormatter.Format(progress, 20));
         }
 
         [Test]
@@ -27,7 +27,7 @@ namespace AlienDefense.Tests.EditMode
         {
             var progress = new LevelProgressSnapshot("level_01", true, 2, 1, 19);
 
-            Assert.AreEqual("HP còn lại: 95%", LevelStatusFormatter.Format(progress, 20));
+            Assert.AreEqual("HP remaining: 95%", LevelStatusFormatter.Format(progress, 20));
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace AlienDefense.Tests.EditMode
         {
             var progress = new LevelProgressSnapshot("level_01", true, 1, 1, 2);
 
-            Assert.AreEqual("HP còn lại: 10%", LevelStatusFormatter.Format(progress, 20));
+            Assert.AreEqual("HP remaining: 10%", LevelStatusFormatter.Format(progress, 20));
         }
 
         [Test]
@@ -43,19 +43,19 @@ namespace AlienDefense.Tests.EditMode
         {
             var progress = new LevelProgressSnapshot("level_01", true, 1, 1, 0);
 
-            Assert.AreEqual("HP còn lại: 0%", LevelStatusFormatter.Format(progress, 0));
+            Assert.AreEqual("HP remaining: 0%", LevelStatusFormatter.Format(progress, 0));
         }
 
         [Test]
         public void FormatLockedRequirement_WithPreviousTitle_ReferencesIt()
         {
-            Assert.AreEqual("Hoàn thành Màn chơi 1 để mở.", LevelStatusFormatter.FormatLockedRequirement("Màn chơi 1"));
+            Assert.AreEqual("Complete Level 1 to unlock.", LevelStatusFormatter.FormatLockedRequirement("Level 1"));
         }
 
         [Test]
         public void FormatLockedRequirement_NoPreviousTitle_ReturnsGenericLockedText()
         {
-            Assert.AreEqual("Đã khoá", LevelStatusFormatter.FormatLockedRequirement(null));
+            Assert.AreEqual("Locked", LevelStatusFormatter.FormatLockedRequirement(null));
         }
     }
 }

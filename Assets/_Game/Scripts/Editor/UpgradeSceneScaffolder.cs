@@ -72,7 +72,7 @@ namespace AlienDefense.EditorTools
             (GameObject canvasObject, Transform safeArea) = EditorCanvasUtility.BuildCanvasWithSafeArea("Canvas");
             BuildFullScreenImage(canvasObject.transform, "BackgroundOverlay", BackgroundColor).transform.SetAsFirstSibling();
 
-            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Nâng Cấp Tower", 40f, 90f, 48f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Upgrade Tower", 40f, 90f, 48f, TextAlignmentOptions.Center);
 
             Button backButton = BuildTopLeftButton(safeArea, "BackButton", "<");
             ResourceWidgetView coinWidget = BuildCoinWidget(safeArea);
@@ -136,7 +136,7 @@ namespace AlienDefense.EditorTools
 
             Image icon = BuildAnchoredImage(go.transform, "Icon", new Vector2(0.5f, 1f), new Vector2(96f, 96f), new Vector2(0f, -20f), Color.white);
             TMP_Text nameText = BuildAnchoredText(go.transform, "NameText", "Tower", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -128f), new Vector2(280f, 36f), 26f, TextAlignmentOptions.Center);
-            TMP_Text levelText = BuildAnchoredText(go.transform, "LevelText", "Cấp 1/1", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -168f), new Vector2(280f, 30f), 20f, TextAlignmentOptions.Center);
+            TMP_Text levelText = BuildAnchoredText(go.transform, "LevelText", "Lv 1/1", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -168f), new Vector2(280f, 30f), 20f, TextAlignmentOptions.Center);
 
             var upgradeButtonObject = new GameObject("UpgradeButton", typeof(RectTransform), typeof(Image), typeof(Button));
             upgradeButtonObject.transform.SetParent(go.transform, false);

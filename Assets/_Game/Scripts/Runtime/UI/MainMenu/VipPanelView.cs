@@ -63,7 +63,7 @@ namespace AlienDefense.UI.MainMenu
         {
             if (_currentTierText != null)
             {
-                _currentTierText.text = currentTier > 0 ? $"VIP hiện tại: {currentTier}" : "Chưa có VIP";
+                _currentTierText.text = currentTier > 0 ? $"Current VIP: {currentTier}" : "No VIP";
             }
         }
 

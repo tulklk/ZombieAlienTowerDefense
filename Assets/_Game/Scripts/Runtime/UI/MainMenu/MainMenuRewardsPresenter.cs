@@ -67,8 +67,8 @@ namespace AlienDefense.UI.MainMenu
             bool claimed = profile.IsDailyQuestClaimed(now);
             bool completed = profile.IsDailyQuestCompleted(now);
 
-            string progressText = claimed ? "Đã nhận thưởng" : completed ? "Sẵn sàng nhận" : "0/1";
-            _questBanner.SetQuest("Hoàn thành 1 màn hôm nay", progressText, completed ? 1f : 0f);
+            string progressText = claimed ? "Reward claimed" : completed ? "Ready to claim" : "0/1";
+            _questBanner.SetQuest("Complete 1 level today", progressText, completed ? 1f : 0f);
         }
 
         private void HandleQuestClicked()

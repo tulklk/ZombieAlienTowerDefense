@@ -153,6 +153,7 @@ MonoBehaviour:
   _levelCatalog: {fileID: 11400000, guid: 8c36aaf10fe2db1448210fd22e205db0, type: 2}
   _playerProfileDefaults: {fileID: 11400000, guid: 3c8b14591e3afce4390a9374d63245bf,
     type: 2}
+  _towerCatalog: {fileID: 0}
   _bootstrapUICamera: {fileID: 1876543203}
 --- !u!4 &1265190013
 Transform:
@@ -173,14 +174,48 @@ Transform:
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-    m_Modification:
+  m_Modification:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1043898328, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
-      propertyPath: m_Name
-      value: LoadingOverlay
+    - target: {fileID: 117813664, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: bc513423574e793478d16ce27858de07,
+        type: 2}
+    - target: {fileID: 117813664, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 052409b745d2f6a4f8e5205c74bda3aa, type: 2}
+    - target: {fileID: 1043898330, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1043898330, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1043898330, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2025903028, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_text
+      value: Loading 0.0 %
+      objectReference: {fileID: 0}
+    - target: {fileID: 2025903028, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: bc513423574e793478d16ce27858de07,
+        type: 2}
+    - target: {fileID: 2025903028, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_fontStyle
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2025903028, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 052409b745d2f6a4f8e5205c74bda3aa, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

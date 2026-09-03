@@ -1,0 +1,20 @@
+=== Font Usage Report ===
+Generated: 9/3/2026 8:01:12 PM
+Scope: Assets/_Game only.
+
+Scenes scanned: 12
+Prefabs scanned: 40
+Total TMP_Text found: 221
+
+-- Current font usage --
+  Fredoka-Bold SDF : 221
+
+-- Planned material preset assignment if Apply is run --
+  Fredoka_SmallLabel : 164
+  Fredoka_HUD : 26
+  Fredoka_Title : 24
+  Fredoka_Timer : 5
+  Fredoka_Button : 2
+
+-- Objects with a non-standard/special material (Apply will change ONLY the font asset on these, never the material) --
+Count: 0

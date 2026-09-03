@@ -45,7 +45,7 @@ namespace AlienDefense.UI
         private TMP_Text _versionText;
 
         [SerializeField]
-        [Tooltip("Optional. \"Đang tải X %\" text below the progress bar.")]
+        [Tooltip("Optional. \"Loading X %\" text below the progress bar.")]
         private TMP_Text _percentageText;
 
         [SerializeField]
@@ -287,7 +287,7 @@ namespace AlienDefense.UI
 
             if (_percentageText != null)
             {
-                _percentageText.text = $"Đang tải {(progress01 * 100f):0.0} %";
+                _percentageText.text = $"Loading {(progress01 * 100f):0.0} %";
             }
 
             if (_progressHandle != null && _progressBarTrack != null)

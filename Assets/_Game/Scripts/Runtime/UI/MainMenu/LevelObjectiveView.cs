@@ -4,24 +4,27 @@ using UnityEngine.UI;
 
 namespace AlienDefense.UI.MainMenu
 {
-    /// <summary>One objective/chest slot. Dumb view: displays whatever LevelObjectivePresentation it's given,
-    /// never computes completion itself.</summary>
+    /// <summary>One reward-chest slot. Dumb view: displays whatever LevelObjectivePresentation it's given,
+    /// never computes completion itself. The chest icon itself never changes (same "?" chest art always) —
+    /// only a green tick badge toggles on top of it once the objective is completed, plus a slight dim while
+    /// locked (no state at all yet, e.g. the level hasn't been unlocked).</summary>
     public sealed class LevelObjectiveView : MonoBehaviour
     {
         [SerializeField]
         private Image _icon;
 
         [SerializeField]
+        [Tooltip("Green checkmark shown over the chest once this objective is completed.")]
+        private GameObject _completedBadge;
+
+        [SerializeField]
         private TMP_Text _requirementText;
 
         [SerializeField]
-        private Color _lockedColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+        private Color _lockedColor = new Color(0.55f, 0.55f, 0.55f, 1f);
 
         [SerializeField]
-        private Color _incompleteColor = new Color(0.7f, 0.7f, 0.8f, 1f);
-
-        [SerializeField]
-        private Color _completedColor = new Color(0.4f, 0.85f, 0.5f, 1f);
+        private Color _unlockedColor = Color.white;
 
         public void Configure(LevelObjectivePresentation presentation)
         {
@@ -32,12 +35,12 @@ namespace AlienDefense.UI.MainMenu
 
             if (_icon != null)
             {
-                _icon.color = presentation.State switch
-                {
-                    LevelObjectiveState.Completed => _completedColor,
-                    LevelObjectiveState.Locked => _lockedColor,
-                    _ => _incompleteColor
-                };
+                _icon.color = presentation.State == LevelObjectiveState.Locked ? _lockedColor : _unlockedColor;
+            }
+
+            if (_completedBadge != null)
+            {
+                _completedBadge.SetActive(presentation.State == LevelObjectiveState.Completed);
             }
         }
     }

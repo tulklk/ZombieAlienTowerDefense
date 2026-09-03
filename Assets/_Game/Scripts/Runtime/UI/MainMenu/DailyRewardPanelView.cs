@@ -54,7 +54,7 @@ namespace AlienDefense.UI.MainMenu
         {
             if (_streakDayText != null)
             {
-                _streakDayText.text = $"Ngày {nextStreakDay}/7";
+                _streakDayText.text = $"Day {nextStreakDay}/7";
             }
 
             if (_rewardPreviewText != null)
@@ -64,7 +64,7 @@ namespace AlienDefense.UI.MainMenu
 
             if (_claimButtonLabel != null)
             {
-                _claimButtonLabel.text = "Nhận";
+                _claimButtonLabel.text = "Claim";
             }
 
             if (_claimButton != null)
@@ -77,17 +77,17 @@ namespace AlienDefense.UI.MainMenu
         {
             if (_streakDayText != null)
             {
-                _streakDayText.text = $"Ngày {currentStreakDay}/7";
+                _streakDayText.text = $"Day {currentStreakDay}/7";
             }
 
             if (_rewardPreviewText != null)
             {
-                _rewardPreviewText.text = "Đã nhận hôm nay, quay lại vào ngày mai.";
+                _rewardPreviewText.text = "Already claimed today, come back tomorrow.";
             }
 
             if (_claimButtonLabel != null)
             {
-                _claimButtonLabel.text = "Đã nhận";
+                _claimButtonLabel.text = "Claimed";
             }
 
             if (_claimButton != null)

@@ -34,7 +34,7 @@ namespace AlienDefense.EditorTools
             (GameObject canvasObject, Transform safeArea) = EditorCanvasUtility.BuildCanvasWithSafeArea("Canvas");
             BuildFullScreenImage(canvasObject.transform, "BackgroundOverlay", BackgroundColor).transform.SetAsFirstSibling();
 
-            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Mở Khoá Tower", 40f, 90f, 48f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Unlock Towers", 40f, 90f, 48f, TextAlignmentOptions.Center);
             Button backButton = BuildTopLeftButton(safeArea, "BackButton", "<", PanelColor);
             ResourceWidgetView coinWidget = BuildCoinWidget(safeArea);
 
@@ -93,7 +93,7 @@ namespace AlienDefense.EditorTools
             unlockButtonObject.GetComponent<Image>().color = AccentGreen;
             TMP_Text costText = BuildAnchoredText(unlockButtonObject.transform, "CostText", "0", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 64f), 26f, TextAlignmentOptions.Center);
 
-            GameObject unlockedLabel = BuildAnchoredText(go.transform, "UnlockedLabel", "Đã mở khoá", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(260f, 44f), 22f, TextAlignmentOptions.Center).gameObject;
+            GameObject unlockedLabel = BuildAnchoredText(go.transform, "UnlockedLabel", "Unlocked", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(260f, 44f), 22f, TextAlignmentOptions.Center).gameObject;
             unlockedLabel.SetActive(false);
 
             var view = go.AddComponent<TowerUnlockCardView>();

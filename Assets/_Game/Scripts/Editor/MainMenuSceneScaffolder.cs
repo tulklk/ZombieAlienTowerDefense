@@ -483,8 +483,8 @@ namespace AlienDefense.EditorTools
             areaLayout.childForceExpandWidth = true;
             areaLayout.childForceExpandHeight = false;
 
-            TMP_Text title = BuildLayoutText(area.transform, "LevelTitle", "Màn chơi 1", 44f, 64f);
-            TMP_Text status = BuildLayoutText(area.transform, "LevelStatus", "Chưa hoàn thành", 26f, 40f);
+            TMP_Text title = BuildLayoutText(area.transform, "LevelTitle", "Level 1", 44f, 64f);
+            TMP_Text status = BuildLayoutText(area.transform, "LevelStatus", "Not completed", 26f, 40f);
 
             Button moreButton = BuildSmallCircleButton(area.transform, "MoreButton", "...", PanelColor, new Vector2(1f, 1f), new Vector2(-8f, -8f));
             moreButton.transform.SetParent(area.transform, false);
@@ -646,7 +646,7 @@ namespace AlienDefense.EditorTools
             buttonRect.offsetMax = Vector2.zero;
             buttonObject.GetComponent<Image>().color = AccentOrange;
 
-            TMP_Text label = BuildAnchoredText(buttonObject.transform, "PlayLabel", "CHƠI", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300f, 70f), 46f, TextAlignmentOptions.Center);
+            TMP_Text label = BuildAnchoredText(buttonObject.transform, "PlayLabel", "PLAY", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300f, 70f), 46f, TextAlignmentOptions.Center);
 
             var energyCostRoot = new GameObject("EnergyCostRoot", typeof(RectTransform));
             energyCostRoot.transform.SetParent(buttonObject.transform, false);
@@ -709,11 +709,11 @@ namespace AlienDefense.EditorTools
             GameObject overlay = BuildPopupOverlay(safeArea, "DailyRewardPanel");
             GameObject panel = BuildPopupCard(overlay.transform, "Card", new Vector2(600f, 400f));
 
-            LevelSceneScaffolder.CreateTMPText(panel.transform, "TitleText", "Điểm Danh Hàng Ngày", 24f, 60f, 32f, TextAlignmentOptions.Center);
-            TMP_Text streakDayText = BuildAnchoredText(panel.transform, "StreakDayText", "Ngày 1/7", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(400f, 44f), 28f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(panel.transform, "TitleText", "Daily Check-in", 24f, 60f, 32f, TextAlignmentOptions.Center);
+            TMP_Text streakDayText = BuildAnchoredText(panel.transform, "StreakDayText", "Day 1/7", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(400f, 44f), 28f, TextAlignmentOptions.Center);
             TMP_Text rewardPreviewText = BuildAnchoredText(panel.transform, "RewardPreviewText", string.Empty, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -170f), new Vector2(480f, 60f), 22f, TextAlignmentOptions.Center);
 
-            (Button claimButton, TMP_Text claimLabel) = BuildLabeledButton(panel.transform, "ClaimButton", "Nhận", AccentGreen, new Vector2(0f, -280f), new Vector2(300f, 76f));
+            (Button claimButton, TMP_Text claimLabel) = BuildLabeledButton(panel.transform, "ClaimButton", "Claim", AccentGreen, new Vector2(0f, -280f), new Vector2(300f, 76f));
             Button closeButton = BuildSmallCircleButton(panel.transform, "CloseButton", "X", PanelColor, new Vector2(1f, 1f), new Vector2(-16f, -16f));
 
             var view = overlay.AddComponent<DailyRewardPanelView>();
@@ -735,7 +735,7 @@ namespace AlienDefense.EditorTools
             GameObject panel = BuildPopupCard(overlay.transform, "Card", new Vector2(680f, 620f));
 
             LevelSceneScaffolder.CreateTMPText(panel.transform, "TitleText", "VIP", 24f, 60f, 32f, TextAlignmentOptions.Center);
-            TMP_Text currentTierText = BuildAnchoredText(panel.transform, "CurrentTierText", "Chưa có VIP", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(400f, 36f), 20f, TextAlignmentOptions.Center);
+            TMP_Text currentTierText = BuildAnchoredText(panel.transform, "CurrentTierText", "No VIP", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(400f, 36f), 20f, TextAlignmentOptions.Center);
 
             var rows = new VipPanelView.TierRow[VipTierTable.Tiers.Length];
             for (int i = 0; i < rows.Length; i++)
@@ -783,14 +783,14 @@ namespace AlienDefense.EditorTools
             TMP_Text costText = BuildAnchoredText(row.transform, "CostText", "0", new Vector2(0.25f, 0.5f), new Vector2(0.25f, 0.5f), new Vector2(0f, -10f), new Vector2(140f, 30f), 20f, TextAlignmentOptions.Center);
             TMP_Text bonusText = BuildAnchoredText(row.transform, "BonusText", "+0% Coin", new Vector2(0.55f, 0.5f), new Vector2(0.55f, 0.5f), new Vector2(0f, -10f), new Vector2(160f, 30f), 18f, TextAlignmentOptions.Center);
 
-            (Button buyButton, _) = BuildLabeledButton(row.transform, "BuyButton", "Mua", AccentGreen, Vector2.zero, new Vector2(140f, 56f));
+            (Button buyButton, _) = BuildLabeledButton(row.transform, "BuyButton", "Buy", AccentGreen, Vector2.zero, new Vector2(140f, 56f));
             RectTransform buyRect = buyButton.GetComponent<RectTransform>();
             buyRect.anchorMin = new Vector2(1f, 0.5f);
             buyRect.anchorMax = new Vector2(1f, 0.5f);
             buyRect.pivot = new Vector2(1f, 0.5f);
             buyRect.anchoredPosition = new Vector2(-16f, 0f);
 
-            GameObject ownedLabel = LevelSceneScaffolder.CreateTMPText(row.transform, "OwnedLabel", "Đã sở hữu", -12f, 30f, 20f, TextAlignmentOptions.Center).gameObject;
+            GameObject ownedLabel = LevelSceneScaffolder.CreateTMPText(row.transform, "OwnedLabel", "Owned", -12f, 30f, 20f, TextAlignmentOptions.Center).gameObject;
             RectTransform ownedRect = ownedLabel.GetComponent<RectTransform>();
             ownedRect.anchorMin = new Vector2(1f, 0.5f);
             ownedRect.anchorMax = new Vector2(1f, 0.5f);
@@ -959,10 +959,10 @@ namespace AlienDefense.EditorTools
             // Per-tab idle animation while selected (user-specified): Play/Base bounce up-down; Upgrade spins 2
             // full turns clockwise then 2 back counter-clockwise; Shop/Defense have none.
             BottomNavTabView shopTab = BuildNavTab(nav.transform, "ShopTab", "Shop", tabHeight, LoadBottomNavSprite("Tab/shop.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.None);
-            BottomNavTabView upgradeTab = BuildNavTab(nav.transform, "UpgradeTab", "Nâng cấp", tabHeight, LoadBottomNavSprite("Tab/storage.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.RotateTwoTurnsBothWays);
-            BottomNavTabView playTab = BuildNavTab(nav.transform, "PlayTab", "CHƠI", tabHeight, LoadBottomNavSprite("Tab/play.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.BounceUpDown);
-            BottomNavTabView baseTab = BuildNavTab(nav.transform, "BaseTab", "Căn cứ", tabHeight, LoadBottomNavSprite("Tab/base.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.BounceUpDown);
-            BottomNavTabView defenseTab = BuildNavTab(nav.transform, "DefenseTab", "Phòng thủ", tabHeight, LoadBottomNavSprite("Tab/tower.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.None);
+            BottomNavTabView upgradeTab = BuildNavTab(nav.transform, "UpgradeTab", "Upgrade", tabHeight, LoadBottomNavSprite("Tab/storage.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.RotateTwoTurnsBothWays);
+            BottomNavTabView playTab = BuildNavTab(nav.transform, "PlayTab", "PLAY", tabHeight, LoadBottomNavSprite("Tab/play.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.BounceUpDown);
+            BottomNavTabView baseTab = BuildNavTab(nav.transform, "BaseTab", "Base", tabHeight, LoadBottomNavSprite("Tab/base.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.BounceUpDown);
+            BottomNavTabView defenseTab = BuildNavTab(nav.transform, "DefenseTab", "Defense", tabHeight, LoadBottomNavSprite("Tab/tower.png"), normalTile, selectedTile, BottomNavIconIdleAnimation.None);
 
             var view = nav.AddComponent<BottomNavigationView>();
             var serialized = new SerializedObject(view);

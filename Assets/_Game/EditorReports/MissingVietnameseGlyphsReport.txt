@@ -1,0 +1,109 @@
+=== Missing Vietnamese/Non-ASCII Glyph Report ===
+Font checked: Fredoka-Bold SDF
+Generated: 9/3/2026 8:01:44 PM
+
+TMP_Text objects checked (non-empty text): 203
+Distinct missing characters: 20
+
+NOTE: no fallback font was added automatically. Decide how to handle these before running Apply.
+
+Missing 'ă' (U+0103) — used in:
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/TitleText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/BottomNavigationSlot/BottomNavigation/BaseTab/IconGroup/ContentGroup/Label
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/SectionTitle
+Missing 'Đ' (U+0110) — used in:
+    Assets/_Game/Scenes/Bootstrap/Bootstrap.unity > LoadingOverlay/SafeArea/PercentageText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/DailyRewardPanel/Card/TitleText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_1/OwnedLabel
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_2/OwnedLabel
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_3/OwnedLabel
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/ExchangeSectionLabel
+    Assets/_Game/Prefabs/UI/Defense/TowerUnlockCard.prefab > TowerUnlockCard/UnlockedLabel
+    Assets/_Game/Prefabs/UI/LoadingOverlay.prefab > LoadingOverlay/SafeArea/PercentageText
+Missing 'đ' (U+0111) — used in:
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/StatsPanel/CompletedLevelsText
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/StatsPanel/UnlockedTowersText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/StatsPanel/CompletedLevelsText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/StatsPanel/UnlockedTowersText
+Missing 'Ơ' (U+01A0) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/BottomNavigationSlot/BottomNavigation/PlayTab/IconGroup/ContentGroup/Label
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/PlayPanel/PlayRow/CenterColumn/PlayArea/PlayButton/PlayLabel
+Missing 'ơ' (U+01A1) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/PlayPanel/PlayRow/CenterColumn/LevelSelectionArea/LevelTitle
+Missing 'ư' (U+01B0) — used in:
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/StatsPanel/VipTierText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/PlayPanel/PlayRow/CenterColumn/LevelSelectionArea/LevelStatus
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_100 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_500 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_1200 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/StatsPanel/VipTierText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/CurrentTierText
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_100 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_500 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_1200 Gem/Notice
+Missing 'ạ' (U+1EA1) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapSectionLabel
+Missing 'ả' (U+1EA3) — used in:
+    Assets/_Game/Scenes/Bootstrap/Bootstrap.unity > LoadingOverlay/SafeArea/PercentageText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_100 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_500 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_1200 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_100 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_500 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_1200 Gem/Notice
+    Assets/_Game/Prefabs/UI/LoadingOverlay.prefab > LoadingOverlay/SafeArea/PercentageText
+Missing 'ấ' (U+1EA5) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/BottomNavigationSlot/BottomNavigation/UpgradeTab/IconGroup/ContentGroup/Label
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/UpgradePanel/UpgradeScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/ExchangeSectionLabel
+    Assets/_Game/Scenes/Menu/Upgrade.unity > Canvas/SafeArea/TitleText
+    Assets/_Game/Prefabs/UI/Upgrade/TowerUpgradeCard.prefab > TowerUpgradeCard/LevelText
+Missing 'ầ' (U+1EA7) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapSectionLabel
+Missing 'ậ' (U+1EAD) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/DailyRewardPanel/Card/ClaimButton/Label
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapSectionLabel
+Missing 'ể' (U+1EC3) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/DailyRewardPanel/Card/TitleText
+Missing 'ổ' (U+1ED5) — used in:
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/StatsPanel/TotalStarsText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/StatsPanel/TotalStarsText
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/ExchangeSectionLabel
+Missing 'ở' (U+1EDF) — used in:
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/StatsPanel/UnlockedTowersText
+    Assets/_Game/Scenes/Menu/Defense.unity > Canvas/SafeArea/TitleText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/DefensePanel/DefenseScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/StatsPanel/UnlockedTowersText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_1/OwnedLabel
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_2/OwnedLabel
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_3/OwnedLabel
+    Assets/_Game/Prefabs/UI/Defense/TowerUnlockCard.prefab > TowerUnlockCard/UnlockedLabel
+Missing 'ợ' (U+1EE3) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapSectionLabel
+Missing 'ụ' (U+1EE5) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_100 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_500 Gem/Notice
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/IapCardRow/IapCard_1200 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_100 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_500 Gem/Notice
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/IapCardRow/IapCard_1200 Gem/Notice
+Missing 'ủ' (U+1EE7) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/BottomNavigationSlot/BottomNavigation/DefenseTab/IconGroup/ContentGroup/Label
+Missing 'ứ' (U+1EE9) — used in:
+    Assets/_Game/Scenes/Menu/Base.unity > Canvas/SafeArea/TitleText
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/BottomNavigationSlot/BottomNavigation/BaseTab/IconGroup/ContentGroup/Label
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/BasePanel/BaseScroll/Viewport/Content/SectionTitle
+Missing 'ử' (U+1EED) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/SafeArea/MenuContentRoot/ShopPanel/ShopScroll/Viewport/Content/SectionTitle
+    Assets/_Game/Scenes/Menu/Shop.unity > Canvas/SafeArea/TitleText
+Missing 'ữ' (U+1EEF) — used in:
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_1/OwnedLabel
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_2/OwnedLabel
+    Assets/_Game/Scenes/Menu/MainMenu.unity > Canvas/VipPanel/Card/TierRow_3/OwnedLabel

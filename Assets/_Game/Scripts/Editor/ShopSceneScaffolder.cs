@@ -35,11 +35,11 @@ namespace AlienDefense.EditorTools
             (GameObject canvasObject, Transform safeArea) = EditorCanvasUtility.BuildCanvasWithSafeArea("Canvas");
             BuildFullScreenImage(canvasObject.transform, "BackgroundOverlay", BackgroundColor).transform.SetAsFirstSibling();
 
-            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Cửa Hàng", 40f, 90f, 48f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(safeArea, "TitleText", "Shop", 40f, 90f, 48f, TextAlignmentOptions.Center);
             Button backButton = BuildTopLeftButton(safeArea, "BackButton", "<", PanelColor);
             (ResourceWidgetView coinWidget, ResourceWidgetView gemWidget) = BuildCurrencyWidgets(safeArea);
 
-            LevelSceneScaffolder.CreateTMPText(safeArea, "ExchangeSectionLabel", "Đổi Gem lấy Coin", 120f, 40f, 26f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(safeArea, "ExchangeSectionLabel", "Exchange Gems for Coins", 120f, 40f, 26f, TextAlignmentOptions.Center);
             Transform exchangeCardContainer = BuildExchangeCardRow(safeArea);
             ShopExchangeCardView cardPrefab = BuildOrLoadExchangeCardPrefab();
 
@@ -174,7 +174,7 @@ namespace AlienDefense.EditorTools
         /// the layout complete without faking a payment flow — see ShopScreenView's doc comment.</summary>
         private static void BuildRealMoneyPlaceholderSection(Transform safeArea)
         {
-            LevelSceneScaffolder.CreateTMPText(safeArea, "IapSectionLabel", "Nạp Gem (cần tích hợp thanh toán thật)", -260f, 40f, 24f, TextAlignmentOptions.Center);
+            LevelSceneScaffolder.CreateTMPText(safeArea, "IapSectionLabel", "Buy Gems (requires real payment integration)", -260f, 40f, 24f, TextAlignmentOptions.Center);
 
             var row = new GameObject("IapCardRow", typeof(RectTransform));
             row.transform.SetParent(safeArea, false);
@@ -201,7 +201,7 @@ namespace AlienDefense.EditorTools
                 layoutElement.preferredHeight = 200f;
 
                 BuildAnchoredText(card.transform, "Label", label, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 20f), new Vector2(240f, 40f), 24f, TextAlignmentOptions.Center);
-                BuildAnchoredText(card.transform, "Notice", "Chưa khả dụng", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(240f, 30f), 16f, TextAlignmentOptions.Center);
+                BuildAnchoredText(card.transform, "Notice", "Not available", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(240f, 30f), 16f, TextAlignmentOptions.Center);
 
                 Button disabledButton = card.AddComponent<Button>();
                 disabledButton.interactable = false;

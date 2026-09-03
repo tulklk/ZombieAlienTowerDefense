@@ -327,7 +327,7 @@ namespace AlienDefense.EditorTools
 
             (RectTransform track, Image fillImage, RectTransform handle) = BuildLoadingProgressBar(safeArea);
 
-            TMP_Text percentageText = BuildBottomText(safeArea, "PercentageText", "Đang tải 0.0 %", 110f);
+            TMP_Text percentageText = BuildBottomText(safeArea, "PercentageText", "Loading 0.0 %", 110f);
             TMP_Text loadingText = LevelSceneScaffolder.CreateTMPText(safeArea, "LoadingText", "Loading...", 0f, 60f, 32f, TextAlignmentOptions.Center);
             loadingText.gameObject.SetActive(false);
 
