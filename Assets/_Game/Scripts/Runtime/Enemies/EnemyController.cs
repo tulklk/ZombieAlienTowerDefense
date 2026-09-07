@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using AlienDefense.Base;
 using AlienDefense.Combat;
 using AlienDefense.Economy;
@@ -43,6 +44,11 @@ namespace AlienDefense.Enemies
         [SerializeField]
         [Tooltip("Optional. Owns Pull/Lift movement while this enemy is being tractor-beam captured.")]
         private EnemyCaptureController _captureController;
+
+        [SerializeField]
+        [Tooltip("Optional. Plays a Die animation and delays the pool-release just long enough for it to be " +
+            "seen (see its own Duration). Enemies without one release to the pool immediately, unchanged.")]
+        private EnemyDeathVisual _deathVisual;
 
         private EnemyDefinition _definition;
         private EconomyService _economy;
@@ -207,6 +213,21 @@ namespace AlienDefense.Enemies
 
             _registry?.Unregister(this);
             Resolved?.Invoke(this, reason);
+
+            if (reason == EnemyResolveReason.Defeated && _deathVisual != null)
+            {
+                _deathVisual.PlayDeath();
+                StartCoroutine(ReleaseAfterDeathVisual());
+            }
+            else
+            {
+                _releaseToPool?.Invoke(this);
+            }
+        }
+
+        private IEnumerator ReleaseAfterDeathVisual()
+        {
+            yield return new WaitForSeconds(_deathVisual.Duration);
             _releaseToPool?.Invoke(this);
         }
     }

@@ -58,9 +58,11 @@ namespace AlienDefense.EditorTools
             TurretModelPath = TowerModelAttacher.Turret1Path,
             Levels = new[]
             {
-                new LevelSpec(0, 20f, 4f, 1f, 720f),
-                new LevelSpec(90, 32f, 4.4f, 1.2f, 720f),
-                new LevelSpec(160, 50f, 4.8f, 1.4f, 720f)
+                // Range doubled (was 4f/4.4f/4.8f) to match the widened EnemyPath/BuildNode layout - see
+                // LevelSceneScaffolder's BuildNodePositions offset and the Terrain road width.
+                new LevelSpec(0, 20f, 8f, 1f, 720f),
+                new LevelSpec(90, 32f, 8.8f, 1.2f, 720f),
+                new LevelSpec(160, 50f, 9.6f, 1.4f, 720f)
             }
         };
 

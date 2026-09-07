@@ -652,6 +652,9 @@ namespace AlienDefense.EditorTools
             {
                 nodesProperty.GetArrayElementAtIndex(i).objectReferenceValue = buildNodes[i];
             }
+            // Ring + hologram show on every Available node even before the player picks a tower type — see
+            // BuildNodeVisualCoordinator's doc comment.
+            serializedCoordinator.FindProperty("_defaultPreviewTower").objectReferenceValue = towerDefinition;
             serializedCoordinator.ApplyModifiedPropertiesWithoutUndo();
 
             var proximityObject = new GameObject("PlayerBuildNodeProximityController");

@@ -84,6 +84,13 @@ namespace AlienDefense.UI.MainMenu
             }
         }
 
+        /// <summary>Hides the whole button (e.g. the selected level is still locked — there is nothing to
+        /// Start/Play yet) instead of showing a non-interactable button that still looks clickable.</summary>
+        public void SetVisible(bool visible)
+        {
+            gameObject.SetActive(visible);
+        }
+
         /// <summary>Only ever a flat cosmetic "cost" display next to the lightning icon — no lobby-stamina
         /// system exists in this project, so nothing is actually deducted when Play is clicked.</summary>
         public void ShowEnergyCost(int cost)

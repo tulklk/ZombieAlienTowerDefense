@@ -18,6 +18,7 @@ MonoBehaviour:
   _prefab: {fileID: 3891672731294487376, guid: 8cbf3f40d8aeb3e4c8bf6f6513640253, type: 3}
   _buildCost: 120
   _sellPercentage: 0.5
+  _unlockCost: 200
   _defaultTargetingMode: 1
   _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
     type: 2}
@@ -29,16 +30,16 @@ MonoBehaviour:
   _levels:
   - _upgradeCost: 0
     _damage: 6
-    _range: 4.2
+    _range: 8.4
     _attacksPerSecond: 1.1
     _turretRotationSpeed: 720
   - _upgradeCost: 130
     _damage: 9
-    _range: 4.5
+    _range: 9
     _attacksPerSecond: 1.2
     _turretRotationSpeed: 720
   - _upgradeCost: 210
     _damage: 13
-    _range: 4.8
+    _range: 9.6
     _attacksPerSecond: 1.35
     _turretRotationSpeed: 720

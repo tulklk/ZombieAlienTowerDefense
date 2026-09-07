@@ -13,6 +13,10 @@ namespace AlienDefense.Building
         [Tooltip("Optional.")]
         private BuildNodeVisual _visual;
 
+        [SerializeField]
+        [Tooltip("Optional. The hologram ghost shown on this node while it's Available and a tower type is selected to build.")]
+        private TowerHologramPreview _hologramPreview;
+
         public BuildNodeState State { get; private set; } = BuildNodeState.Available;
         public TowerController CurrentTower { get; private set; }
         public Transform BuildPoint => _buildPoint != null ? _buildPoint : transform;
@@ -63,11 +67,37 @@ namespace AlienDefense.Building
             }
         }
 
+        /// <summary>Shows the hologram ghost of towerPrefab (e.g. a TowerDefinition.Prefab.gameObject) on this
+        /// node. Intended caller: BuildNodeVisualCoordinator, only while this node is Available.</summary>
+        public void ShowHologramPreview(GameObject towerPrefab)
+        {
+            if (_hologramPreview != null)
+            {
+                _hologramPreview.ShowPreview(towerPrefab);
+            }
+        }
+
+        public void HideHologramPreview()
+        {
+            if (_hologramPreview != null)
+            {
+                _hologramPreview.HidePreview();
+            }
+        }
+
         private void ApplyVisualState()
         {
             if (_visual != null)
             {
                 _visual.SetState(State);
+            }
+
+            // A tower actually being built (Occupied) or the node going Disabled both mean the ghost preview no
+            // longer belongs here, regardless of what the selection coordinator does next — see
+            // TowerHologramPreview.ConfirmBuild's doc comment for why AssignTower's path counts as "confirmed".
+            if (State != BuildNodeState.Available && _hologramPreview != null)
+            {
+                _hologramPreview.HidePreview();
             }
         }
     }

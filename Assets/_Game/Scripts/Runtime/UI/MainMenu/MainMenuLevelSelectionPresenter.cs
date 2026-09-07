@@ -162,6 +162,7 @@ namespace AlienDefense.UI.MainMenu
             _navigationDirection = 0;
 
             bool canPlay = isUnlocked;
+            _playButtonView?.SetVisible(canPlay);
             _playButtonView?.SetPlayedBefore(progress.IsCompleted);
             _playButtonView?.ShowEnergyCost(5);
             _playButtonView?.SetInteractable(canPlay);
@@ -169,15 +170,22 @@ namespace AlienDefense.UI.MainMenu
 
         /// <summary>Maps the existing 3-star formula (LevelCompositionRoot.BuildLevelCompletedResult: 1 star =
         /// win, 2 = half+ base HP, 3 = undamaged base) onto 3 objective slots — no separate objective/reward
-        /// domain exists, so this only ever reflects star thresholds already being tracked.</summary>
+        /// domain exists, so this only ever reflects star thresholds already being tracked. Still shown (as
+        /// dimmed Locked slots) for a level the player hasn't unlocked yet, so the reward row previews what's
+        /// waiting once they get there instead of leaving a gap — see PlayButtonView.SetVisible for the
+        /// complementary rule (the Start/Play button itself is what disappears while locked, not this row).</summary>
         private static LevelObjectivePresentation[] BuildObjectives(LevelProgressSnapshot progress, bool isUnlocked)
         {
+            var objectives = new LevelObjectivePresentation[3];
+
             if (!isUnlocked)
             {
-                return null;
+                objectives[0] = new LevelObjectivePresentation("Complete level", LevelObjectiveState.Locked);
+                objectives[1] = new LevelObjectivePresentation("Base HP 50%+", LevelObjectiveState.Locked);
+                objectives[2] = new LevelObjectivePresentation("Perfect (Base untouched)", LevelObjectiveState.Locked);
+                return objectives;
             }
 
-            var objectives = new LevelObjectivePresentation[3];
             objectives[0] = new LevelObjectivePresentation("Complete level", progress.IsCompleted ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
             objectives[1] = new LevelObjectivePresentation("Base HP 50%+", progress.BestStars >= 2 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
             objectives[2] = new LevelObjectivePresentation("Perfect (Base untouched)", progress.BestStars >= 3 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);

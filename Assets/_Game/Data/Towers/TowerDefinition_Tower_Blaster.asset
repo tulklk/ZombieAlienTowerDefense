@@ -18,24 +18,28 @@ MonoBehaviour:
   _prefab: {fileID: 6171785530919239617, guid: e94c20233ffb9ee4881e7b06070cb7ef, type: 3}
   _buildCost: 75
   _sellPercentage: 0.5
+  _unlockCost: 200
   _defaultTargetingMode: 0
   _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
     type: 2}
+  _attackBehavior: 0
+  _statusEffectOnHit: {fileID: 0}
+  _splashRadius: 0
   _muzzleVfxDefinition: {fileID: 11400000, guid: 81f325e45ba233a4c8ab02e246488f70,
     type: 2}
   _levels:
   - _upgradeCost: 0
     _damage: 20
-    _range: 4
+    _range: 8
     _attacksPerSecond: 1
     _turretRotationSpeed: 720
   - _upgradeCost: 90
     _damage: 32
-    _range: 4.4
+    _range: 8.8
     _attacksPerSecond: 1.2
     _turretRotationSpeed: 720
   - _upgradeCost: 160
     _damage: 50
-    _range: 4.8
+    _range: 9.6
     _attacksPerSecond: 1.4
     _turretRotationSpeed: 720

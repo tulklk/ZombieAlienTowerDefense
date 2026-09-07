@@ -20,6 +20,23 @@ namespace AlienDefense.Enemies
         private float _statusSpeedMultiplier = 1f;
         private float _behaviorSpeedMultiplier = 1f;
 
+        // Ground-snapping: EnemyPath3D waypoints are straight-line-interpolated (including Y), but on curved
+        // hilly terrain a straight line between two waypoints can dip below (or float above) the real surface
+        // mid-segment. Measured directly on the Level_01 hillside path: enemies sank up to ~0.5 units into the
+        // slope this way, burying their legs — not an animation/rig bug, a movement one. "Default" is the layer
+        // every terrain chunk and bridge deck in this project actually uses (confirmed by inspecting live
+        // colliders); Enemy/Player/Tower/etc are on their own layers and excluded automatically.
+        //
+        // Computed lazily (NOT a static field initializer): Unity forbids calling LayerMask.NameToLayer/GetMask
+        // from a static or instance field initializer / constructor (it throws "NameToLayer is not allowed to
+        // be called from a MonoBehaviour constructor") — that exception was silently unwinding through every
+        // EnemyController.Awake() during pool prewarm, which aborted LevelCompositionRoot's wave setup entirely
+        // (0 waves, no enemies ever spawned). Must only ever run from Awake/Start/Update onward.
+        private static int _groundMask = -1;
+        private static int GroundMask => _groundMask >= 0 ? _groundMask : (_groundMask = LayerMask.GetMask("Default"));
+        private const float GroundProbeUpOffset = 4f;
+        private const float GroundProbeMaxDistance = 12f;
+
         public Vector2 CurrentMoveDirection { get; private set; }
         public float PathProgress { get; private set; }
 
@@ -39,7 +56,9 @@ namespace AlienDefense.Enemies
                 return;
             }
 
-            transform.position = _path.GetPoint(0);
+            Vector3 spawnPoint = _path.GetPoint(0);
+            spawnPoint.y = SampleGroundHeight(spawnPoint, spawnPoint.y);
+            transform.position = spawnPoint;
             _targetWaypointIndex = 1;
             CacheSegmentLength();
 
@@ -91,14 +110,33 @@ namespace AlienDefense.Enemies
 
             float effectiveSpeed = _moveSpeed * _statusSpeedMultiplier * _behaviorSpeedMultiplier;
             Vector3 newPosition = Vector3.MoveTowards(currentPosition, targetPosition, effectiveSpeed * Time.deltaTime);
+            newPosition.y = SampleGroundHeight(newPosition, newPosition.y);
             transform.position = newPosition;
 
             UpdatePathProgress(newPosition);
 
-            if (Vector3.Distance(newPosition, targetPosition) <= _arrivalThreshold)
+            // Horizontal-only: newPosition.y now follows the real terrain surface and can legitimately differ
+            // from the path waypoint's own Y (see SampleGroundHeight) — that difference must never block or
+            // delay reaching the next waypoint the way a full 3D distance check could.
+            float flatDistance = Vector2.Distance(new Vector2(newPosition.x, newPosition.z), new Vector2(targetPosition.x, targetPosition.z));
+            if (flatDistance <= _arrivalThreshold)
             {
                 AdvanceToNextWaypoint();
             }
+        }
+
+        /// <summary>Raycasts straight down onto the real ground/terrain surface beneath <paramref name="position"/>
+        /// and returns its height, falling back to <paramref name="fallbackY"/> (the path's own interpolated Y)
+        /// when nothing is hit — e.g. briefly off the playable area. See the GroundMask field doc for why.</summary>
+        private static float SampleGroundHeight(Vector3 position, float fallbackY)
+        {
+            Vector3 origin = new Vector3(position.x, position.y + GroundProbeUpOffset, position.z);
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, GroundProbeMaxDistance, GroundMask, QueryTriggerInteraction.Ignore))
+            {
+                return hit.point.y;
+            }
+
+            return fallbackY;
         }
 
         private void UpdatePathProgress(Vector3 currentPosition)

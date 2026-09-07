@@ -1,0 +1,89 @@
+UFO Tractor Beam — Shader Graph Custom Function wiring
+======================================================
+
+Context
+-------
+- Unity 6.3 LTS / Shader Graph 17.3
+- Graph: Assets/_Game/Shaders/UFOTractorBeam.shadergraph
+- Math: Assets/_Game/Shaders/UFOTractorBeamFunction.hlsl
+- Backup: Assets/_Game/Shaders/Backup/UFOTractorBeam_before_cursor.shadergraph
+- Production beam already runs via AlienDefense/UFOTractorBeam.shader (same HLSL).
+  Wire the graph below when you want Shader Graphs/UFOTractorBeam for MAT_UFOTractorBeam_SG.
+
+Do NOT hand-edit .shadergraph JSON for dozens of math nodes.
+
+Graph Settings (keep)
+---------------------
+Material = Unlit
+Surface Type = Transparent
+Blending Mode = Additive
+Render Face = Both
+Depth Write = Force Disabled
+Depth Test = L Equal
+Alpha Clipping = OFF
+Cast Shadows = OFF
+
+Steps in Shader Graph window
+----------------------------
+1. Open UFOTractorBeam.shadergraph and Save if you had unsaved UV→Split work.
+   (Disk backup had properties only; empty edges — unsaved Editor nodes are fine to keep or drop.)
+
+2. Create Node → Custom Function
+   - Type: File
+   - Source: Assets/_Game/Shaders/UFOTractorBeamFunction.hlsl
+   - Name: UFOTractorBeam
+   - Precision: float
+
+3. Inputs (create Property nodes from Blackboard, or drag properties):
+   - UV                  ← UV node (UV0)
+   - TimeValue           ← Time (Time)
+   - BeamColor           ← _BeamColor
+   - CoreColor           ← _CoreColor
+   - BaseAlpha           ← _BaseAlpha
+   - EmissionStrength    ← _EmissionStrength
+   - FlowColor           ← _FlowColor
+   - FlowSpeed           ← _FlowSpeed
+   - FlowDensity         ← _FlowDensity
+   - FlowWidth           ← _FlowWidth
+   - FlowStrength        ← _FlowStrength
+   - FlowDistortion      ← _FlowDistortion
+   - PulseSpeed          ← _PulseSpeed
+   - PulseAmount         ← _PulseAmount
+   - EdgeSoftness        ← _EdgeSoftness
+   - TopFade             ← _TopFade
+   - BottomFade          ← _BottomFade
+   - RadialSoftness      ← _RadialSoftness
+   - NoiseScale          ← _NoiseScale
+   - NoiseSpeed          ← _NoiseSpeed
+   - NoiseStrength       ← _NoiseStrength
+   - NormalWS            ← Normal Vector (World)
+   - ViewDirectionWS     ← View Direction (World)
+
+4. Outputs:
+   - FinalColor → Fragment Base Color
+   - FinalAlpha → Fragment Alpha
+
+5. Save Asset. Confirm Console has no shader errors.
+   Inspector should still report SRP Batcher compatible when possible.
+
+6. Assign material:
+   - Assets/_Game/Materials/VFX/MAT_UFOTractorBeam_SG.mat
+     Currently uses AlienDefense/UFOTractorBeam (same HLSL) so it is playable immediately.
+     After this graph compiles with the Custom Function, switch the material shader to
+     Shader Graphs/UFOTractorBeam (keep all property values).
+   - Prefab UFO_Player → TractorBeamRoot → BeamConeOuter keeps
+     Assets/_Game/Art/Materials/VFX/MAT_UFOTractorBeam.mat until you intentionally swap
+     to MAT_UFOTractorBeam_SG (both share the same property names for MPB fade).
+
+Property references (do not rename)
+-----------------------------------
+_BeamColor, _CoreColor, _BaseAlpha, _EmissionStrength,
+_FlowColor, _FlowSpeed, _FlowDensity, _FlowWidth, _FlowStrength, _FlowDistortion,
+_PulseSpeed, _PulseAmount,
+_EdgeSoftness, _TopFade, _BottomFade, _RadialSoftness,
+_NoiseScale, _NoiseSpeed, _NoiseStrength
+
+Runtime (UFOTractorBeamVisual)
+------------------------------
+Uses MaterialPropertyBlock on _BeamColor (alpha fade) and _FlowSpeed.
+No per-frame renderer.material.
