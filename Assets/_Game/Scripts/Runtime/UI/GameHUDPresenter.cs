@@ -5,22 +5,24 @@ using UnityEngine;
 
 namespace AlienDefense.UI
 {
-    /// <summary>Wires GameHUDView to Economy, BaseHealth, and GameSpeed. Requests Pause via GameFlow/GameSpeed; never sets Time.timeScale itself.</summary>
+    /// <summary>Wires GameHUDView to Economy, EnergyWallet, BaseHealth, and GameSpeed. Requests Pause via GameFlow/GameSpeed; never sets Time.timeScale itself.</summary>
     public sealed class GameHUDPresenter : MonoBehaviour
     {
         [SerializeField]
         private GameHUDView _view;
 
         private EconomyService _economy;
+        private EnergyWalletService _energyWallet;
         private BaseHealthService _baseHealth;
         private GameSpeedController _gameSpeed;
         private GameFlowController _gameFlow;
 
-        public void Initialize(EconomyService economy, BaseHealthService baseHealth, GameSpeedController gameSpeed, GameFlowController gameFlow)
+        public void Initialize(EconomyService economy, EnergyWalletService energyWallet, BaseHealthService baseHealth, GameSpeedController gameSpeed, GameFlowController gameFlow)
         {
             Unsubscribe();
 
             _economy = economy;
+            _energyWallet = energyWallet;
             _baseHealth = baseHealth;
             _gameSpeed = gameSpeed;
             _gameFlow = gameFlow;
@@ -28,6 +30,12 @@ namespace AlienDefense.UI
             if (_economy != null)
             {
                 _economy.ResourceChanged += HandleResourceChanged;
+            }
+
+            if (_energyWallet != null)
+            {
+                _energyWallet.EnergyChanged += HandleEnergyChanged;
+                _energyWallet.MaxEnergyChanged += HandleMaxEnergyChanged;
             }
 
             if (_baseHealth != null)
@@ -61,6 +69,11 @@ namespace AlienDefense.UI
                 _view.SetResource(_economy.CurrentResource);
             }
 
+            if (_energyWallet != null)
+            {
+                _view.SetEnergy(_energyWallet.CurrentEnergy, _energyWallet.MaxEnergy);
+            }
+
             if (_baseHealth != null)
             {
                 _view.SetBaseHealth(_baseHealth.CurrentHealth, _baseHealth.MaxHealth);
@@ -75,6 +88,22 @@ namespace AlienDefense.UI
         private void HandleResourceChanged(int amount)
         {
             _view?.SetResource(amount);
+        }
+
+        private void HandleEnergyChanged(int amount)
+        {
+            if (_energyWallet != null)
+            {
+                _view?.SetEnergy(amount, _energyWallet.MaxEnergy);
+            }
+        }
+
+        private void HandleMaxEnergyChanged(int max)
+        {
+            if (_energyWallet != null)
+            {
+                _view?.SetEnergy(_energyWallet.CurrentEnergy, max);
+            }
         }
 
         private void HandleBaseHealthChanged(int current, int max)
@@ -109,6 +138,12 @@ namespace AlienDefense.UI
             if (_economy != null)
             {
                 _economy.ResourceChanged -= HandleResourceChanged;
+            }
+
+            if (_energyWallet != null)
+            {
+                _energyWallet.EnergyChanged -= HandleEnergyChanged;
+                _energyWallet.MaxEnergyChanged -= HandleMaxEnergyChanged;
             }
 
             if (_baseHealth != null)

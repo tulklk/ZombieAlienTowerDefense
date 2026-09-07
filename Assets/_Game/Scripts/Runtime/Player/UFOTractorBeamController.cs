@@ -38,6 +38,17 @@ namespace AlienDefense.Player
 
         private float _scanTimer;
         private bool _isEnabled = true;
+        private float _radiusMultiplier = 1f;
+        private float _pullSpeedMultiplier = 1f;
+
+        /// <summary>Runtime-only multipliers stacked on top of the definition's own AttractionRadius/PullSpeed -
+        /// never mutates the asset. Intended caller: PlayerSkillEffectApplier, combining the Radius skill's own
+        /// multiplier with the Magnet skill's additional bonus into these two final numbers.</summary>
+        public void SetSkillMultipliers(float radiusMultiplier, float pullSpeedMultiplier)
+        {
+            _radiusMultiplier = Mathf.Max(0.01f, radiusMultiplier);
+            _pullSpeedMultiplier = Mathf.Max(0.01f, pullSpeedMultiplier);
+        }
 
         public bool IsEnabled => _isEnabled;
 
@@ -53,7 +64,7 @@ namespace AlienDefense.Player
         public int MaxConcurrentEnergyAbsorptions => _definition != null ? _definition.MaxConcurrentEnergyAbsorptions : 0;
         public int MaxConcurrentPropAbsorptions => _definition != null ? _definition.MaxConcurrentPropAbsorptions : 0;
 
-        public float AttractionRadius => _definition != null ? _definition.AttractionRadius : 0f;
+        public float AttractionRadius => _definition != null ? _definition.AttractionRadius * _radiusMultiplier : 0f;
 
         public bool HasAvailableSlot => MaxConcurrentCaptures <= 0 || ActiveCaptureCount < MaxConcurrentCaptures;
         public bool HasAvailableEnergySlot => MaxConcurrentEnergyAbsorptions <= 0 || ActiveEnergyAbsorptionCount < MaxConcurrentEnergyAbsorptions;
@@ -163,7 +174,7 @@ namespace AlienDefense.Player
             }
 
             Vector3 beamPosition = _beamGroundAnchor.position;
-            float radiusSquared = _definition.AttractionRadius * _definition.AttractionRadius;
+            float radiusSquared = AttractionRadius * AttractionRadius;
 
             for (int i = 0; i < _enemyRegistry.Count; i++)
             {
@@ -193,7 +204,7 @@ namespace AlienDefense.Player
         private void TryBeginCapture(EnemyController enemy)
         {
             float resistance = enemy.Definition != null ? Mathf.Max(0.01f, enemy.Definition.TractorResistance) : 1f;
-            float effectivePullSpeed = _definition.PullSpeed / resistance;
+            float effectivePullSpeed = _definition.PullSpeed * _pullSpeedMultiplier / resistance;
 
             var request = new TractorCaptureRequest(
                 _beamGroundAnchor,
@@ -245,7 +256,7 @@ namespace AlienDefense.Player
             }
 
             Vector3 beamPosition = _beamGroundAnchor.position;
-            float radiusSquared = _definition.AttractionRadius * _definition.AttractionRadius;
+            float radiusSquared = AttractionRadius * AttractionRadius;
 
             for (int i = 0; i < _energyRegistry.Count; i++)
             {
@@ -277,7 +288,7 @@ namespace AlienDefense.Player
             var request = new TractorEnergyAbsorptionRequest(
                 _beamGroundAnchor,
                 _captureSocket,
-                _definition.PullSpeed,
+                _definition.PullSpeed * _pullSpeedMultiplier,
                 _definition.LiftSpeed,
                 _definition.BeamCenterThreshold,
                 _definition.CaptureSocketThreshold,
@@ -317,7 +328,7 @@ namespace AlienDefense.Player
             }
 
             Vector3 beamPosition = _beamGroundAnchor.position;
-            float radiusSquared = _definition.AttractionRadius * _definition.AttractionRadius;
+            float radiusSquared = AttractionRadius * AttractionRadius;
 
             for (int i = 0; i < _propRegistry.Count; i++)
             {
@@ -347,7 +358,7 @@ namespace AlienDefense.Player
         private void TryBeginPropAbsorption(TractorAbsorbableProp prop)
         {
             float resistance = prop.TractorResistance;
-            float effectivePullSpeed = _definition.PullSpeed * prop.PullSpeedMultiplier / resistance;
+            float effectivePullSpeed = _definition.PullSpeed * prop.PullSpeedMultiplier * _pullSpeedMultiplier / resistance;
             float effectiveLiftSpeed = _definition.LiftSpeed * prop.LiftSpeedMultiplier / resistance;
 
             var request = new TractorPropAbsorptionRequest(

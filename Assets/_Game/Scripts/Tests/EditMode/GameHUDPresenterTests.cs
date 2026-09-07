@@ -61,6 +61,11 @@ namespace AlienDefense.Tests.EditMode
             _spawnedObjects.Add(resourceText.gameObject);
             SetPrivateField(view, "_resourceText", resourceText);
 
+            var energyText = new GameObject("EnergyText").AddComponent<TextMeshProUGUI>();
+            energyText.transform.SetParent(go.transform);
+            _spawnedObjects.Add(energyText.gameObject);
+            SetPrivateField(view, "_energyText", energyText);
+
             var baseHealthText = new GameObject("BaseHealthText").AddComponent<TextMeshProUGUI>();
             baseHealthText.transform.SetParent(go.transform);
             _spawnedObjects.Add(baseHealthText.gameObject);
@@ -104,16 +109,19 @@ namespace AlienDefense.Tests.EditMode
             GameHUDView view = CreateView();
             GameHUDPresenter presenter = CreatePresenter(view);
             var economy = new EconomyService(250);
+            var energyWallet = new EnergyWalletService(5);
             var baseHealth = new BaseHealthService(20);
             var gameSpeed = new GameSpeedController(new FakeTimeScaleTarget());
 
-            presenter.Initialize(economy, baseHealth, gameSpeed, new GameFlowController());
+            presenter.Initialize(economy, energyWallet, baseHealth, gameSpeed, new GameFlowController());
 
             var resourceText = (TMP_Text)GetPrivateField(view, "_resourceText");
+            var energyText = (TMP_Text)GetPrivateField(view, "_energyText");
             var baseHealthText = (TMP_Text)GetPrivateField(view, "_baseHealthText");
             var speedText = (TMP_Text)GetPrivateField(view, "_speedText");
             Assert.AreEqual("250", resourceText.text);
-            Assert.AreEqual("20/20", baseHealthText.text);
+            Assert.AreEqual("5/10", energyText.text);
+            Assert.AreEqual("20", baseHealthText.text);
             Assert.AreEqual("x1", speedText.text);
         }
 
@@ -123,7 +131,7 @@ namespace AlienDefense.Tests.EditMode
             GameHUDView view = CreateView();
             GameHUDPresenter presenter = CreatePresenter(view);
             var economy = new EconomyService(250);
-            presenter.Initialize(economy, new BaseHealthService(20), new GameSpeedController(new FakeTimeScaleTarget()), new GameFlowController());
+            presenter.Initialize(economy, new EnergyWalletService(), new BaseHealthService(20), new GameSpeedController(new FakeTimeScaleTarget()), new GameFlowController());
 
             economy.Add(50);
 
@@ -132,17 +140,31 @@ namespace AlienDefense.Tests.EditMode
         }
 
         [Test]
+        public void EnergyChanged_UpdatesView()
+        {
+            GameHUDView view = CreateView();
+            GameHUDPresenter presenter = CreatePresenter(view);
+            var energyWallet = new EnergyWalletService();
+            presenter.Initialize(new EconomyService(0), energyWallet, new BaseHealthService(20), new GameSpeedController(new FakeTimeScaleTarget()), new GameFlowController());
+
+            energyWallet.Add(3);
+
+            var energyText = (TMP_Text)GetPrivateField(view, "_energyText");
+            Assert.AreEqual("3/10", energyText.text);
+        }
+
+        [Test]
         public void BaseHealthChanged_UpdatesView()
         {
             GameHUDView view = CreateView();
             GameHUDPresenter presenter = CreatePresenter(view);
             var baseHealth = new BaseHealthService(20);
-            presenter.Initialize(new EconomyService(250), baseHealth, new GameSpeedController(new FakeTimeScaleTarget()), new GameFlowController());
+            presenter.Initialize(new EconomyService(250), new EnergyWalletService(), baseHealth, new GameSpeedController(new FakeTimeScaleTarget()), new GameFlowController());
 
             baseHealth.TakeDamage(5);
 
             var baseHealthText = (TMP_Text)GetPrivateField(view, "_baseHealthText");
-            Assert.AreEqual("15/20", baseHealthText.text);
+            Assert.AreEqual("15", baseHealthText.text);
         }
 
         [Test]
@@ -151,7 +173,7 @@ namespace AlienDefense.Tests.EditMode
             GameHUDView view = CreateView();
             GameHUDPresenter presenter = CreatePresenter(view);
             var gameSpeed = new GameSpeedController(new FakeTimeScaleTarget());
-            presenter.Initialize(new EconomyService(0), new BaseHealthService(20), gameSpeed, new GameFlowController());
+            presenter.Initialize(new EconomyService(0), new EnergyWalletService(), new BaseHealthService(20), gameSpeed, new GameFlowController());
 
             InvokePrivateMethod(presenter, "HandleSpeedButtonClicked");
             Assert.AreEqual(2, gameSpeed.CurrentSpeed);
@@ -169,7 +191,7 @@ namespace AlienDefense.Tests.EditMode
             var gameFlow = new GameFlowController();
             gameFlow.BeginPreparingWave();
             gameFlow.BeginPlayingWave();
-            presenter.Initialize(new EconomyService(0), new BaseHealthService(20), gameSpeed, gameFlow);
+            presenter.Initialize(new EconomyService(0), new EnergyWalletService(), new BaseHealthService(20), gameSpeed, gameFlow);
 
             InvokePrivateMethod(presenter, "HandlePauseButtonClicked");
 

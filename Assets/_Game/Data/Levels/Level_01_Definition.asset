@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Data.LevelDefinition
   _levelId: level_01
   _startingResource: 250
-  _baseMaxHealth: 20
+  _baseMaxHealth: 100
   _preparationDuration: 5
   _targetFrameRate: 60
   _waves:

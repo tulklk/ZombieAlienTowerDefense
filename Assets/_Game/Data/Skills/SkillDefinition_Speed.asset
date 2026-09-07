@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aba42c4c95c949d4c8aab4e1da442898, type: 3}
+  m_Name: SkillDefinition_Speed
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Data.SkillDefinition
+  _type: 1
+  _displayName: "T\u1ED1c \u0111\u1ED9"
+  _icon: {fileID: 0}
+  _ranks:
+  - Description: "T\u1ED1c \u0111\u1ED9 10%"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0.1
+    CapacityMax: 0
+    MissileDamageMultiplier: 0
+    MissileRangeMultiplier: 0
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "T\u1ED1c \u0111\u1ED9 15%"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0.15
+    CapacityMax: 0
+    MissileDamageMultiplier: 0
+    MissileRangeMultiplier: 0
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "T\u1ED1c \u0111\u1ED9 20%"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0.2
+    CapacityMax: 0
+    MissileDamageMultiplier: 0
+    MissileRangeMultiplier: 0
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "T\u1ED1c \u0111\u1ED9 25%"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0.25
+    CapacityMax: 0
+    MissileDamageMultiplier: 0
+    MissileRangeMultiplier: 0
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "T\u1ED1c \u0111\u1ED9 30%"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0.3
+    CapacityMax: 0
+    MissileDamageMultiplier: 0
+    MissileRangeMultiplier: 0
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0

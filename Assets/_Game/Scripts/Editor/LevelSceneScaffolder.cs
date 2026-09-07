@@ -120,7 +120,7 @@ namespace AlienDefense.EditorTools
                 BuildSystems(normalEnemyDefinition, enemyPath, towerDefinitions[0], towerSpawnPoint, cameraTransform, buildNodes);
             towerDefinitions = CombineTowerCatalog(TowerPrefabBuilder.LoadAll(), AdvancedTowerPrefabBuilder.LoadAll());
             (BuildBarPresenter buildBarPresenter, TowerDetailsPresenter towerDetailsPresenter, GameHUDPresenter gameHUDPresenter, GameStateUIController gameStateUIController) =
-                BuildCanvas(waveController, towerDefinitions, backNavigation);
+                BuildCanvas(waveController, enemyPath, towerDefinitions, backNavigation, buildNodes, playerInstance.GetComponent<PlayerController>());
             BuildEventSystem();
 
             WirePlayerLevelBounds(playerInstance, levelBounds);
@@ -673,7 +673,7 @@ namespace AlienDefense.EditorTools
             return (spawner, waveController, waveDebugControls, towerSpawner, worldSelectionController, buildNodeVisualCoordinator, playerBuildNodeProximity);
         }
 
-        private static (BuildBarPresenter buildBarPresenter, TowerDetailsPresenter towerDetailsPresenter, GameHUDPresenter gameHUDPresenter, GameStateUIController gameStateUIController) BuildCanvas(WaveController waveController, TowerDefinition[] towerDefinitions, BackNavigationController backNavigation)
+        private static (BuildBarPresenter buildBarPresenter, TowerDetailsPresenter towerDetailsPresenter, GameHUDPresenter gameHUDPresenter, GameStateUIController gameStateUIController) BuildCanvas(WaveController waveController, EnemyPath3D enemyPath, TowerDefinition[] towerDefinitions, BackNavigationController backNavigation, BuildNode[] buildNodes, PlayerController playerController)
         {
             (GameObject _, Transform safeArea) = EditorCanvasUtility.BuildCanvasWithSafeArea("Canvas");
             GameObject safeAreaObject = safeArea.gameObject;
@@ -692,6 +692,11 @@ namespace AlienDefense.EditorTools
 
             WaveHUDView waveHUDView = BuildWavePanel(topHUD.transform, 100f);
             BuildWaveHUDPresenter(topHUD.transform, waveController, waveHUDView);
+
+            // Schematic 2D minimap (not a world Camera/RenderTexture - see MinimapController) - placed just below
+            // TopHUD's own declared height so it never overlaps HP/resource/wave UI regardless of future TopHUD
+            // height tuning.
+            MinimapHUDBuilder.Build(safeAreaObject.transform, topHUDRect.sizeDelta.y, waveController, enemyPath, buildNodes, playerController);
 
             var bottomControls = new GameObject("BottomControls", typeof(RectTransform));
             bottomControls.transform.SetParent(safeAreaObject.transform, false);
@@ -730,6 +735,8 @@ namespace AlienDefense.EditorTools
             return (buildBarPresenter, towerDetailsPresenter, gameHUDPresenter, gameStateUIController);
         }
 
+        private const string PlaySpriteDir = "Assets/_Game/Art/Sprite/Play";
+
         private static GameHUDView BuildGameHUDPanel(Transform parent)
         {
             var panel = new GameObject("GameHUD", typeof(RectTransform));
@@ -739,11 +746,12 @@ namespace AlienDefense.EditorTools
             panelRect.anchorMax = new Vector2(1f, 1f);
             panelRect.pivot = new Vector2(0.5f, 1f);
             panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(0f, 100f);
+            panelRect.sizeDelta = new Vector2(0f, 150f);
 
             TMP_Text resourceText = CreateAnchoredTMPText(panel.transform, "ResourceText", "0",
                 new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(220f, 44f), 28f, TextAlignmentOptions.MidlineLeft);
 
+            TMP_Text energyText = BuildEnergyBadge(panel.transform);
             (TMP_Text baseHealthText, Image baseHealthFillImage) = BuildBaseHealthDisplay(panel.transform);
 
             (Button speedButton, TMP_Text speedText) = BuildHUDIconButton(panel.transform, "SpeedButton", "x1", new Vector2(-140f, -10f));
@@ -752,6 +760,7 @@ namespace AlienDefense.EditorTools
             var view = panel.AddComponent<GameHUDView>();
             var serializedView = new SerializedObject(view);
             serializedView.FindProperty("_resourceText").objectReferenceValue = resourceText;
+            serializedView.FindProperty("_energyText").objectReferenceValue = energyText;
             serializedView.FindProperty("_baseHealthText").objectReferenceValue = baseHealthText;
             serializedView.FindProperty("_baseHealthFillImage").objectReferenceValue = baseHealthFillImage;
             serializedView.FindProperty("_speedText").objectReferenceValue = speedText;
@@ -760,6 +769,42 @@ namespace AlienDefense.EditorTools
             serializedView.ApplyModifiedPropertiesWithoutUndo();
 
             return view;
+        }
+
+        /// <summary>Top-left circular badge (below ResourceText) showing EnergyWalletService.CurrentEnergy - the
+        /// "energy ball" count. Uses the project's own pre-made khung.png (ring frame) + enegry-ball.png (icon)
+        /// art, matching the mobile-game reference screenshot's corner-badge look. No fill/max - Energy has no
+        /// cap (see EnergyWalletService), so this is a plain ring + icon + running count, not a gauge.</summary>
+        private static TMP_Text BuildEnergyBadge(Transform parent)
+        {
+            Sprite ringSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/khung.png");
+            Sprite iconSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/enegry-ball.png");
+
+            var ring = new GameObject("EnergyRing", typeof(RectTransform), typeof(Image));
+            ring.transform.SetParent(parent, false);
+            var ringRect = ring.GetComponent<RectTransform>();
+            ringRect.anchorMin = new Vector2(0f, 1f);
+            ringRect.anchorMax = new Vector2(0f, 1f);
+            ringRect.pivot = new Vector2(0.5f, 0.5f);
+            ringRect.anchoredPosition = new Vector2(50f, -72f);
+            ringRect.sizeDelta = new Vector2(60f, 60f);
+            ring.GetComponent<Image>().sprite = ringSprite;
+
+            var icon = new GameObject("EnergyIcon", typeof(RectTransform), typeof(Image));
+            icon.transform.SetParent(ring.transform, false);
+            var iconRect = icon.GetComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = Vector2.zero;
+            iconRect.sizeDelta = new Vector2(38f, 38f);
+            icon.GetComponent<Image>().sprite = iconSprite;
+
+            // CreateAnchoredTMPText pins pivot == anchor (top-left here), so anchoredPosition.x is the box's LEFT
+            // edge, not its center - offset by half the box width so the text ends up centered under the ring
+            // above (ring center x=50), not shifted right of it.
+            return CreateAnchoredTMPText(parent, "EnergyText", "0",
+                new Vector2(0f, 1f), new Vector2(10f, -106f), new Vector2(80f, 24f), 22f, TextAlignmentOptions.Center);
         }
 
         internal static TMP_Text CreateAnchoredTMPText(Transform parent, string name, string initialText,
@@ -783,34 +828,49 @@ namespace AlienDefense.EditorTools
             return text;
         }
 
+        /// <summary>Top-right circular badge (left of PauseButton) showing BaseHealthService as "current/max"
+        /// text plus a radial-filling ring using the project's own hpbase.png (a segmented gauge-style ring that
+        /// drains as the base takes damage), matching the mobile-game reference screenshot's corner-badge look.
+        /// GameHUDView.SetBaseHealth only ever sets fillAmount (0-1), which behaves identically regardless of the
+        /// Image's fill method, so switching this from the old flat horizontal bar to a radial ring needed no
+        /// GameHUDView/Presenter change - only this build-time Image config.</summary>
         private static (TMP_Text text, Image fill) BuildBaseHealthDisplay(Transform parent)
         {
-            TMP_Text text = CreateAnchoredTMPText(parent, "BaseHealthText", "0/0",
-                new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(240f, 30f), 26f, TextAlignmentOptions.Center);
+            Sprite ringSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/hpbase.png");
 
-            var background = new GameObject("BaseHealthFillBar", typeof(RectTransform), typeof(Image));
-            background.transform.SetParent(parent, false);
-            var backgroundRect = background.GetComponent<RectTransform>();
-            backgroundRect.anchorMin = new Vector2(0.5f, 1f);
-            backgroundRect.anchorMax = new Vector2(0.5f, 1f);
-            backgroundRect.pivot = new Vector2(0.5f, 1f);
-            backgroundRect.anchoredPosition = new Vector2(0f, -44f);
-            backgroundRect.sizeDelta = new Vector2(200f, 12f);
-            background.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.4f);
+            var backing = new GameObject("BaseHealthRingBacking", typeof(RectTransform), typeof(Image));
+            backing.transform.SetParent(parent, false);
+            var backingRect = backing.GetComponent<RectTransform>();
+            backingRect.anchorMin = new Vector2(1f, 1f);
+            backingRect.anchorMax = new Vector2(1f, 1f);
+            backingRect.pivot = new Vector2(0.5f, 0.5f);
+            backingRect.anchoredPosition = new Vector2(-160f, -72f);
+            backingRect.sizeDelta = new Vector2(60f, 60f);
+            var backingImage = backing.GetComponent<Image>();
+            backingImage.sprite = ringSprite;
+            backingImage.color = new Color(1f, 1f, 1f, 0.25f); // dim "empty" backing so the fill ring reads as a gauge
 
-            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fill.transform.SetParent(background.transform, false);
+            var fill = new GameObject("BaseHealthFillBar", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(parent, false);
             var fillRect = fill.GetComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
+            fillRect.anchorMin = new Vector2(1f, 1f);
+            fillRect.anchorMax = new Vector2(1f, 1f);
+            fillRect.pivot = new Vector2(0.5f, 0.5f);
+            fillRect.anchoredPosition = new Vector2(-160f, -72f);
+            fillRect.sizeDelta = new Vector2(60f, 60f);
             var fillImage = fill.GetComponent<Image>();
-            fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            fillImage.color = new Color(0.2f, 0.85f, 0.3f);
+            fillImage.sprite = ringSprite;
+            fillImage.color = new Color(0.25f, 0.95f, 0.35f);
             fillImage.type = Image.Type.Filled;
-            fillImage.fillMethod = Image.FillMethod.Horizontal;
+            fillImage.fillMethod = Image.FillMethod.Radial360;
+            fillImage.fillOrigin = (int)Image.Origin360.Top;
+            fillImage.fillClockwise = true;
             fillImage.fillAmount = 1f;
+
+            // CreateAnchoredTMPText pins pivot == anchor (top-right here), so anchoredPosition.x is the box's
+            // RIGHT edge - offset so the text ends up centered under the ring above (ring center x=-160).
+            TMP_Text text = CreateAnchoredTMPText(parent, "BaseHealthText", "0/0",
+                new Vector2(1f, 1f), new Vector2(-115f, -106f), new Vector2(90f, 24f), 22f, TextAlignmentOptions.Center);
 
             return (text, fillImage);
         }

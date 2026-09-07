@@ -27,6 +27,14 @@ namespace AlienDefense.Player
         private Vector3 _currentVelocity;
         private bool _isInitialized;
         private bool _movementEnabled = true;
+        private float _speedMultiplier = 1f;
+
+        /// <summary>Runtime-only multiplier on top of PlayerDefinition.MoveSpeed - never mutates the asset
+        /// itself. Intended caller: PlayerSkillEffectApplier, driven by the player's current Speed skill rank.</summary>
+        public void SetSpeedMultiplier(float multiplier)
+        {
+            _speedMultiplier = Mathf.Max(0f, multiplier);
+        }
 
         /// <summary>Raw stick input after dead-zone filtering (screen-relative, not world-relative).</summary>
         public Vector2 CurrentMoveInput { get; private set; }
@@ -163,7 +171,7 @@ namespace AlienDefense.Player
 
             Vector3 desiredDirection = ComputeWorldDirection(rawInput);
             CurrentWorldMoveDirection = new Vector2(desiredDirection.x, desiredDirection.z);
-            Vector3 targetVelocity = desiredDirection * _definition.MoveSpeed;
+            Vector3 targetVelocity = desiredDirection * (_definition.MoveSpeed * _speedMultiplier);
 
             float rate = targetVelocity.sqrMagnitude > _currentVelocity.sqrMagnitude
                 ? _definition.Acceleration

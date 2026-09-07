@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aba42c4c95c949d4c8aab4e1da442898, type: 3}
+  m_Name: SkillDefinition_Missile
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Data.SkillDefinition
+  _type: 2
+  _displayName: "T\xEAn l\u1EEDa"
+  _icon: {fileID: 0}
+  _ranks:
+  - Description: "Th\xEAm t\xEAn l\u1EEDa, t\u0103ng s\xE1t th\u01B0\u01A1ng"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0
+    CapacityMax: 0
+    MissileDamageMultiplier: 1
+    MissileRangeMultiplier: 1
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "Th\xEAm t\xEAn l\u1EEDa, t\u0103ng s\xE1t th\u01B0\u01A1ng"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0
+    CapacityMax: 0
+    MissileDamageMultiplier: 1.25
+    MissileRangeMultiplier: 1
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "Th\xEAm t\xEAn l\u1EEDa, t\u0103ng s\xE1t th\u01B0\u01A1ng"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0
+    CapacityMax: 0
+    MissileDamageMultiplier: 1.5
+    MissileRangeMultiplier: 1
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "Th\xEAm t\xEAn l\u1EEDa, t\u0103ng s\xE1t th\u01B0\u01A1ng"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0
+    CapacityMax: 0
+    MissileDamageMultiplier: 1.75
+    MissileRangeMultiplier: 1
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0
+  - Description: "Th\xEAm t\xEAn l\u1EEDa, t\u0103ng ph\u1EA1m vi"
+    RadiusMultiplier: 0
+    SpeedBonusPercent: 0
+    CapacityMax: 0
+    MissileDamageMultiplier: 1.75
+    MissileRangeMultiplier: 1.3
+    MagnetRadiusBonusPercent: 0
+    MagnetPullSpeedBonusPercent: 0

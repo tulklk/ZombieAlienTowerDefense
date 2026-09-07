@@ -1,9 +1,13 @@
+using AlienDefense.Economy;
 using AlienDefense.Waves;
 using UnityEngine;
 
 namespace AlienDefense.UI
 {
-    /// <summary>Subscribes to a fixed WaveController and forwards updates to a WaveHUDView.</summary>
+    /// <summary>Subscribes to a fixed WaveController (wave number + preparation countdown only - see
+    /// WaveHUDView's own doc comment for why this panel's progress bar no longer tracks WaveController's own
+    /// enemy-resolved progress) and, once Initialize is called with it, a PlayerLevelProgressionService for the
+    /// Level text + Level-progress bar.</summary>
     public sealed class WaveHUDPresenter : MonoBehaviour
     {
         [SerializeField]
@@ -11,6 +15,8 @@ namespace AlienDefense.UI
 
         [SerializeField]
         private WaveHUDView _view;
+
+        private PlayerLevelProgressionService _levelProgression;
 
         private void Awake()
         {
@@ -24,22 +30,51 @@ namespace AlienDefense.UI
             _waveController.WavePrepared += HandleWavePrepared;
             _waveController.PreparationTimeChanged += HandlePreparationTimeChanged;
             _waveController.WaveStarted += HandleWaveStarted;
-            _waveController.WaveProgressChanged += HandleProgressChanged;
 
             _view.HideCountdown();
         }
 
-        private void OnDestroy()
+        /// <summary>Optional second init step - PlayerLevelProgressionService is a plain runtime service built
+        /// by LevelCompositionRoot, not something this presenter can hold a [SerializeField] to, so it's pushed
+        /// in explicitly once composition finishes (mirrors GameHUDPresenter.Initialize's own pattern).</summary>
+        public void Initialize(PlayerLevelProgressionService levelProgression)
         {
-            if (_waveController == null)
+            UnsubscribeLevelProgression();
+
+            _levelProgression = levelProgression;
+            if (_levelProgression == null)
             {
                 return;
             }
 
-            _waveController.WavePrepared -= HandleWavePrepared;
-            _waveController.PreparationTimeChanged -= HandlePreparationTimeChanged;
-            _waveController.WaveStarted -= HandleWaveStarted;
-            _waveController.WaveProgressChanged -= HandleProgressChanged;
+            _levelProgression.ExperienceChanged += HandleExperienceChanged;
+            _levelProgression.LevelChanged += HandleLevelChanged;
+
+            _view.SetLevel(_levelProgression.CurrentLevel);
+            RefreshLevelProgress();
+        }
+
+        private void OnDestroy()
+        {
+            if (_waveController != null)
+            {
+                _waveController.WavePrepared -= HandleWavePrepared;
+                _waveController.PreparationTimeChanged -= HandlePreparationTimeChanged;
+                _waveController.WaveStarted -= HandleWaveStarted;
+            }
+
+            UnsubscribeLevelProgression();
+        }
+
+        private void UnsubscribeLevelProgression()
+        {
+            if (_levelProgression == null)
+            {
+                return;
+            }
+
+            _levelProgression.ExperienceChanged -= HandleExperienceChanged;
+            _levelProgression.LevelChanged -= HandleLevelChanged;
         }
 
         private void HandleWavePrepared(int waveNumber, int totalWaves)
@@ -64,9 +99,21 @@ namespace AlienDefense.UI
             _view.HideCountdown();
         }
 
-        private void HandleProgressChanged(WaveProgressSnapshot snapshot)
+        private void HandleExperienceChanged(int totalExperience)
         {
-            _view.SetProgress(snapshot.ResolvedEnemyCount, snapshot.PlannedEnemyCount, snapshot.NormalizedProgress);
+            RefreshLevelProgress();
+        }
+
+        private void HandleLevelChanged(int newLevel)
+        {
+            _view.SetLevel(newLevel);
+            RefreshLevelProgress();
+        }
+
+        private void RefreshLevelProgress()
+        {
+            (int currentInLevel, int neededForLevel, float normalized) = _levelProgression.GetProgressInCurrentLevel();
+            _view.SetLevelProgress(currentInLevel, neededForLevel, normalized);
         }
     }
 }

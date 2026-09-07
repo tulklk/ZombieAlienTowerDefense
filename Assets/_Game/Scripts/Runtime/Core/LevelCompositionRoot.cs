@@ -43,6 +43,30 @@ namespace AlienDefense.Core
         private UFOTractorBeamVisual _tractorBeamVisual;
 
         [SerializeField]
+        [Tooltip("Optional. Exactly the 5 fixed skills (Radius/Speed/Missile/Capacity/Magnet) offered on level-up.")]
+        private SkillDefinition[] _skillCatalog;
+
+        [SerializeField]
+        [Tooltip("Optional. Reused for the Missile skill's auto-fired shot (only its speed/lifetime/hit-distance/VFX - damage comes from the current rank instead).")]
+        private ProjectileDefinition _missileProjectileDefinition;
+
+        [SerializeField]
+        [Tooltip("Optional.")]
+        private PlayerSkillEffectApplier _playerSkillEffectApplier;
+
+        [SerializeField]
+        [Tooltip("Optional.")]
+        private PlayerMissileController _playerMissileController;
+
+        [SerializeField]
+        [Tooltip("Optional. The 'pick 1 of 3' level-up popup.")]
+        private SkillChoicePresenter _skillChoicePresenter;
+
+        [SerializeField]
+        [Tooltip("Optional. Also receives PlayerLevelProgression once it exists (see Initialize's 2nd call) - its own WaveController wiring still happens in its own Awake.")]
+        private WaveHUDPresenter _waveHUDPresenter;
+
+        [SerializeField]
         [Tooltip("Optional. Dedicated looping AudioSource for the beam hum; never shared with music.")]
         private AudioSource _tractorBeamLoopSource;
 
@@ -201,6 +225,7 @@ namespace AlienDefense.Core
 
         public PlayerLevelProgressionService PlayerLevelProgression { get; private set; }
         public EnergyCollectionService EnergyCollection { get; private set; }
+        public PlayerSkillService PlayerSkills { get; private set; }
         public ProjectileFactory ProjectileSpawner { get; private set; }
         public TowerFactory TowerSpawner { get; private set; }
         public AreaDamageResolver AreaDamage { get; private set; }
@@ -275,6 +300,7 @@ namespace AlienDefense.Core
             EnergyWallet = new EnergyWalletService();
             PlayerLevelProgression = new PlayerLevelProgressionService();
             EnergyCollection = new EnergyCollectionService(EnergyWallet, PlayerLevelProgression);
+            PlayerSkills = new PlayerSkillService(_skillCatalog);
 
             Application.targetFrameRate = levelDefinition.TargetFrameRate;
 
@@ -424,6 +450,17 @@ namespace AlienDefense.Core
 
             _tractorBeamAudio = new TractorBeamAudioController(_audioService, _tractorBeamLoopSource, _tractorBeamLoopClip, _tractorBeamCaptureClip);
             _tractorBeamAudio.Initialize(_tractorBeamController);
+
+            if (_playerSkillEffectApplier != null && PlayerSkills != null)
+            {
+                PlayerMovement movement = _player != null ? _player.GetComponent<PlayerMovement>() : null;
+                _playerSkillEffectApplier.Initialize(PlayerSkills, _tractorBeamController, movement, EnergyWallet);
+            }
+
+            if (_playerMissileController != null && PlayerSkills != null && Enemies != null && ProjectileSpawner != null)
+            {
+                _playerMissileController.Initialize(PlayerSkills, Enemies, ProjectileSpawner, _missileProjectileDefinition);
+            }
         }
 
         private void InitializeTowerSystem()
@@ -585,8 +622,11 @@ namespace AlienDefense.Core
 
             if (_gameHUDPresenter != null)
             {
-                _gameHUDPresenter.Initialize(Economy, BaseHealth, GameSpeed, GameFlow);
+                _gameHUDPresenter.Initialize(Economy, EnergyWallet, BaseHealth, GameSpeed, GameFlow);
             }
+
+            _waveHUDPresenter?.Initialize(PlayerLevelProgression);
+            _skillChoicePresenter?.Initialize(PlayerLevelProgression, PlayerSkills, GameSpeed);
 
             if (_gameStateUIController != null)
             {

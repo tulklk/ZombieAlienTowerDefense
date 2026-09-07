@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
@@ -9,6 +10,11 @@ namespace AlienDefense.Enemies
         private Transform[] _waypoints;
 
         public int Count => _waypoints?.Length ?? 0;
+
+        /// <summary>Read-only access to the underlying waypoint Transforms, in path order. Purely additive (no
+        /// existing member changed) - added so other systems (e.g. the minimap) can reuse this path's own data
+        /// instead of keeping a second waypoint list. Never mutate the returned array's contents.</summary>
+        public IReadOnlyList<Transform> Waypoints => _waypoints;
 
         public Vector3 GetPoint(int index)
         {

@@ -12,6 +12,12 @@ namespace AlienDefense.UI
         private TMP_Text _resourceText;
 
         [SerializeField]
+        [Tooltip("Optional. Shows EnergyWalletService.CurrentEnergy - the separate 'energy ball' currency only " +
+            "gained by tractor-beaming an EnergyPickup into the UFO (see EnergyWalletService's own doc comment " +
+            "for why it's kept apart from _resourceText/EconomyService, the tower build currency).")]
+        private TMP_Text _energyText;
+
+        [SerializeField]
         private TMP_Text _baseHealthText;
 
         [SerializeField]
@@ -51,11 +57,23 @@ namespace AlienDefense.UI
             }
         }
 
+        /// <summary>Energy is capped by the Capacity ("Tải") skill's current rank (see EnergyWalletService.MaxEnergy) -
+        /// shown as "current/max", same convention as SetBaseHealth.</summary>
+        public void SetEnergy(int current, int max)
+        {
+            if (_energyText != null)
+            {
+                _energyText.text = current + "/" + max;
+            }
+        }
+
+        /// <summary>Text shows only the current value (e.g. "100", not "100/100") - the ring's own fillAmount
+        /// is what conveys "out of max" visually, so the max number would just be redundant clutter here.</summary>
         public void SetBaseHealth(int current, int max)
         {
             if (_baseHealthText != null)
             {
-                _baseHealthText.text = current + "/" + max;
+                _baseHealthText.text = current.ToString();
             }
 
             if (_baseHealthFillImage != null)
