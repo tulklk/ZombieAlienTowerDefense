@@ -131,19 +131,31 @@ namespace AlienDefense.Core
             }
 
             _loadingOverlay.SetProgress(1f);
-            _loadingOverlay.Dismiss();
-            LoadingOverlayCleanup.DestroyInstance(_loadingOverlay);
-            _loadingOverlay = null;
-            LoadingOverlayCleanup.DestroyAllRuntimeInstances();
-
-            yield return null;
-
             operation.allowSceneActivation = true;
 
             while (!operation.isDone)
             {
                 yield return null;
             }
+
+            // Give the new scene's own Awake/Start/OnEnable - and its first rendered frame - a beat before
+            // tearing the overlay down. Destroying it earlier (the old order) left a gap between the overlay
+            // disappearing and the new scene actually painting anything, which read as a black flash: the
+            // overlay's own camera clears to a solid color and stays alive/rendering until Bootstrap's objects
+            // are actually unloaded, so removing only the overlay's Canvas first just uncovers that solid
+            // background instead of the new scene.
+            yield return null;
+
+            // Bootstrap's own objects (this controller included) can already be mid-unload by now since the new
+            // scene just activated under LoadSceneMode.Single - guard against the overlay having gone with it.
+            if (_loadingOverlay != null)
+            {
+                _loadingOverlay.Dismiss();
+                LoadingOverlayCleanup.DestroyInstance(_loadingOverlay);
+                _loadingOverlay = null;
+            }
+
+            LoadingOverlayCleanup.DestroyAllRuntimeInstances();
 
             Debug.Log($"[BootstrapLoadingController] '{targetSceneName}' loaded; Bootstrap scene will unload.", this);
             BootstrapLoadContext.ResetToColdBootDefaults();

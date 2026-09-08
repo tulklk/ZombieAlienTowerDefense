@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using AlienDefense.CameraSystem;
+using AlienDefense.Common;
 using AlienDefense.Enemies;
 using AlienDefense.Environment;
 using AlienDefense.Pickups;
@@ -15,7 +17,7 @@ namespace AlienDefense.Player
     /// (Enemy capture grants none at all; Energy reward is granted by EnergyPickupFactory when a pickup finishes;
     /// Prop absorption grants none), never touches EconomyService/EnergyWalletService/PlayerLevelProgressionService/
     /// WaveController/pools directly.</summary>
-    public sealed class UFOTractorBeamController : MonoBehaviour
+    public sealed class UFOTractorBeamController : MonoBehaviour, IPullSpeedBoostSource
     {
         [SerializeField]
         private UFOTractorBeamDefinition _definition;
@@ -27,6 +29,20 @@ namespace AlienDefense.Player
         [SerializeField]
         [Tooltip("Where a captured/absorbed object ends its Lift phase, inside/under the UFO body.")]
         private Transform _captureSocket;
+
+        [SerializeField]
+        [Tooltip("Optional. Must implement IMovementDirectionSource (e.g. PlayerController). While the Player is " +
+            "actively moving, every object currently being pulled/lifted gets a temporary speed boost (see Moving " +
+            "Pull Speed Multiplier) so it keeps pace with the beam instead of trailing behind as the UFO flies " +
+            "away. Leave empty to disable the boost entirely — Pull/Lift then always run at their base speed.")]
+        private MonoBehaviour _movementDirectionSource;
+
+        [SerializeField, Min(1f)]
+        [Tooltip("Extra multiplier stacked on top of every active capture/absorption's PullSpeed and LiftSpeed " +
+            "while the Player is moving (see Movement Direction Source above). 1 = no boost.")]
+        private float _movingPullSpeedMultiplier = 1.6f;
+
+        private IMovementDirectionSource _resolvedMovementSource;
 
         private EnemyRegistry _enemyRegistry;
         private EnergyPickupRegistry _energyRegistry;
@@ -66,6 +82,14 @@ namespace AlienDefense.Player
 
         public float AttractionRadius => _definition != null ? _definition.AttractionRadius * _radiusMultiplier : 0f;
 
+        /// <summary>IPullSpeedBoostSource implementation — read live every frame by every currently Pulling/
+        /// Lifting object (see TractorCaptureRequest/TractorEnergyAbsorptionRequest/TractorPropAbsorptionRequest's
+        /// SpeedBoost field), not just the ones admitted while the Player happened to already be moving.</summary>
+        public float PullSpeedMultiplier =>
+            _resolvedMovementSource != null && _resolvedMovementSource.MovementDirection.sqrMagnitude > 0.0001f
+                ? _movingPullSpeedMultiplier
+                : 1f;
+
         public bool HasAvailableSlot => MaxConcurrentCaptures <= 0 || ActiveCaptureCount < MaxConcurrentCaptures;
         public bool HasAvailableEnergySlot => MaxConcurrentEnergyAbsorptions <= 0 || ActiveEnergyAbsorptionCount < MaxConcurrentEnergyAbsorptions;
         public bool HasAvailablePropSlot => MaxConcurrentPropAbsorptions <= 0 || ActivePropAbsorptionCount < MaxConcurrentPropAbsorptions;
@@ -86,6 +110,11 @@ namespace AlienDefense.Player
         /// <summary>Fired once at Initialize (and again if the anchors ever move relative to each other) with
         /// (length, radius) so visual pieces can size themselves without reading anchors or the Definition directly.</summary>
         public event Action<float, float> BeamGeometryChanged;
+
+        private void Awake()
+        {
+            _resolvedMovementSource = _movementDirectionSource as IMovementDirectionSource;
+        }
 
         /// <summary>energyRegistry/propRegistry are optional so existing single-arg callers (tests that only
         /// exercise Enemy capture) keep compiling unchanged; those two scan branches simply no-op while null.</summary>
@@ -215,7 +244,8 @@ namespace AlienDefense.Player
                 _definition.CaptureSocketThreshold,
                 _definition.ShrinkDuringLift,
                 _definition.MinimumVisualScale,
-                _definition.LiftSpinSpeedDegreesPerSecond);
+                _definition.LiftSpinSpeedDegreesPerSecond,
+                this);
 
             if (!enemy.TryBeginTractorCapture(request))
             {
@@ -294,7 +324,8 @@ namespace AlienDefense.Player
                 _definition.CaptureSocketThreshold,
                 _definition.ShrinkDuringLift,
                 _definition.MinimumVisualScale,
-                _definition.LiftSpinSpeedDegreesPerSecond);
+                _definition.LiftSpinSpeedDegreesPerSecond,
+                this);
 
             if (!pickup.TryBeginAbsorption(request))
             {
@@ -370,7 +401,8 @@ namespace AlienDefense.Player
                 _definition.CaptureSocketThreshold,
                 prop.ShrinkDuringLift,
                 prop.MinimumVisualScale,
-                _definition.LiftSpinSpeedDegreesPerSecond);
+                _definition.LiftSpinSpeedDegreesPerSecond,
+                this);
 
             if (!prop.TryBeginAbsorption(request))
             {

@@ -11,6 +11,11 @@ namespace AlienDefense.Towers
         [Tooltip("Cost to reach this level from the previous one. Index 0 (Level 1) may be 0.")]
         private int _upgradeCost;
 
+        [SerializeField, Min(0)]
+        [Tooltip("Energy Ball cost to reach this level via the UFO proximity build/upgrade flow (separate " +
+            "currency from _upgradeCost's Economy resource - see EnergyTowerTransactionService).")]
+        private int _energyCost;
+
         [SerializeField, Min(0.01f)]
         private float _damage = 10f;
 
@@ -24,6 +29,7 @@ namespace AlienDefense.Towers
         private float _turretRotationSpeed = 360f;
 
         public int UpgradeCost => _upgradeCost;
+        public int EnergyCost => _energyCost;
         public float Damage => _damage;
         public float Range => _range;
         public float AttacksPerSecond => _attacksPerSecond;

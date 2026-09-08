@@ -1,13 +1,20 @@
-using AlienDefense.Towers;
+using System.Collections;
+using AlienDefense.UI;
 using UnityEngine;
 
 namespace AlienDefense.Building
 {
     /// <summary>Continuously watches the Player's XZ distance to a fixed set of BuildNodes. Flying into a node's
-    /// proximity radius triggers exactly what a tap on that node would (see WorldSelectionController): builds the
-    /// currently-selected tower on an empty node, or opens TowerDetailsPanel on an occupied one. Flying away from
-    /// the currently-open tower's node clears the selection again. Never spawns towers itself, never touches
-    /// Economy/Canvas — only forwards to BuildService/TowerSelectionService, same as the tap path.</summary>
+    /// proximity radius and staying there for _channelDuration seconds (visualized as BuildNodeChannelUI's ring
+    /// filling clockwise - reset the instant the Player leaves or a different node becomes nearest) triggers,
+    /// if the Energy wallet can afford this node's next action: a short fly-animation of Energy Ball icons from
+    /// the Player to the node, then either the TowerChoicePresenter popup (node Available - the player still
+    /// picks which tower) or an immediate EnergyTowerTransactionService upgrade (node Occupied - already a
+    /// specific tower, no choice needed). Deliberately does NOT touch TowerSelectionService - proximity alone
+    /// used to auto-select the nearest tower (showing its RangeIndicator, a green circle) but that visually
+    /// clashed with this controller's own yellow channel ring, so tower selection here is tap-only again (see
+    /// WorldSelectionController). Never spawns/charges anything itself - only forwards to
+    /// EnergyTowerTransactionService/TowerChoicePresenter.</summary>
     public sealed class PlayerBuildNodeProximityController : MonoBehaviour
     {
         [SerializeField]
@@ -21,24 +28,60 @@ namespace AlienDefense.Building
         [SerializeField, Min(0.02f)]
         private float _scanInterval = 0.1f;
 
+        [SerializeField, Min(0.1f)]
+        [Tooltip("Seconds the Player must stay in range before a build/upgrade actually triggers.")]
+        private float _channelDuration = 3f;
+
+        [SerializeField, Min(0.05f)]
+        private float _flyDuration = 0.5f;
+
+        [SerializeField]
+        [Tooltip("Optional. Spawned as a world-space SpriteRenderer that arcs from the Player to the node during " +
+            "the fly animation - purely decorative.")]
+        private Sprite _energyBallSprite;
+
         private Transform _player;
-        private BuildService _buildService;
-        private TowerSelectionService _towerSelectionService;
-        private BuildNode _activeOccupiedNode;
+        private EnergyTowerTransactionService _energyTransactions;
+        private TowerChoicePresenter _towerChoicePresenter;
+
+        private BuildNode _channelingNode;
+        private float _channelTimer;
+        private bool _isChannelBusy; // true while a fly animation / choice popup is resolving - suspends new channels
         private float _scanTimer;
         private bool _isInputEnabled = true;
 
-        public void Initialize(Transform player, BuildService buildService, TowerSelectionService towerSelectionService)
+        public void Initialize(Transform player, EnergyTowerTransactionService energyTransactions, TowerChoicePresenter towerChoicePresenter, Transform cameraTransform)
         {
             _player = player;
-            _buildService = buildService;
-            _towerSelectionService = towerSelectionService;
-            _activeOccupiedNode = null;
+            _energyTransactions = energyTransactions;
+            _towerChoicePresenter = towerChoicePresenter;
+            _channelingNode = null;
+            _channelTimer = 0f;
+            _isChannelBusy = false;
             _scanTimer = 0f;
+
+            InitializeBillboards(cameraTransform);
+            RefreshAllCostBadges();
+        }
+
+        /// <summary>Keeps every node's ring/badge facing the fixed isometric camera - otherwise the World Space
+        /// canvas plane renders edge-on and unreadable from this camera's steep top-down angle.</summary>
+        private void InitializeBillboards(Transform cameraTransform)
+        {
+            if (_nodes == null || cameraTransform == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _nodes.Length; i++)
+            {
+                _nodes[i]?.ChannelUI?.Initialize(cameraTransform);
+            }
         }
 
         /// <summary>Mirrors WorldSelectionController.SetInputEnabled: disabled during Paused/Victory/Defeat. Just
-        /// stops new proximity triggers — never force-clears an already-open TowerDetailsPanel.</summary>
+        /// stops new proximity triggers — never force-clears an already-open TowerDetailsPanel or in-flight
+        /// channel/animation.</summary>
         public void SetInputEnabled(bool value)
         {
             _isInputEnabled = value;
@@ -46,25 +89,28 @@ namespace AlienDefense.Building
 
         private void Update()
         {
-            if (!_isInputEnabled || _player == null || _nodes == null || _nodes.Length == 0)
+            if (_player == null || _nodes == null || _nodes.Length == 0)
             {
                 return;
             }
 
             _scanTimer -= Time.deltaTime;
-            if (_scanTimer > 0f)
+            if (_scanTimer <= 0f)
+            {
+                _scanTimer = _scanInterval;
+                Scan();
+            }
+
+            TickChannel(Time.deltaTime);
+        }
+
+        private void Scan()
+        {
+            if (!_isInputEnabled)
             {
                 return;
             }
 
-            _scanTimer = _scanInterval;
-            Scan();
-        }
-
-        /// <summary>Only ever acts on the single nearest in-range node, so hovering near two nodes at once can't
-        /// build on both or fight over which tower's details are shown.</summary>
-        private void Scan()
-        {
             Vector3 playerPosition = _player.position;
             float nearestSqrDistance = _proximityRadius * _proximityRadius;
             BuildNode nearestNode = null;
@@ -89,28 +135,157 @@ namespace AlienDefense.Building
                 nearestNode = node;
             }
 
-            if (nearestNode != null && nearestNode.State == BuildNodeState.Available)
+            BuildNode channelTarget = nearestNode != null && IsChannelable(nearestNode) ? nearestNode : null;
+            if (channelTarget != _channelingNode && !_isChannelBusy)
             {
-                _buildService?.TryBuild(nearestNode);
-                // TryBuild mutates nearestNode.State in place on success; a failed attempt (e.g. no tower
-                // selected, can't afford it) leaves it Available and simply falls through below.
+                CancelChannel();
+                _channelingNode = channelTarget;
+            }
+        }
+
+        private bool IsChannelable(BuildNode node)
+        {
+            if (node.State == BuildNodeState.Available)
+            {
+                return true;
             }
 
-            BuildNode occupiedNode = nearestNode != null && nearestNode.State == BuildNodeState.Occupied ? nearestNode : null;
-            if (occupiedNode == _activeOccupiedNode)
+            return node.State == BuildNodeState.Occupied && node.CurrentTower != null && !node.CurrentTower.IsMaxLevel;
+        }
+
+        private void TickChannel(float deltaTime)
+        {
+            if (_channelingNode == null || _isChannelBusy || !_isInputEnabled)
             {
                 return;
             }
 
-            _activeOccupiedNode = occupiedNode;
-            if (occupiedNode != null)
+            _channelTimer += deltaTime;
+            _channelingNode.ChannelUI?.SetChannelProgress(_channelTimer / _channelDuration);
+
+            if (_channelTimer < _channelDuration)
             {
-                _towerSelectionService?.Select(occupiedNode.CurrentTower);
+                return;
+            }
+
+            BuildNode node = _channelingNode;
+            CancelChannel();
+            StartCoroutine(ResolveChannelComplete(node));
+        }
+
+        private void CancelChannel()
+        {
+            _channelingNode?.ChannelUI?.SetChannelProgress(0f);
+            _channelingNode = null;
+            _channelTimer = 0f;
+        }
+
+        /// <summary>Runs the fly animation then the build/upgrade action - a coroutine (not an instant call) so
+        /// the visual read as "energy is being spent" rather than the tower just appearing.</summary>
+        private IEnumerator ResolveChannelComplete(BuildNode node)
+        {
+            if (node == null || _energyTransactions == null)
+            {
+                yield break;
+            }
+
+            bool isBuild = node.State == BuildNodeState.Available;
+            bool canAfford = isBuild
+                ? _towerChoicePresenter != null && _towerChoicePresenter.HasAnyAffordableTower()
+                : _energyTransactions.CanAffordUpgrade(node.CurrentTower);
+
+            if (!canAfford)
+            {
+                yield break; // channel simply fizzles - no fly, no popup
+            }
+
+            _isChannelBusy = true;
+            yield return PlayFlyAnimation(node);
+
+            if (isBuild)
+            {
+                _towerChoicePresenter?.ShowForNode(node);
             }
             else
             {
-                _towerSelectionService?.Clear();
+                _energyTransactions.TryUpgrade(node.CurrentTower);
             }
+
+            _isChannelBusy = false;
+        }
+
+        private IEnumerator PlayFlyAnimation(BuildNode node)
+        {
+            if (_energyBallSprite == null || _player == null)
+            {
+                yield break;
+            }
+
+            var go = new GameObject("EnergyBallFlyVisual");
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = _energyBallSprite;
+            renderer.sortingOrder = 100;
+            go.transform.localScale = Vector3.one * 0.6f;
+
+            Vector3 start = _player.position + Vector3.up * 1.5f;
+            Vector3 end = node.BuildPoint.position + Vector3.up * 0.5f;
+            float arcHeight = 1.5f;
+
+            float t = 0f;
+            while (t < _flyDuration)
+            {
+                t += Time.deltaTime;
+                float normalized = Mathf.Clamp01(t / _flyDuration);
+                Vector3 flat = Vector3.Lerp(start, end, normalized);
+                flat.y += Mathf.Sin(normalized * Mathf.PI) * arcHeight;
+                go.transform.position = flat;
+                yield return null;
+            }
+
+            Destroy(go);
+        }
+
+        /// <summary>Cheap - just text updates, called once on Initialize and again whenever the Energy wallet
+        /// changes (see LevelCompositionRoot wiring) so every badge stays accurate without a per-frame cost.</summary>
+        public void RefreshAllCostBadges()
+        {
+            if (_nodes == null || _energyTransactions == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _nodes.Length; i++)
+            {
+                BuildNode node = _nodes[i];
+                if (node == null || node.ChannelUI == null)
+                {
+                    continue;
+                }
+
+                int cost;
+                if (node.State == BuildNodeState.Available)
+                {
+                    cost = _towerChoicePresenter != null ? _towerChoicePresenter.CheapestBuildCost() : 0;
+                }
+                else if (node.State == BuildNodeState.Occupied)
+                {
+                    cost = _energyTransactions.GetUpgradeCost(node.CurrentTower);
+                }
+                else
+                {
+                    cost = 0;
+                }
+
+                int wallet = _energyTransactions != null ? CurrentWalletEnergy() : 0;
+                node.ChannelUI.SetCost(wallet, cost);
+
+                node.ChannelUI.SetRingVisible(IsChannelable(node));
+            }
+        }
+
+        private int CurrentWalletEnergy()
+        {
+            return _energyTransactions != null ? _energyTransactions.CurrentWalletEnergy : 0;
         }
     }
 }

@@ -305,6 +305,7 @@ MonoBehaviour:
   _buildPoint: {fileID: 2471822787664967380}
   _visual: {fileID: 741590408966574313}
   _hologramPreview: {fileID: 3077656231648426091}
+  _channelUI: {fileID: 0}
 --- !u!114 &3077656231648426091
 MonoBehaviour:
   m_ObjectHideFlags: 0

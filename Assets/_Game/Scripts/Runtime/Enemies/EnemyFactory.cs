@@ -81,7 +81,7 @@ namespace AlienDefense.Enemies
 
             if (_energyDrop != null && EnemyResolutionPolicy.ShouldDropEnergy(reason))
             {
-                _energyDrop.Spawn(enemy.transform.position, enemy.Definition.RewardResource);
+                _energyDrop.Spawn(enemy.transform.position, enemy.Definition.RewardResource, enemy.Definition.ExperienceReward);
             }
         }
     }

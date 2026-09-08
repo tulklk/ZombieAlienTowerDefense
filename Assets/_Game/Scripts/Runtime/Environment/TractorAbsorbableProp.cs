@@ -7,9 +7,9 @@ namespace AlienDefense.Environment
     /// <summary>Opt-in marker + behavior for one decorative Environment Prop (tree, flower, mushroom, rock,
     /// barrel...) the UFO tractor beam may Pull/Lift/Absorb. Absence of this component is what makes an object
     /// immune — Ground/Plane/Terrain/Road/Bridge/gameplay-critical objects simply never get it, so there is no
-    /// name-string or tag check anywhere in this system. Absorption is purely visual/removal: never grants
-    /// Energy, XP, or any other reward (see AlienDefense.Enemies.EnemyResolutionPolicy for why that boundary
-    /// matters and how it is kept there instead of duplicated here).
+    /// name-string or tag check anywhere in this system. This class itself never grants a reward - it only
+    /// fires Absorbed; LevelCompositionRoot's HandlePropAbsorbedForExperience is what turns that into Experience
+    /// (see its doc comment for why props grant only XP, never Energy, unlike EnergyPickups).
     ///
     /// Disabled (Update stopped) whenever Idle, per the "no per-frame cost for objects sitting still"
     /// performance requirement — only enabled while actually Pulling/Lifting.
@@ -33,6 +33,12 @@ namespace AlienDefense.Environment
         [SerializeField]
         [Tooltip("Shrunk/spun during Lift. Falls back to this Transform if unassigned.")]
         private Transform _visualRoot;
+
+        [SerializeField, Range(1, 2)]
+        [Tooltip("XP granted to PlayerLevelProgressionService when this prop is absorbed - deliberately capped " +
+            "low (max 2), same convention as EnemyDefinition.ExperienceReward, so decorative clutter can never " +
+            "rush a level-up any faster than an actual kill.")]
+        private int _experienceReward = 1;
 
         [Header("Speed Multipliers (relative to the beam's base Pull/Lift speed)")]
         [SerializeField, Min(0.01f)]
@@ -59,6 +65,7 @@ namespace AlienDefense.Environment
         public TractorAbsorbablePropState State { get; private set; } = TractorAbsorbablePropState.Idle;
         public bool CanBeAbsorbed => _canBeAbsorbed;
         public float TractorResistance => Mathf.Max(0.01f, _tractorResistance);
+        public int ExperienceReward => _experienceReward;
         public float PullSpeedMultiplier => _pullSpeedMultiplier;
         public float LiftSpeedMultiplier => _liftSpeedMultiplier;
         public bool ShrinkDuringLift => _shrinkDuringLift;
@@ -154,9 +161,10 @@ namespace AlienDefense.Environment
                 return;
             }
 
+            float boost = _request.SpeedBoost?.PullSpeedMultiplier ?? 1f;
             transform.position = TractorPullLiftMotion.TickPull(
                 transform.position, _request.BeamGroundAnchor.position, _groundY,
-                _request.PullSpeed, _request.CenterThreshold, deltaTime, out bool reachedCenter);
+                _request.PullSpeed * boost, _request.CenterThreshold, deltaTime, out bool reachedCenter);
 
             if (reachedCenter)
             {
@@ -179,9 +187,10 @@ namespace AlienDefense.Environment
                 return;
             }
 
+            float boost = _request.SpeedBoost?.PullSpeedMultiplier ?? 1f;
             transform.position = TractorPullLiftMotion.TickLift(
                 transform.position, _request.CaptureSocket.position,
-                _request.LiftSpeed, _request.SocketThreshold, deltaTime,
+                _request.LiftSpeed * boost, _request.SocketThreshold, deltaTime,
                 out float remainingDistance, out bool reachedSocket);
 
             UpdateLiftVisual(remainingDistance, deltaTime);
@@ -235,6 +244,8 @@ namespace AlienDefense.Environment
 #if UNITY_EDITOR
         private void OnValidate()
         {
+            _experienceReward = Mathf.Clamp(_experienceReward, 1, 2);
+
             if (_tractorResistance <= 0f)
             {
                 Debug.LogWarning($"[TractorAbsorbableProp] '{name}': Tractor Resistance must be > 0.", this);

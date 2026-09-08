@@ -15,6 +15,7 @@ MonoBehaviour:
   _id: tower_mortar
   _displayName: Mortar Tower
   _icon: {fileID: 0}
+  _description: Big blasts with AOE damage
   _prefab: {fileID: 8868492464935254508, guid: 8e6d315edb151ce4ebffa9909b83d773, type: 3}
   _buildCost: 180
   _sellPercentage: 0.5
@@ -29,16 +30,19 @@ MonoBehaviour:
     type: 2}
   _levels:
   - _upgradeCost: 0
+    _energyCost: 10
     _damage: 35
     _range: 9.2
     _attacksPerSecond: 0.35
     _turretRotationSpeed: 300
   - _upgradeCost: 260
+    _energyCost: 15
     _damage: 55
     _range: 9.8
     _attacksPerSecond: 0.4
     _turretRotationSpeed: 300
   - _upgradeCost: 420
+    _energyCost: 45
     _damage: 80
     _range: 10.4
     _attacksPerSecond: 0.45

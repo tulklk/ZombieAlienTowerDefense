@@ -18,6 +18,10 @@ namespace AlienDefense.Towers
         [SerializeField]
         private Sprite _icon;
 
+        [SerializeField, TextArea]
+        [Tooltip("Short flavor text shown on the 'Choose Tower' card - see TowerChoiceView.")]
+        private string _description = "";
+
         [SerializeField]
         private TowerController _prefab;
 
@@ -64,6 +68,7 @@ namespace AlienDefense.Towers
         public string Id => _id;
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
+        public string Description => _description;
         public TowerController Prefab => _prefab;
         public int BuildCost => _buildCost;
         public float SellPercentage => _sellPercentage;

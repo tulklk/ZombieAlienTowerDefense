@@ -32,23 +32,25 @@ namespace AlienDefense.EditorTools
             public string ObjFolderName;
             public string ObjBaseName;
             public string DisplayName;
+            public string AttackFbxFileName;
 
-            public Variant(int number, string fbxFileName, string objFolderName, string objBaseName, string displayName)
+            public Variant(int number, string fbxFileName, string objFolderName, string objBaseName, string displayName, string attackFbxFileName)
             {
                 Number = number;
                 FbxFileName = fbxFileName;
                 ObjFolderName = objFolderName;
                 ObjBaseName = objBaseName;
                 DisplayName = displayName;
+                AttackFbxFileName = attackFbxFileName;
             }
         }
 
         private static readonly Variant[] Variants =
         {
-            new Variant(1, "Walk1.fbx", "zombie character 3d model", "zombie+character+3d+model", "ZombieVariant1"),
-            new Variant(2, "Walking2.fbx", "zom2", "zom2", "ZombieVariant2"),
-            new Variant(3, "Walking3.fbx", "zomb3", "zomb3", "ZombieVariant3"),
-            new Variant(4, "Walking5.fbx", "zomb5", "zomb5", "ZombieVariant4"),
+            new Variant(1, "Walk1.fbx", "zombie character 3d model", "zombie+character+3d+model", "ZombieVariant1", "Attack1.fbx"),
+            new Variant(2, "Walking2.fbx", "zom2", "zom2", "ZombieVariant2", "Attack2.fbx"),
+            new Variant(3, "Walking3.fbx", "zomb3", "zomb3", "ZombieVariant3", "Attack3.fbx"),
+            new Variant(4, "Walking5.fbx", "zomb5", "zomb5", "ZombieVariant4", "Attack4.fbx"),
         };
 
         /// <summary>Convenience wrapper for the menu item — runs both phases back to back. When driving this
@@ -386,6 +388,211 @@ namespace AlienDefense.EditorTools
 
             AssetDatabase.SaveAssets();
             Debug.Log("[ZombieVariantBuilder] Wired " + EnemyAssignments.Length + " enemy prefabs to the new zombie variants.");
+        }
+
+        // ------------------------------------------------------------------------------------------------
+        // Attack animations (added after the walk-only pipeline above already shipped) - each variant folder
+        // got its own "Attack{N}.fbx" (same Tripo+Mixamo pipeline, same three import bugs as the walk clips).
+        // Kept as the same two-separate-calls shape as Steps 7a/7b for the same documented reason: writing a
+        // freshly-created AnimatorController change and reading it back as part of building/saving something
+        // else in the very same call is where Unity's serialization has repeatedly dropped references in this
+        // pipeline. Step 9a only touches the controllers; Step 9b (a later call) reads them back off disk and
+        // wires the result onto the Enemy_* prefabs' EnemyController/EnemyBaseAttackVisual.
+        // ------------------------------------------------------------------------------------------------
+
+        private static readonly int AttackTriggerHash = Animator.StringToHash("Attack");
+
+        /// <summary>Step 1 of 2: fixes each variant's Attack FBX import (same Bug 1 as the walk clips - Mixamo's
+        /// declared 1cm-per-unit file scale would otherwise shrink the retargeted attack pose relative to the
+        /// walk clip on the same rig) and adds an "Attack" state + trigger parameter to that variant's existing
+        /// Walk controller (Any State -&gt; Attack on the trigger, Attack -&gt; Walk once the clip finishes
+        /// playing - exit time, no condition needed since the clip doesn't loop). Idempotent: re-running this
+        /// after the state/parameter already exist updates the motion/import fix in place instead of
+        /// duplicating them.</summary>
+        [MenuItem("AlienDefense/Setup/9a. Add Zombie Attack Animations - Step 1 (Imports+Controller)")]
+        public static void BuildAttackImportsAndControllers()
+        {
+            foreach (var variant in Variants)
+            {
+                BuildOneVariantAttackImportAndController(variant);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[ZombieVariantBuilder] Step 9a done: fixed Attack imports and extended " + Variants.Length + " AnimatorControllers.");
+        }
+
+        private static void BuildOneVariantAttackImportAndController(Variant variant)
+        {
+            string variantFolder = RootFolder + "/" + variant.Number;
+            string attackFbxPath = variantFolder + "/" + variant.AttackFbxFileName;
+
+            var modelImporter = AssetImporter.GetAtPath(attackFbxPath) as ModelImporter;
+            if (modelImporter == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] Missing Attack FBX: " + attackFbxPath);
+                return;
+            }
+
+            // Bug 1 (see BuildOneVariantImportsAndController): same Mixamo fileScale=0.01 issue.
+            modelImporter.useFileScale = false;
+
+            // The zombie never walks again once it reaches the base - it stays parked there attacking
+            // repeatedly (see EnemyController.AttackBaseRepeatedly) until killed or the base is destroyed - so
+            // the Attack state loops this clip forever instead of playing once and returning to Walk. Mixamo
+            // exports it non-looping by default; override that explicitly.
+            var clips = modelImporter.defaultClipAnimations;
+            if (clips.Length > 0)
+            {
+                ModelImporterClipAnimation clip = clips[0];
+                clip.loopTime = true;
+                clip.loopPose = true;
+                modelImporter.clipAnimations = new[] { clip };
+            }
+
+            AssetDatabase.WriteImportSettingsIfDirty(attackFbxPath);
+            AssetDatabase.ImportAsset(attackFbxPath, ImportAssetOptions.ForceUpdate);
+
+            // Same "__preview__" decoy clip as the walk import (see BuildOneVariantImportsAndController) - the
+            // real clip is the one NOT prefixed that way.
+            AnimationClip attackClip = AssetDatabase.LoadAllAssetsAtPath(attackFbxPath)
+                .OfType<AnimationClip>()
+                .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
+            if (attackClip == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] No non-preview animation clip found in " + attackFbxPath);
+                return;
+            }
+
+            string controllerPath = variantFolder + "/" + variant.DisplayName + "_Walk.controller";
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+            if (controller == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] Controller not found: " + controllerPath + " (run Step 7a first).");
+                return;
+            }
+
+            AddOrUpdateAttackState(controller, attackClip);
+            EditorUtility.SetDirty(controller);
+        }
+
+        /// <summary>Attack is a terminal, looping state once entered: Any State -&gt; Attack on the trigger, and
+        /// NO transition back to Walk - the zombie never walks again after reaching the base (see
+        /// EnemyController.AttackBaseRepeatedly), it just loops this clip forever. Fully idempotent: re-running
+        /// this also strips any old Attack -&gt; Walk transition an earlier (one-shot-attack) version of this
+        /// builder left behind, so existing controllers self-correct instead of needing to be deleted by hand.</summary>
+        private static void AddOrUpdateAttackState(AnimatorController controller, AnimationClip attackClip)
+        {
+            bool hasParam = controller.parameters.Any(p => p.name == "Attack" && p.type == AnimatorControllerParameterType.Trigger);
+            if (!hasParam)
+            {
+                controller.AddParameter("Attack", AnimatorControllerParameterType.Trigger);
+            }
+
+            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+            ChildAnimatorState[] existing = stateMachine.states;
+            AnimatorState attackState = existing.FirstOrDefault(s => s.state.name == "Attack").state;
+
+            if (attackState == null)
+            {
+                attackState = stateMachine.AddState("Attack");
+            }
+            else
+            {
+                // Strip any leftover Attack -> Walk transition from an earlier version of this builder.
+                attackState.transitions = System.Array.Empty<AnimatorStateTransition>();
+            }
+
+            bool hasAnyStateTransition = stateMachine.anyStateTransitions.Any(t => t.destinationState == attackState);
+            if (!hasAnyStateTransition)
+            {
+                AnimatorStateTransition toAttack = stateMachine.AddAnyStateTransition(attackState);
+                toAttack.hasExitTime = false;
+                toAttack.duration = 0.1f;
+                toAttack.canTransitionToSelf = false;
+                toAttack.AddCondition(AnimatorConditionMode.If, 0f, "Attack");
+            }
+
+            attackState.motion = attackClip;
+        }
+
+        /// <summary>Step 2 of 2 (a separate later call - see the class-level doc comment on why): adds
+        /// EnemyBaseAttackVisual to each Enemy_* prefab's root (the same spot EnemyDeathVisual/EnemyHitFlash
+        /// already live), points it at the variant's Animator (VisualRoot/Model) and sets its hold duration to
+        /// that variant's actual Attack clip length (read fresh off disk, not assumed), and wires the result
+        /// into EnemyController's own _baseAttackVisual field.</summary>
+        [MenuItem("AlienDefense/Setup/9b. Add Zombie Attack Animations - Step 2 (Wire Enemies)")]
+        public static void WireBaseAttackVisualOntoEnemies()
+        {
+            foreach (var assignment in EnemyAssignments)
+            {
+                Variant variant = Variants.First(v => v.DisplayName == assignment.VariantDisplayName);
+                string attackFbxPath = RootFolder + "/" + variant.Number + "/" + variant.AttackFbxFileName;
+                AnimationClip attackClip = AssetDatabase.LoadAllAssetsAtPath(attackFbxPath)
+                    .OfType<AnimationClip>()
+                    .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
+
+                if (attackClip == null)
+                {
+                    Debug.LogWarning("[ZombieVariantBuilder] No Attack clip found for " + assignment.EnemyPrefab + " (run Step 9a first).");
+                    continue;
+                }
+
+                WireBaseAttackVisualOntoEnemy(assignment.EnemyPrefab, attackClip.length);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[ZombieVariantBuilder] Step 9b done: wired EnemyBaseAttackVisual onto " + EnemyAssignments.Length + " enemy prefabs.");
+        }
+
+        private static void WireBaseAttackVisualOntoEnemy(string enemyPrefabName, float attackClipLength)
+        {
+            string prefabPath = EnemyPrefabFolder + "/" + enemyPrefabName + ".prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (existing == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] Enemy prefab not found: " + prefabPath);
+                return;
+            }
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+
+            Transform model = contents.transform.Find("VisualRoot/Model");
+            Animator animator = model != null ? model.GetComponent<Animator>() : null;
+            if (animator == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] " + enemyPrefabName + " has no VisualRoot/Model Animator (run Step 8 first).");
+                PrefabUtility.UnloadPrefabContents(contents);
+                return;
+            }
+
+            var baseAttackVisual = contents.GetComponent<EnemyBaseAttackVisual>();
+            if (baseAttackVisual == null)
+            {
+                baseAttackVisual = contents.AddComponent<EnemyBaseAttackVisual>();
+            }
+
+            var visualSerialized = new SerializedObject(baseAttackVisual);
+            visualSerialized.FindProperty("_animator").objectReferenceValue = animator;
+            visualSerialized.FindProperty("_attackHoldDuration").floatValue = attackClipLength;
+            visualSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var enemyController = contents.GetComponent<EnemyController>();
+            if (enemyController != null)
+            {
+                var controllerSerialized = new SerializedObject(enemyController);
+                var baseAttackVisualProp = controllerSerialized.FindProperty("_baseAttackVisual");
+                if (baseAttackVisualProp != null)
+                {
+                    baseAttackVisualProp.objectReferenceValue = baseAttackVisual;
+                    controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+            PrefabUtility.UnloadPrefabContents(contents);
+
+            Debug.Log("[ZombieVariantBuilder] " + enemyPrefabName + " now attacks PlayerBase (hold=" + attackClipLength.ToString("0.00") + "s) instead of vanishing on arrival.");
         }
 
         /// <summary>Same "replace VisualRoot's one child" approach as ZombiePrefabBuilder.ApplyZombieVisualToEnemy

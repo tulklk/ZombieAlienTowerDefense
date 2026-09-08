@@ -15,9 +15,9 @@ namespace AlienDefense.Pickups
             _factory = factory;
         }
 
-        public void Spawn(Vector3 position, int value)
+        public void Spawn(Vector3 position, int value, int experienceValue = 0)
         {
-            _factory?.Spawn(position, value);
+            _factory?.Spawn(position, value, experienceValue);
         }
     }
 }

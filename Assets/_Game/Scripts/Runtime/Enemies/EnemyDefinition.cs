@@ -34,6 +34,12 @@ namespace AlienDefense.Enemies
         [SerializeField, Min(0)]
         private int _rewardResource = 10;
 
+        [SerializeField, Range(1, 2)]
+        [Tooltip("XP granted to PlayerLevelProgressionService when the EnergyPickup this enemy drops on death is " +
+            "collected - deliberately capped low (max 2) and separate from Reward Resource (the Energy currency " +
+            "amount, which stays uncapped), so a single kill can never trivially rush a level-up.")]
+        private int _experienceReward = 1;
+
         [SerializeField, Min(1)]
         private int _baseDamage = 1;
 
@@ -73,6 +79,7 @@ namespace AlienDefense.Enemies
         public float MoveSpeed => _moveSpeed;
         public float RotationSpeed => _rotationSpeed;
         public int RewardResource => _rewardResource;
+        public int ExperienceReward => _experienceReward;
         public int BaseDamage => _baseDamage;
         public float ArrivalThreshold => _arrivalThreshold;
         public float HealthBarHeightOffset => _healthBarHeightOffset;
@@ -119,6 +126,8 @@ namespace AlienDefense.Enemies
             {
                 _rewardResource = 0;
             }
+
+            _experienceReward = Mathf.Clamp(_experienceReward, 1, 2);
 
             if (_baseDamage < 1)
             {

@@ -353,6 +353,7 @@ GameObject:
   - component: {fileID: 8495150792700654576}
   - component: {fileID: 2002613557826523492}
   - component: {fileID: 8872965502697714938}
+  - component: {fileID: 6084983533293471546}
   m_Layer: 10
   m_Name: Enemy_Boss
   m_TagString: Untagged
@@ -447,6 +448,7 @@ MonoBehaviour:
   _bossController: {fileID: 8872965502697714938}
   _captureController: {fileID: 0}
   _deathVisual: {fileID: 0}
+  _baseAttackVisual: {fileID: 6084983533293471546}
 --- !u!114 &4853482691237559322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -507,6 +509,20 @@ MonoBehaviour:
   _movement: {fileID: 931801446675145297}
   _defense: {fileID: 8495150792700654576}
   _behavior: {fileID: 11400000, guid: 9896899a0a22c0248ae85a1bd8ff6c43, type: 2}
+--- !u!114 &6084983533293471546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6849597331937082080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba8d297f7a53234db01d638475d1a07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyBaseAttackVisual
+  _animator: {fileID: 2974251122422920743}
+  _attackHoldDuration: 4.6333337
 --- !u!1001 &1506194510447786068
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -584,6 +600,12 @@ SkinnedMeshRenderer:
 --- !u!4 &1954811915618179751 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1137142386879455987, guid: c9aa074cad28d374d8721ec5d374ac83,
+    type: 3}
+  m_PrefabInstance: {fileID: 1506194510447786068}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &2974251122422920743 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 4441035553566166643, guid: c9aa074cad28d374d8721ec5d374ac83,
     type: 3}
   m_PrefabInstance: {fileID: 1506194510447786068}
   m_PrefabAsset: {fileID: 0}

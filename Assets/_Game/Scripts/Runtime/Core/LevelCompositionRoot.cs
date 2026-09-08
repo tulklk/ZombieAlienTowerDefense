@@ -142,8 +142,16 @@ namespace AlienDefense.Core
         private BuildNodeVisualCoordinator _buildNodeVisualCoordinator;
 
         [SerializeField]
-        [Tooltip("Optional. Flying the Player onto a BuildNode acts like tapping it.")]
+        [Tooltip("Optional. Flying the Player onto a BuildNode and holding position for a few seconds builds/upgrades it via Energy Ball, see EnergyTowerTransactionService.")]
         private PlayerBuildNodeProximityController _playerBuildNodeProximity;
+
+        [SerializeField]
+        [Tooltip("Optional. The 'Choose Tower' popup opened by _playerBuildNodeProximity after a successful build channel.")]
+        private TowerChoicePresenter _towerChoicePresenter;
+
+        [SerializeField]
+        [Tooltip("Optional. Every buildable TowerDefinition - offered by _towerChoicePresenter.")]
+        private TowerDefinition[] _towerCatalog;
 
         [SerializeField]
         [Tooltip("Optional (Phase 8, before Selection/Upgrade/Sell exist).")]
@@ -231,6 +239,7 @@ namespace AlienDefense.Core
         public AreaDamageResolver AreaDamage { get; private set; }
         public BuildSelectionService BuildSelection { get; private set; }
         public BuildService BuildService { get; private set; }
+        public EnergyTowerTransactionService EnergyTransactions { get; private set; }
         public TowerSelectionService TowerSelection { get; private set; }
         public TowerUpgradeService TowerUpgrade { get; private set; }
         public TowerSellService TowerSell { get; private set; }
@@ -325,6 +334,23 @@ namespace AlienDefense.Core
             if (BaseHealth != null)
             {
                 BaseHealth.Destroyed -= HandleBaseDestroyed;
+            }
+
+            if (EnergyWallet != null)
+            {
+                EnergyWallet.EnergyChanged -= HandleEnergyChangedForBuildBadges;
+                EnergyWallet.MaxEnergyChanged -= HandleMaxEnergyChangedForBuildBadges;
+            }
+
+            if (EnergyTransactions != null)
+            {
+                EnergyTransactions.BuildCompleted -= HandleBuildCompletedForBuildBadges;
+                EnergyTransactions.TowerUpgraded -= HandleTowerUpgradedForBuildBadges;
+            }
+
+            if (_tractorBeamController != null)
+            {
+                _tractorBeamController.PropAbsorbed -= HandlePropAbsorbedForExperience;
             }
 
             if (GameFlow != null)
@@ -447,6 +473,7 @@ namespace AlienDefense.Core
 
             _tractorBeamController.Initialize(Enemies, _energyPickupRegistry, _environmentPropRegistry);
             _tractorBeamVisual?.Initialize(_tractorBeamController);
+            _tractorBeamController.PropAbsorbed += HandlePropAbsorbedForExperience;
 
             _tractorBeamAudio = new TractorBeamAudioController(_audioService, _tractorBeamLoopSource, _tractorBeamLoopClip, _tractorBeamCaptureClip);
             _tractorBeamAudio.Initialize(_tractorBeamController);
@@ -461,6 +488,15 @@ namespace AlienDefense.Core
             {
                 _playerMissileController.Initialize(PlayerSkills, Enemies, ProjectileSpawner, _missileProjectileDefinition);
             }
+        }
+
+        /// <summary>Environment Props (trees, rocks, mushrooms...) grant only Experience, never Energy - bypasses
+        /// EnergyCollectionService entirely instead of routing through it like EnergyPickups do, since props
+        /// never touch the Energy wallet. The amount comes from the prop's own ExperienceReward (per-instance,
+        /// capped at 2 like EnemyDefinition.ExperienceReward) rather than one flat value for every prop.</summary>
+        private void HandlePropAbsorbedForExperience(TractorAbsorbableProp prop)
+        {
+            PlayerLevelProgression?.AddExperience(prop.ExperienceReward);
         }
 
         private void InitializeTowerSystem()
@@ -500,6 +536,11 @@ namespace AlienDefense.Core
             }
 
             BuildService = new BuildService(BuildSelection, Economy, TowerSpawner, GameFlow);
+            EnergyTransactions = new EnergyTowerTransactionService(EnergyWallet, TowerSpawner, GameFlow);
+            EnergyWallet.EnergyChanged += HandleEnergyChangedForBuildBadges;
+            EnergyWallet.MaxEnergyChanged += HandleMaxEnergyChangedForBuildBadges;
+            EnergyTransactions.BuildCompleted += HandleBuildCompletedForBuildBadges;
+            EnergyTransactions.TowerUpgraded += HandleTowerUpgradedForBuildBadges;
 
             TowerSelection = new TowerSelectionService();
             TowerUpgrade = new TowerUpgradeService(Economy, GameFlow);
@@ -523,15 +564,48 @@ namespace AlienDefense.Core
                 _buildNodeVisualCoordinator.Initialize(BuildSelection);
             }
 
+            if (_towerChoicePresenter != null)
+            {
+                _towerChoicePresenter.Initialize(EnergyTransactions, _towerCatalog, GameSpeed);
+            }
+
             if (_playerBuildNodeProximity != null && _player != null)
             {
-                _playerBuildNodeProximity.Initialize(_player.transform, BuildService, TowerSelection);
+                _playerBuildNodeProximity.Initialize(_player.transform, EnergyTransactions, _towerChoicePresenter, _cameraTransform);
             }
 
             if (_towerDetailsPresenter != null)
             {
                 _towerDetailsPresenter.Initialize(TowerSelection, Economy, TowerUpgrade, TowerSell);
             }
+        }
+
+        /// <summary>Keeps every BuildNode's "{wallet}/{cost}" Energy badge showing the current wallet balance -
+        /// cheap (just text), so it's fine to refresh every node on every wallet change rather than only the
+        /// nearest one.</summary>
+        private void HandleEnergyChangedForBuildBadges(int currentEnergy)
+        {
+            _playerBuildNodeProximity?.RefreshAllCostBadges();
+        }
+
+        private void HandleMaxEnergyChangedForBuildBadges(int maxEnergy)
+        {
+            _playerBuildNodeProximity?.RefreshAllCostBadges();
+        }
+
+        /// <summary>A just-built node flips Available -> Occupied, switching its badge from the catalog's cheapest
+        /// build cost to this specific tower's next-level upgrade cost - EnergyChanged alone doesn't cover this
+        /// since TrySpend fires before the node's state/level actually changes.</summary>
+        private void HandleBuildCompletedForBuildBadges(BuildNode node, TowerController tower)
+        {
+            _playerBuildNodeProximity?.RefreshAllCostBadges();
+        }
+
+        /// <summary>An upgraded tower's next-level cost changes - EnergyChanged alone is stale here because
+        /// TrySpend (and its event) fires before TryApplyNextLevel actually advances the tower's level.</summary>
+        private void HandleTowerUpgradedForBuildBadges(TowerController tower)
+        {
+            _playerBuildNodeProximity?.RefreshAllCostBadges();
         }
 
         private void InitializeWaveSystem()

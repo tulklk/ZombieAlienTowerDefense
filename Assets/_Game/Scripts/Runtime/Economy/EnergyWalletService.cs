@@ -31,6 +31,25 @@ namespace AlienDefense.Economy
             CurrentEnergy = Mathf.Min(startingEnergy, MaxEnergy);
         }
 
+        public bool CanAfford(int amount)
+        {
+            return amount >= 0 && CurrentEnergy >= amount;
+        }
+
+        /// <summary>Spends Energy if, and only if, the full amount can be afforded. Intended caller:
+        /// EnergyTowerTransactionService only.</summary>
+        public bool TrySpend(int amount)
+        {
+            if (amount <= 0 || CurrentEnergy < amount)
+            {
+                return false;
+            }
+
+            CurrentEnergy -= amount;
+            EnergyChanged?.Invoke(CurrentEnergy);
+            return true;
+        }
+
         /// <summary>Adds Energy, clamped to MaxEnergy. Intended caller: EnergyCollectionService only.</summary>
         public void Add(int amount)
         {

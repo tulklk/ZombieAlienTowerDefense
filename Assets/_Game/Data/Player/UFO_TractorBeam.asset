@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Player.UFOTractorBeamDefinition
   _stableId: ufo_tractorbeam_default
   _displayName: UFO Tractor Beam
-  _attractionRadius: 0.98
+  _attractionRadius: 3
   _scanInterval: 0.1
   _maxConcurrentCaptures: 8
   _maxConcurrentEnergyAbsorptions: 16

@@ -51,6 +51,7 @@ namespace AlienDefense.Tests.EditMode
         public void Defeated_DropsPickup_NotDirectReward_ThenCollectingIt_GrantsWalletAndXp()
         {
             const int rewardValue = 4;
+            const int experienceValue = 2;
 
             // --- Energy/XP services (the ONLY funnel to reward) ---
             var wallet = new EnergyWalletService();
@@ -81,6 +82,7 @@ namespace AlienDefense.Tests.EditMode
             _definition = definition;
             SetPrivateField(definition, "_maxHealth", 10f);
             SetPrivateField(definition, "_rewardResource", rewardValue);
+            SetPrivateField(definition, "_experienceReward", experienceValue);
             SetPrivateField(definition, "_prefab", enemyPrefabController);
 
             var enemyRegistry = new EnemyRegistry();
@@ -123,7 +125,8 @@ namespace AlienDefense.Tests.EditMode
 
             Assert.AreEqual(0, pickupRegistry.Count, "A Collected pickup must unregister itself.");
             Assert.AreEqual(rewardValue, wallet.CurrentEnergy, "Only actually collecting the pickup grants Energy.");
-            Assert.AreEqual(rewardValue, progression.CurrentExperience, "Only actually collecting the pickup grants XP.");
+            Assert.AreEqual(experienceValue, progression.CurrentExperience,
+                "Only actually collecting the pickup grants XP, and by the enemy's separate ExperienceReward - not its RewardResource.");
         }
 
         private EnemyPath3D CreatePath()

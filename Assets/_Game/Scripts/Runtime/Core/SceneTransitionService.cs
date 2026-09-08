@@ -139,15 +139,22 @@ namespace AlienDefense.Core
                 }
 
                 ReportProgress(1f);
-                DestroyOverlay();
-
-                yield return null;
 
                 operation.allowSceneActivation = true;
                 while (!operation.isDone)
                 {
                     yield return null;
                 }
+
+                // Give the new scene's own Awake/Start/OnEnable - and its first rendered frame - a beat before
+                // tearing the overlay down. Destroying it earlier (the old order) left a gap between the overlay
+                // disappearing and the new scene actually painting anything: the overlay lives under this
+                // service's own (persistent) transform, so nothing removes it automatically on scene unload,
+                // and its camera keeps clearing to a solid color with no UI on it once the Canvas is gone -
+                // that solid color is the "black flash" players see between scenes.
+                yield return null;
+
+                DestroyOverlay();
 
                 Debug.Log($"[SceneTransitionService] '{sceneName}' activated. Active scene = {SceneManager.GetActiveScene().name}.", this);
 

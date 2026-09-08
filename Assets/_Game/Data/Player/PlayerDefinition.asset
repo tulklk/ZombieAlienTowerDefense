@@ -20,7 +20,7 @@ MonoBehaviour:
   _acceleration: 25
   _deceleration: 30
   _inputDeadZone: 0.15
-  _hoverHeight: 1.5
+  _hoverHeight: 3
   _attackRange: 5
   _attackDamage: 12
   _attacksPerSecond: 1.5

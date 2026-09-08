@@ -109,7 +109,8 @@ namespace AlienDefense.Enemies
             Vector3 anchor = _request.BeamGroundAnchor.position;
             Vector3 target = new Vector3(anchor.x, _groundY, anchor.z);
             Vector3 current = transform.position;
-            Vector3 next = Vector3.MoveTowards(current, target, _request.PullSpeed * deltaTime);
+            float boost = _request.SpeedBoost?.PullSpeedMultiplier ?? 1f;
+            Vector3 next = Vector3.MoveTowards(current, target, _request.PullSpeed * boost * deltaTime);
             transform.position = next;
 
             float dx = next.x - anchor.x;
@@ -138,7 +139,8 @@ namespace AlienDefense.Enemies
 
             Vector3 socket = _request.CaptureSocket.position;
             Vector3 current = transform.position;
-            Vector3 next = Vector3.MoveTowards(current, socket, _request.LiftSpeed * deltaTime);
+            float boost = _request.SpeedBoost?.PullSpeedMultiplier ?? 1f;
+            Vector3 next = Vector3.MoveTowards(current, socket, _request.LiftSpeed * boost * deltaTime);
             transform.position = next;
 
             float remainingDistance = Vector3.Distance(next, socket);

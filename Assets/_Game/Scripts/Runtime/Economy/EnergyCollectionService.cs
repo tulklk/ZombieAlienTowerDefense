@@ -16,8 +16,12 @@ namespace AlienDefense.Economy
             _progression = progression;
         }
 
-        /// <summary>Call exactly when an EnergyPickup finishes its Lift phase and is absorbed into the UFO.</summary>
-        public void Collect(int value)
+        /// <summary>Call exactly when an EnergyPickup finishes its Lift phase and is absorbed into the UFO.
+        /// value (Energy currency, uncapped) and experienceValue (XP, deliberately capped low - see
+        /// EnemyDefinition.ExperienceReward / TractorAbsorbableProp's own experience field) are intentionally
+        /// separate numbers now: a big kill should still be worth a lot of Energy without also rushing a level-up
+        /// in one absorb.</summary>
+        public void Collect(int value, int experienceValue)
         {
             if (value <= 0)
             {
@@ -25,7 +29,11 @@ namespace AlienDefense.Economy
             }
 
             _wallet?.Add(value);
-            _progression?.AddExperience(value);
+
+            if (experienceValue > 0)
+            {
+                _progression?.AddExperience(experienceValue);
+            }
         }
     }
 }

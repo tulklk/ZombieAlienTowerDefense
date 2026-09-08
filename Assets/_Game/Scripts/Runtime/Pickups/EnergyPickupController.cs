@@ -24,6 +24,10 @@ namespace AlienDefense.Pickups
 
         public EnergyPickupState State { get; private set; } = EnergyPickupState.Idle;
         public int Value { get; private set; }
+
+        /// <summary>XP granted on Collected — separate from Value (the Energy currency amount) so the two can
+        /// diverge; see EnergyCollectionService.Collect and EnemyDefinition.ExperienceReward.</summary>
+        public int ExperienceValue { get; private set; }
         public int Generation => _generation;
 
         /// <summary>True only while this pickup is eligible to start a fresh tractor beam absorption.</summary>
@@ -42,10 +46,13 @@ namespace AlienDefense.Pickups
             }
         }
 
-        /// <summary>Called by EnergyPickupFactory right after spawning/reactivating this instance.</summary>
-        public void Initialize(int value)
+        /// <summary>Called by EnergyPickupFactory right after spawning/reactivating this instance. experienceValue
+        /// defaults to 0 (no XP) so existing single-arg callers - state-machine tests that never touch reward -
+        /// keep compiling unchanged.</summary>
+        public void Initialize(int value, int experienceValue = 0)
         {
             Value = value;
+            ExperienceValue = experienceValue;
             _generation++;
             State = EnergyPickupState.Idle;
             enabled = false;
@@ -113,9 +120,10 @@ namespace AlienDefense.Pickups
                 return;
             }
 
+            float boost = _request.SpeedBoost?.PullSpeedMultiplier ?? 1f;
             transform.position = TractorPullLiftMotion.TickPull(
                 transform.position, _request.BeamGroundAnchor.position, _groundY,
-                _request.PullSpeed, _request.CenterThreshold, deltaTime, out bool reachedCenter);
+                _request.PullSpeed * boost, _request.CenterThreshold, deltaTime, out bool reachedCenter);
 
             if (reachedCenter)
             {
@@ -138,9 +146,10 @@ namespace AlienDefense.Pickups
                 return;
             }
 
+            float boost = _request.SpeedBoost?.PullSpeedMultiplier ?? 1f;
             transform.position = TractorPullLiftMotion.TickLift(
                 transform.position, _request.CaptureSocket.position,
-                _request.LiftSpeed, _request.SocketThreshold, deltaTime,
+                _request.LiftSpeed * boost, _request.SocketThreshold, deltaTime,
                 out float remainingDistance, out bool reachedSocket);
 
             UpdateLiftVisual(remainingDistance, deltaTime);

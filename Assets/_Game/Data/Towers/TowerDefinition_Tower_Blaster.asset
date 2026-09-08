@@ -15,6 +15,7 @@ MonoBehaviour:
   _id: tower_blaster
   _displayName: Blaster Tower
   _icon: {fileID: 0}
+  _description: Simple turret, hits right on target
   _prefab: {fileID: 6171785530919239617, guid: e94c20233ffb9ee4881e7b06070cb7ef, type: 3}
   _buildCost: 75
   _sellPercentage: 0.5
@@ -29,16 +30,19 @@ MonoBehaviour:
     type: 2}
   _levels:
   - _upgradeCost: 0
+    _energyCost: 10
     _damage: 20
     _range: 8
     _attacksPerSecond: 1
     _turretRotationSpeed: 720
   - _upgradeCost: 90
+    _energyCost: 15
     _damage: 32
     _range: 8.8
     _attacksPerSecond: 1.2
     _turretRotationSpeed: 720
   - _upgradeCost: 160
+    _energyCost: 45
     _damage: 50
     _range: 9.6
     _attacksPerSecond: 1.4

@@ -19,7 +19,7 @@ namespace AlienDefense.Pickups
             _energyCollection = energyCollection;
         }
 
-        public EnergyPickupController Spawn(Vector3 position, int value)
+        public EnergyPickupController Spawn(Vector3 position, int value, int experienceValue = 0)
         {
             if (_pool == null || value <= 0)
             {
@@ -34,7 +34,7 @@ namespace AlienDefense.Pickups
             }
 
             pickup.transform.SetPositionAndRotation(position, Quaternion.identity);
-            pickup.Initialize(value);
+            pickup.Initialize(value, experienceValue);
             pickup.gameObject.SetActive(true);
 
             pickup.Collected -= HandlePickupCollected;
@@ -48,7 +48,7 @@ namespace AlienDefense.Pickups
         {
             pickup.Collected -= HandlePickupCollected;
             _registry?.Unregister(pickup);
-            _energyCollection?.Collect(pickup.Value);
+            _energyCollection?.Collect(pickup.Value, pickup.ExperienceValue);
             _pool.Release(pickup);
         }
     }

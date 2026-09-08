@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 6808836811960785594}
   - component: {fileID: 6956509540092894205}
   - component: {fileID: 3566841109017668905}
+  - component: {fileID: 1151121923164143873}
   m_Layer: 10
   m_Name: Enemy_Armored
   m_TagString: Untagged
@@ -111,6 +112,7 @@ MonoBehaviour:
   _bossController: {fileID: 0}
   _captureController: {fileID: 3566841109017668905}
   _deathVisual: {fileID: 0}
+  _baseAttackVisual: {fileID: 1151121923164143873}
 --- !u!114 &7443951595408891451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -167,6 +169,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyCaptureController
   _visualRoot: {fileID: 870229650163960461}
+--- !u!114 &1151121923164143873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1071862664955086661}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba8d297f7a53234db01d638475d1a07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyBaseAttackVisual
+  _animator: {fileID: 5287176548762039722}
+  _attackHoldDuration: 2.6333334
 --- !u!1 &3161875021207409767
 GameObject:
   m_ObjectHideFlags: 0
@@ -580,6 +596,12 @@ SkinnedMeshRenderer:
 --- !u!4 &3951637570129177368 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2233156457489569472, guid: 183b251d841e02d48918c64ff2abcc85,
+    type: 3}
+  m_PrefabInstance: {fileID: 2894348471436459480}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &5287176548762039722 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 7022547331989276786, guid: 183b251d841e02d48918c64ff2abcc85,
     type: 3}
   m_PrefabInstance: {fileID: 2894348471436459480}
   m_PrefabAsset: {fileID: 0}

@@ -5,9 +5,16 @@ Shader "AlienDefense/RingIndicator"
     // only a border band out to the mesh's own edge (radius 0.5 on Unity's built-in Cylinder primitive).
     // Uses object-space XZ distance from center rather than the mesh's UVs, so it doesn't depend on exactly how
     // Unity's primitive cylinder happens to map its cap UVs.
+    //
+    // _FillAmount (driven by PlayerBuildNodeProximityController's channel timer via BuildNodeChannelUI) sweeps
+    // a second, brighter color clockwise around the ring from 0 (nothing filled) to 1 (fully filled) - the same
+    // ring mesh doubles as both the always-visible "you can act here" border AND the channel-progress loading
+    // indicator, instead of needing a second overlapping object.
     Properties
     {
-        _BaseColor ("Color", Color) = (1, 0.85, 0.2, 0.7)
+        _BaseColor ("Unfilled Color", Color) = (1, 0.85, 0.2, 0.7)
+        _FillColor ("Filled Color", Color) = (1, 0.95, 0.55, 1)
+        _FillAmount ("Fill Amount (0-1)", Range(0, 1)) = 0
         _InnerRadius ("Inner Radius (0-1, fraction of the disc's own radius)", Range(0, 0.95)) = 0.82
         _EdgeSoftness ("Edge Softness", Range(0.001, 0.3)) = 0.04
     }
@@ -51,6 +58,8 @@ Shader "AlienDefense/RingIndicator"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
+                half4 _FillColor;
+                float _FillAmount;
                 float _InnerRadius;
                 float _EdgeSoftness;
             CBUFFER_END
@@ -72,7 +81,12 @@ Shader "AlienDefense/RingIndicator"
                 float ring = smoothstep(_InnerRadius - _EdgeSoftness, _InnerRadius, dist);
                 ring *= smoothstep(1.0, 1.0 - _EdgeSoftness, dist); // soften the outer edge too
 
-                half4 color = _BaseColor;
+                // Clockwise sweep from the top (+Z in object space), matching Unity UI's Radial360
+                // Top/Clockwise fill convention so this reads the same way our old UI-based ring did.
+                float angle01 = frac(0.5 - atan2(IN.positionOSxz.x, IN.positionOSxz.y) / (2.0 * PI));
+                float filled = step(angle01, _FillAmount);
+
+                half4 color = lerp(_BaseColor, _FillColor, filled);
                 color.a *= ring;
                 return color;
             }

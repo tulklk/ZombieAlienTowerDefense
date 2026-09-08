@@ -1,3 +1,4 @@
+using AlienDefense.Common;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
@@ -16,6 +17,10 @@ namespace AlienDefense.Enemies
         public readonly float MinimumVisualScale;
         public readonly float SpinSpeedDegreesPerSecond;
 
+        /// <summary>Optional. Read live every frame (see IPullSpeedBoostSource) instead of baked in once here —
+        /// null keeps PullSpeed/LiftSpeed exactly as given, unchanged from before this field existed.</summary>
+        public readonly IPullSpeedBoostSource SpeedBoost;
+
         public TractorCaptureRequest(
             Transform beamGroundAnchor,
             Transform captureSocket,
@@ -25,7 +30,8 @@ namespace AlienDefense.Enemies
             float socketThreshold,
             bool shrinkDuringLift,
             float minimumVisualScale,
-            float spinSpeedDegreesPerSecond)
+            float spinSpeedDegreesPerSecond,
+            IPullSpeedBoostSource speedBoost = null)
         {
             BeamGroundAnchor = beamGroundAnchor;
             CaptureSocket = captureSocket;
@@ -36,6 +42,7 @@ namespace AlienDefense.Enemies
             ShrinkDuringLift = shrinkDuringLift;
             MinimumVisualScale = minimumVisualScale;
             SpinSpeedDegreesPerSecond = spinSpeedDegreesPerSecond;
+            SpeedBoost = speedBoost;
         }
 
         public bool IsValid => BeamGroundAnchor != null && CaptureSocket != null;

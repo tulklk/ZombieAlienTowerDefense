@@ -15,6 +15,7 @@ MonoBehaviour:
   _id: tower_frost
   _displayName: Frost Tower
   _icon: {fileID: 0}
+  _description: Icy strike with a freeze chance
   _prefab: {fileID: 3891672731294487376, guid: 8cbf3f40d8aeb3e4c8bf6f6513640253, type: 3}
   _buildCost: 120
   _sellPercentage: 0.5
@@ -29,16 +30,19 @@ MonoBehaviour:
     type: 2}
   _levels:
   - _upgradeCost: 0
+    _energyCost: 10
     _damage: 6
     _range: 8.4
     _attacksPerSecond: 1.1
     _turretRotationSpeed: 720
   - _upgradeCost: 130
+    _energyCost: 15
     _damage: 9
     _range: 9
     _attacksPerSecond: 1.2
     _turretRotationSpeed: 720
   - _upgradeCost: 210
+    _energyCost: 45
     _damage: 13
     _range: 9.6
     _attacksPerSecond: 1.35

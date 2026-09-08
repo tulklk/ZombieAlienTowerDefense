@@ -50,6 +50,14 @@ namespace AlienDefense.Enemies
             "seen (see its own Duration). Enemies without one release to the pool immediately, unchanged.")]
         private EnemyDeathVisual _deathVisual;
 
+        [SerializeField]
+        [Tooltip("Optional. On reaching PlayerBase, plays a looping Attack animation and deals BaseDamage " +
+            "repeatedly - once per its own Duration - instead of vanishing after a single hit. Stays alive and " +
+            "fully targetable the whole time, so a Tower can still kill it mid-attack; otherwise it keeps " +
+            "attacking until BaseHealthService.IsDestroyed. Enemies without one keep resolving ReachedBase " +
+            "instantly with a single hit, unchanged.")]
+        private EnemyBaseAttackVisual _baseAttackVisual;
+
         private EnemyDefinition _definition;
         private EconomyService _economy;
         private BaseHealthService _baseHealth;
@@ -178,7 +186,59 @@ namespace AlienDefense.Enemies
 
         private void HandleReachedBase()
         {
-            Resolve(EnemyResolveReason.ReachedBase);
+            if (_isResolved)
+            {
+                return;
+            }
+
+            if (_baseAttackVisual != null)
+            {
+                // Deliberately NOT Resolve(ReachedBase) here: this enemy is meant to stay alive, registered and
+                // fully targetable, parked at the base attacking it over and over, until either a Tower kills it
+                // (the normal Defeated path still applies at any point, via HandleDied -> Resolve) or the level
+                // cleans it up (LevelEnded, via LevelCompositionRoot.DespawnAllEnemies -> ForceResolve). Resolved
+                // is intentionally NOT fired early either: this zombie is still a live threat sitting on the
+                // base, so it should keep counting against its wave's ActiveEnemyCount (see WaveRuntimeTracker)
+                // for as long as it's parked there - a wave with an unresolved base-attacker at the end of it is
+                // not actually "done", and neither is the level (HandleAllWavesCompleted/ReportVictory), until a
+                // Tower kills it. That's intended pressure, not a bug: leaving a zombie alive at the base is what
+                // keeps damaging PlayerBase, so the player has to clear it out to progress.
+                _baseAttackVisual.PlayAttack();
+                StartCoroutine(AttackBaseRepeatedly());
+            }
+            else
+            {
+                Resolve(EnemyResolveReason.ReachedBase);
+            }
+        }
+
+        /// <summary>Deals BaseDamage on a loop, once per EnemyBaseAttackVisual.Duration (one Attack clip cycle),
+        /// for as long as this enemy is still alive and the base still has health. Captures _generation up front
+        /// so a stale coroutine from a PREVIOUS life of this pooled instance can never damage the base on behalf
+        /// of a instance that's since been re-initialized for a different spawn (same safety pattern as
+        /// CaptureHandle/EnergyHandle/PropHandle elsewhere in this project) - and stops immediately once this
+        /// instance actually resolves (Tower kill mid-attack) or the base is destroyed.</summary>
+        private IEnumerator AttackBaseRepeatedly()
+        {
+            int generationAtStart = _generation;
+            var wait = new WaitForSeconds(_baseAttackVisual.Duration);
+
+            while (true)
+            {
+                yield return wait;
+
+                if (_generation != generationAtStart || _isResolved)
+                {
+                    yield break;
+                }
+
+                if (_baseHealth != null && _baseHealth.IsDestroyed)
+                {
+                    yield break;
+                }
+
+                _baseHealth?.TakeDamage(_definition.BaseDamage);
+            }
         }
 
         private void HandleCaptureCompleted()

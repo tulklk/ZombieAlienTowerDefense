@@ -17,9 +17,14 @@ namespace AlienDefense.Building
         [Tooltip("Optional. The hologram ghost shown on this node while it's Available and a tower type is selected to build.")]
         private TowerHologramPreview _hologramPreview;
 
+        [SerializeField]
+        [Tooltip("Optional. The channel ring + Energy Ball cost badge driven by PlayerBuildNodeProximityController.")]
+        private BuildNodeChannelUI _channelUI;
+
         public BuildNodeState State { get; private set; } = BuildNodeState.Available;
         public TowerController CurrentTower { get; private set; }
         public Transform BuildPoint => _buildPoint != null ? _buildPoint : transform;
+        public BuildNodeChannelUI ChannelUI => _channelUI;
 
         private void Awake()
         {

@@ -20,7 +20,7 @@ MonoBehaviour:
   _moveSpeed: 3
   _rotationSpeed: 540
   _rewardResource: 9
-  _baseDamage: 1
+  _baseDamage: 2
   _arrivalThreshold: 0.1
   _healthBarHeightOffset: 2
   _canBeTractorCaptured: 1
