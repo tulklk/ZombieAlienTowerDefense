@@ -1,6 +1,8 @@
 using AlienDefense.Enemies;
 using AlienDefense.Environment;
 using AlienDefense.Pickups;
+using AlienDefense.UI;
+using DG.Tweening;
 using UnityEngine;
 
 namespace AlienDefense.Player
@@ -95,13 +97,30 @@ namespace AlienDefense.Player
         [SerializeField, Min(0)]
         private int _captureFlashBurstCount = 10;
 
+        [Header("XP Popup")]
+        [SerializeField]
+        [Tooltip("Optional. Spawned (Instantiate, never pooled - these are rare, roughly once per Energy Pickup " +
+            "or Prop/animal absorbed) once per XP-granting absorption, showing '+N XP'. See " +
+            "HandleEnergyPickupCollected/HandlePropAbsorbed - amount comes from the source's own ExperienceValue/" +
+            "ExperienceReward, never guessed here.")]
+        private XpPopupView _xpPopupPrefab;
+
+        [SerializeField]
+        [Tooltip("Optional. Where a spawned XP popup appears and starts rising from. Falls back to this " +
+            "Transform (the beam root, under the UFO) if left empty.")]
+        private Transform _xpPopupSpawnAnchor;
+
         private UFOTractorBeamController _controller;
+        private Transform _cameraTransform;
+        private Camera _camera;
         private MaterialPropertyBlock _outerBlock;
         private Color _outerBaseColor;
         private Vector3 _groundRingBaseScale = Vector3.one;
 
         private float _targetIntensity;
         private float _displayedIntensity;
+        private Tweener _intensityTween;
+        private Tweener _groundRingTween;
         private bool _hasEmissionModule;
         private ParticleSystem.EmissionModule _emissionModule;
         private bool _hasStreakEmissionModule;
@@ -117,10 +136,16 @@ namespace AlienDefense.Player
         // the visible cone well before reaching the (much narrower) top - see UFOBeamParticleAttractor.
         private const float ConeTaperRatio = 0.15f;
 
-        public void Initialize(UFOTractorBeamController controller)
+        public void Initialize(UFOTractorBeamController controller, Transform cameraTransform = null)
         {
             Unsubscribe();
             _controller = controller;
+            _cameraTransform = cameraTransform;
+            _camera = cameraTransform != null ? cameraTransform.GetComponent<Camera>() : null;
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+            }
 
             _outerBlock = new MaterialPropertyBlock();
 
@@ -180,28 +205,60 @@ namespace AlienDefense.Player
                 HandleBeamGeometryChanged(_controller.BeamLength, _controller.AttractionRadius);
             }
 
+            _intensityTween?.Kill();
+            _intensityTween = null;
             _displayedIntensity = _targetIntensity;
             ApplyIntensity(_displayedIntensity);
+            RestartGroundRingPulse();
         }
 
-        private void Update()
+        /// <summary>Eases the cone toward its new intensity instead of stepping toward it every frame. Re-targets
+        /// (kill + restart from wherever it currently is) each time the capture count changes, so a burst of
+        /// captures reads as one continuous brighten rather than a stack of competing fades. The duration is
+        /// scaled by how far there is left to travel, so a small change stays quick.</summary>
+        private void RetargetIntensity()
         {
-            if (!_isBeamEnabled && _displayedIntensity <= 0.001f)
+            _intensityTween?.Kill();
+
+            float distance = Mathf.Abs(_targetIntensity - _displayedIntensity);
+            if (distance <= 0.001f)
+            {
+                _displayedIntensity = _targetIntensity;
+                ApplyIntensity(_displayedIntensity);
+                return;
+            }
+
+            float fullSweep = _displayedIntensity < _targetIntensity ? _fadeInDuration : _fadeOutDuration;
+            _intensityTween = DOTween
+                .To(() => _displayedIntensity, v => { _displayedIntensity = v; ApplyIntensity(v); }, _targetIntensity, fullSweep * distance)
+                .SetEase(Ease.OutQuad);
+        }
+
+        /// <summary>Restarts the ground ring's slow breathing at whatever base scale SetBeamRadius last computed
+        /// (the radius changes with the Radius/Magnet skills, so the loop has to be rebuilt when it does).</summary>
+        private void RestartGroundRingPulse()
+        {
+            _groundRingTween?.Kill();
+            _groundRingTween = null;
+
+            if (_groundRing == null)
             {
                 return;
             }
 
-            float rate = _displayedIntensity < _targetIntensity ? 1f / _fadeInDuration : 1f / _fadeOutDuration;
-            _displayedIntensity = Mathf.MoveTowards(_displayedIntensity, _targetIntensity, rate * Time.deltaTime);
-
-            float pulse = 1f;
-            if (_groundRing != null && _isBeamEnabled)
+            if (!_isBeamEnabled || _pulseScaleAmplitude <= 0f || _pulseFrequency <= 0f)
             {
-                pulse = 1f + Mathf.Sin(Time.time * _pulseFrequency * Mathf.PI * 2f) * _pulseScaleAmplitude;
-                _groundRing.transform.localScale = _groundRingBaseScale * pulse;
+                _groundRing.transform.localScale = _groundRingBaseScale;
+                return;
             }
 
-            ApplyIntensity(_displayedIntensity);
+            // One yoyo loop is half a cycle, hence the /2 on the period.
+            float halfCycle = 1f / (_pulseFrequency * 2f);
+            _groundRing.transform.localScale = _groundRingBaseScale * (1f - _pulseScaleAmplitude);
+            _groundRingTween = _groundRing.transform
+                .DOScale(_groundRingBaseScale * (1f + _pulseScaleAmplitude), halfCycle)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
         }
 
         /// <summary>Beam length: distance from CaptureSocket to BeamGroundAnchor. Beam radius: gameplay
@@ -244,6 +301,7 @@ namespace AlienDefense.Player
             {
                 _groundRingBaseScale = new Vector3(visualRadius * 2f, 1f, visualRadius * 2f);
                 _groundRing.transform.localScale = _groundRingBaseScale;
+                RestartGroundRingPulse(); // the loop tweens around this base scale, so it has to be rebuilt
             }
 
             // Keeps each particle system's Shape.radius (a Cone shape's base radius) synced to the same
@@ -329,6 +387,7 @@ namespace AlienDefense.Player
             // intensity still ramps up during an active capture below, so a capture still reads as "brighter".
 
             _targetIntensity = _isBeamEnabled ? (isActive ? 1f : _idleIntensity) : 0f;
+            RetargetIntensity();
 
             if (_hasEmissionModule || _hasStreakEmissionModule)
             {
@@ -357,11 +416,33 @@ namespace AlienDefense.Player
         private void HandleEnergyPickupCollected(EnergyPickupController pickup)
         {
             _captureFlashParticles?.Emit(_captureFlashBurstCount);
+            SpawnXpPopup(pickup.ExperienceValue);
         }
 
         private void HandlePropAbsorbed(TractorAbsorbableProp prop)
         {
             _captureFlashParticles?.Emit(_captureFlashBurstCount);
+            SpawnXpPopup(prop.ExperienceReward);
+        }
+
+        /// <summary>amount is whatever the source itself already decided to grant (EnergyPickupController.
+        /// ExperienceValue or TractorAbsorbableProp.ExperienceReward, both capped at 2 - see
+        /// EnemyDefinition.ExperienceReward's tooltip) - never recomputed or guessed here.</summary>
+        private void SpawnXpPopup(int amount)
+        {
+            if (_xpPopupPrefab == null || amount <= 0)
+            {
+                return;
+            }
+
+            // Screen Space - Overlay (see XpPopupView's class doc for why), so there's no more "behind the beam
+            // cone" risk to dodge with a world-space offset - a small upward nudge off the UFO's own position is
+            // enough; XpPopupView reprojects it (and its own further rise) to screen space every frame itself.
+            Vector3 basePosition = _xpPopupSpawnAnchor != null ? _xpPopupSpawnAnchor.position : transform.position;
+            Vector3 spawnPosition = basePosition + Vector3.up * 0.6f;
+
+            XpPopupView popup = Instantiate(_xpPopupPrefab);
+            popup.Show(amount, spawnPosition, _camera);
         }
 
         private void HandleBeamEnabledChanged(bool isEnabled)
@@ -388,6 +469,8 @@ namespace AlienDefense.Player
 
             int currentCount = _controller != null ? _controller.TotalActiveAbsorptionCount : 0;
             _targetIntensity = isEnabled ? (currentCount > 0 ? 1f : _idleIntensity) : 0f;
+            RetargetIntensity();
+            RestartGroundRingPulse(); // stops breathing when the beam is switched off, resumes when it's back
 
             if (_beamParticles != null)
             {
@@ -460,6 +543,11 @@ namespace AlienDefense.Player
         private void OnDestroy()
         {
             Unsubscribe();
+
+            _intensityTween?.Kill();
+            _groundRingTween?.Kill();
+            _intensityTween = null;
+            _groundRingTween = null;
         }
     }
 }

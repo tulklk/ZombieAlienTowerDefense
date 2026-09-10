@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Data.SkillDefinition
   _type: 1
   _displayName: "T\u1ED1c \u0111\u1ED9"
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 12dbd6bf2e9d4384588012701f425e1b, type: 3}
   _ranks:
   - Description: "T\u1ED1c \u0111\u1ED9 10%"
     RadiusMultiplier: 0

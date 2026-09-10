@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Data.SkillDefinition
   _type: 2
   _displayName: "T\xEAn l\u1EEDa"
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 67e765915cf04f547bf8c35d7a63f1f8, type: 3}
   _ranks:
   - Description: "Th\xEAm t\xEAn l\u1EEDa, t\u0103ng s\xE1t th\u01B0\u01A1ng"
     RadiusMultiplier: 0

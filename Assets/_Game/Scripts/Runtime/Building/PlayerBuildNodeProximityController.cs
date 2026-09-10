@@ -1,5 +1,6 @@
 using System.Collections;
 using AlienDefense.UI;
+using DG.Tweening;
 using UnityEngine;
 
 namespace AlienDefense.Building
@@ -229,18 +230,13 @@ namespace AlienDefense.Building
 
             Vector3 start = _player.position + Vector3.up * 1.5f;
             Vector3 end = node.BuildPoint.position + Vector3.up * 0.5f;
-            float arcHeight = 1.5f;
+            const float arcHeight = 1.5f;
 
-            float t = 0f;
-            while (t < _flyDuration)
-            {
-                t += Time.deltaTime;
-                float normalized = Mathf.Clamp01(t / _flyDuration);
-                Vector3 flat = Vector3.Lerp(start, end, normalized);
-                flat.y += Mathf.Sin(normalized * Mathf.PI) * arcHeight;
-                go.transform.position = flat;
-                yield return null;
-            }
+            go.transform.position = start;
+
+            // DOJump gives the same lob as the old hand-rolled Lerp+sin arc, but eased rather than linear.
+            Tween fly = go.transform.DOJump(end, arcHeight, 1, _flyDuration).SetEase(Ease.InOutSine);
+            yield return fly.WaitForCompletion();
 
             Destroy(go);
         }

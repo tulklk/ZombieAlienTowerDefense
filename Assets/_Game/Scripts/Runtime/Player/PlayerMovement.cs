@@ -6,7 +6,11 @@ using UnityEngine;
 namespace AlienDefense.Player
 {
     /// <summary>Moves the UFO on the XZ plane via CharacterController and holds it at hover height above the
-    /// actual terrain surface (not a fixed world-Y), so hovering stays correct over hills.</summary>
+    /// actual terrain surface (not a fixed world-Y), so hovering stays correct over hills.
+    ///
+    /// Deliberately follows the Terrain only, never the buildings standing on it: the UFO is meant to sail
+    /// straight over/through them at a constant height rather than climbing onto their roofs. Structures it
+    /// cannot absorb announce themselves by shaking instead - see TractorImmuneShake.</summary>
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerMovement : MonoBehaviour
     {
@@ -152,7 +156,9 @@ namespace AlienDefense.Player
 
         private void Update()
         {
-            if (!_isInitialized || !_movementEnabled)
+            // The null checks are for Play Mode teardown, where this Update can still run one more time after
+            // the input source / definition the composition root injected have already gone away.
+            if (!_isInitialized || !_movementEnabled || _input == null || _definition == null)
             {
                 return;
             }

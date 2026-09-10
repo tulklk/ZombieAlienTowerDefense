@@ -44,6 +44,10 @@ namespace AlienDefense.Player
 
         private IMovementDirectionSource _resolvedMovementSource;
 
+        // Reused by ScanForImmuneObjects so its per-scan overlap query never allocates. Overflow is harmless:
+        // anything past the buffer just misses one wobble and gets it on the next scan.
+        private readonly Collider[] _immuneOverlapBuffer = new Collider[32];
+
         private EnemyRegistry _enemyRegistry;
         private EnergyPickupRegistry _energyRegistry;
         private TractorAbsorbablePropRegistry _propRegistry;
@@ -185,6 +189,37 @@ namespace AlienDefense.Player
             ScanForNewCaptures();
             ScanForNewEnergyAbsorptions();
             ScanForNewPropAbsorptions();
+            ScanForImmuneObjects();
+        }
+
+        /// <summary>Cosmetic fourth pass: rocks any TractorImmuneShake standing in the beam, so a building the
+        /// beam can't take reads as "tugged at but too heavy" instead of silently ignoring the beam. Nothing is
+        /// admitted, no slot is consumed and no state changes - which is why this runs regardless of whether the
+        /// capture/absorption slots are full.
+        ///
+        /// A physics overlap rather than a registry because these are ordinary scene decoration with no
+        /// lifecycle worth tracking; at one query per ScanInterval against a radius this small that's cheaper
+        /// than maintaining registration for every building on the level.</summary>
+        private void ScanForImmuneObjects()
+        {
+            int count = Physics.OverlapSphereNonAlloc(
+                _beamGroundAnchor.position, AttractionRadius, _immuneOverlapBuffer, ~0, QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider candidate = _immuneOverlapBuffer[i];
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                // GetComponentInParent because the collider usually sits on a mesh child, not the marked root.
+                var immune = candidate.GetComponentInParent<TractorImmuneShake>();
+                if (immune != null && !immune.IsBusy)
+                {
+                    immune.Nudge();
+                }
+            }
         }
 
         // ---------------------------------------------------------------------------------------------------

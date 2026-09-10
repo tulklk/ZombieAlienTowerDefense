@@ -25,5 +25,5 @@ MonoBehaviour:
   _captureSocketThreshold: 0.15
   _shrinkDuringLift: 1
   _minimumVisualScale: 0.25
-  _liftSpinSpeedDegreesPerSecond: 240
+  _liftSpinSpeedDegreesPerSecond: 110
   _beamVisualRadius: 0

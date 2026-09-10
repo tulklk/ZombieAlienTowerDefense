@@ -88,7 +88,9 @@ namespace AlienDefense.Player
 
         private void LateUpdate()
         {
-            if (_particles == null || !_particles.isPlaying && _particles.particleCount == 0)
+            // _buffer is only null if this LateUpdate beat Awake, which happens during Play Mode teardown -
+            // GetParticles(null) throws ArgumentNullException rather than returning 0, so it must be guarded.
+            if (_particles == null || _buffer == null || !_particles.isPlaying && _particles.particleCount == 0)
             {
                 return;
             }

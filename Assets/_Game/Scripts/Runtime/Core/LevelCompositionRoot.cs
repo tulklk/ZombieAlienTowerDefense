@@ -3,6 +3,7 @@ using AlienDefense.Audio;
 using AlienDefense.Base;
 using AlienDefense.Building;
 using AlienDefense.Combat;
+using AlienDefense.Common;
 using AlienDefense.Data;
 using AlienDefense.DebugTools;
 using AlienDefense.Economy;
@@ -93,6 +94,21 @@ namespace AlienDefense.Core
 
         [SerializeField, Min(1)]
         private int _energyPickupPoolMaxSize = 64;
+
+        [SerializeField]
+        [Tooltip("Optional. Keeps loose Energy cubes scattered around the map and along the zombie road for the " +
+            "player to collect. Leave empty for a level with no ambient Energy - kills still drop their own.")]
+        private EnergyScatterSpawner _energyScatterSpawner;
+
+        [SerializeField]
+        [Tooltip("Optional. The road the Energy scatter strings cubes along. Leave empty to scatter over open " +
+            "ground only.")]
+        private EnemyPath3D _energyScatterPath;
+
+        [SerializeField]
+        [Tooltip("Optional. Bounds the Energy scatter's open-ground placement. Leave empty to place along the " +
+            "road only.")]
+        private LevelBounds _energyScatterBounds;
 
         [SerializeField]
         [Tooltip("Every TractorAbsorbableProp already placed in the scene is collected once here at level start " +
@@ -318,6 +334,7 @@ namespace AlienDefense.Core
 
             InitializeVfxSystem();
             InitializeEnergyEconomySystem();
+            InitializeEnergyScatterSystem();
             InitializeEnvironmentPropSystem();
             InitializeEnemySystem();
             InitializeCombatSystem();
@@ -413,6 +430,27 @@ namespace AlienDefense.Core
             _energyDropService = new EnergyDropService(_energyPickupSpawner);
         }
 
+        /// <summary>Ambient Energy scatter. Runs straight after InitializeEnergyEconomySystem because it needs
+        /// that method's EnergyDropService/EnergyPickupRegistry, and does nothing without them — a level with no
+        /// EnergyPickup prefab simply has no scatter either.
+        ///
+        /// This is where AlienDefense.Enemies meets AlienDefense.Pickups: the spawner takes the road as bare
+        /// Transforms so Pickups keeps its "never depends on Enemies" rule, and Core, which already references
+        /// both, is the one place allowed to bridge them.</summary>
+        private void InitializeEnergyScatterSystem()
+        {
+            if (_energyScatterSpawner == null || _energyDropService == null)
+            {
+                return;
+            }
+
+            _energyScatterSpawner.Initialize(
+                _energyDropService,
+                _energyPickupRegistry,
+                _energyScatterPath != null ? _energyScatterPath.Waypoints : null,
+                _energyScatterBounds);
+        }
+
         /// <summary>One-time collection of every TractorAbsorbableProp already placed in the scene — see
         /// TractorAbsorbablePropRegistry's doc comment for why this is a single FindObjectsByType at level start
         /// rather than per-prop OnEnable/OnDisable self-registration. Must run before InitializeTractorBeamSystem.</summary>
@@ -472,7 +510,7 @@ namespace AlienDefense.Core
             }
 
             _tractorBeamController.Initialize(Enemies, _energyPickupRegistry, _environmentPropRegistry);
-            _tractorBeamVisual?.Initialize(_tractorBeamController);
+            _tractorBeamVisual?.Initialize(_tractorBeamController, _cameraTransform);
             _tractorBeamController.PropAbsorbed += HandlePropAbsorbedForExperience;
 
             _tractorBeamAudio = new TractorBeamAudioController(_audioService, _tractorBeamLoopSource, _tractorBeamLoopClip, _tractorBeamCaptureClip);

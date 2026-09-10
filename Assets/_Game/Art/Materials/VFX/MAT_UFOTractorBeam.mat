@@ -25,10 +25,10 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _BaseAlpha: 0.12
+    - _BaseAlpha: 0.35
     - _BottomFade: 0.15
-    - _EdgeSoftness: 0.35
-    - _EmissionStrength: 0.55
+    - _EdgeSoftness: 0.25
+    - _EmissionStrength: 0.75
     - _FlowDensity: 18
     - _FlowDistortion: 0.28
     - _FlowSpeed: 1.5
@@ -39,7 +39,7 @@ Material:
     - _NoiseStrength: 0.03
     - _PulseAmount: 0.08
     - _PulseSpeed: 1
-    - _RadialSoftness: 0.3
+    - _RadialSoftness: 0.22
     - _TopFade: 0.1
     m_Colors:
     - _BeamColor: {r: 0.21960784, g: 0.9490196, b: 0.32156864, a: 1}

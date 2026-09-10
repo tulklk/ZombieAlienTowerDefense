@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af8e82025390133498db4dfdac4c8a8b, type: 3}
+  m_Name: EnergyScatter_Level_02
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Pickups.EnergyScatterDefinition
+  _initialCount: 30
+  _maxAlive: 42
+  _topUpInterval: 5
+  _topUpCount: 3
+  _roadShare: 0.5
+  _roadLateralSpread: 2.5
+  _boundsPadding: 4
+  _minSpacing: 2.2
+  _groundOffset: 0.35
+  _energyValueMin: 1
+  _energyValueMax: 2
+  _experienceReward: 0
