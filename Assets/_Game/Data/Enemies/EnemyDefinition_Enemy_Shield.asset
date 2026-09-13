@@ -16,6 +16,10 @@ MonoBehaviour:
   _displayName: Shield Enemy
   _icon: {fileID: 0}
   _prefab: {fileID: 5748018425905435855, guid: 9af0cd22c7cd2a74d9a2c1f6079c86dc, type: 3}
+  _archetype: 3
+  _healthScaleFactor: 1.15
+  _speedScaleFactor: 0.75
+  _damageScaleFactor: 1.1
   _maxHealth: 140
   _moveSpeed: 1.6
   _rotationSpeed: 300

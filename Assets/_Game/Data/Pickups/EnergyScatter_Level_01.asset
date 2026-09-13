@@ -12,15 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af8e82025390133498db4dfdac4c8a8b, type: 3}
   m_Name: EnergyScatter_Level_01
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Pickups.EnergyScatterDefinition
-  _initialCount: 34
-  _maxAlive: 48
-  _topUpInterval: 4
-  _topUpCount: 4
-  _roadShare: 0.45
-  _roadLateralSpread: 2.5
+  _clusterSize: 10
+  _clusterRadius: 1.4
+  _pickupSpacing: 0.45
+  _clusterSpacing: 10
+  _initialClusters: 8
+  _maxClusters: 10
+  _topUpInterval: 7
+  _roadShare: 0.4
+  _roadLateralSpread: 1.5
   _boundsPadding: 4
-  _minSpacing: 2.2
   _groundOffset: 0.35
-  _energyValueMin: 1
-  _energyValueMax: 2
+  _energyPerPickup: 1
   _experienceReward: 0

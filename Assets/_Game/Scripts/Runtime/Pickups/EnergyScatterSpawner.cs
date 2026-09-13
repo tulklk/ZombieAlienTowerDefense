@@ -4,14 +4,17 @@ using UnityEngine;
 
 namespace AlienDefense.Pickups
 {
-    /// <summary>Keeps the map stocked with loose Energy cubes for the player to collect and spend on towers -
-    /// some strung along the zombie road, the rest scattered across the open ground. This is the ambient economy
+    /// <summary>Keeps the map stocked with clusters of loose Energy for the player to collect and spend on towers
+    /// - some heaps sitting on the zombie road, the rest out across the open ground. This is the ambient economy
     /// source; EnergyDropService remains the separate "this enemy died, here is its Energy" path, and the two
     /// share the same pool/registry so Max Alive counts both.
     ///
-    /// Spawns through EnergyDropService rather than touching EnergyPickupFactory directly, so scattered cubes
-    /// travel the exact same spawn -> beam -> collect -> reward -> pool route as dropped ones and need no
-    /// special-casing anywhere downstream.
+    /// Each cluster is planned in full before a single ball is spawned: several candidate centres are tried and
+    /// the one that fits the most balls wins, stopping early as soon as one fits them all. Spawning ball by ball
+    /// against a single centre would leave clusters on busy ground (bushes, fences, rocks) visibly short.
+    ///
+    /// Spawns through EnergyDropService rather than touching EnergyPickupFactory directly, so scattered balls
+    /// travel the exact same spawn -> beam -> collect -> reward -> pool route as dropped ones.
     ///
     /// Takes the road as a plain waypoint list rather than an EnemyPath3D: AlienDefense.Pickups deliberately
     /// never depends on AlienDefense.Enemies (see EnergyDropService), so LevelCompositionRoot - which may
@@ -24,17 +27,20 @@ namespace AlienDefense.Pickups
         private EnergyScatterDefinition _definition;
 
         [SerializeField, Min(1)]
-        [Tooltip("How many random placements to try before giving up on one cube for this pass. Placement can " +
-            "fail legitimately - too close to another cube, off the terrain, or inside a building.")]
-        private int _placementAttempts = 12;
+        [Tooltip("Candidate centres tried per cluster. The best-fitting one is used.")]
+        private int _centreAttempts = 10;
+
+        [SerializeField, Min(1)]
+        [Tooltip("Random spots tried per ball inside a cluster before that ball is given up on.")]
+        private int _pickupAttempts = 12;
 
         [SerializeField, Min(1f)]
         [Tooltip("How far above a candidate point the ground probe starts when checking what is standing there.")]
         private float _obstacleProbeHeight = 60f;
 
         [SerializeField, Min(0f)]
-        [Tooltip("A candidate is rejected when solid geometry sits more than this above the terrain there - that " +
-            "is a roof or a rock, and a cube placed on it would be unreachable or float visibly.")]
+        [Tooltip("A spot is rejected when solid geometry sits more than this above the terrain there - a roof, a " +
+            "bush or a rock - so balls never end up buried inside something.")]
         private float _obstacleClearance = 0.6f;
 
         private EnergyDropService _dropService;
@@ -44,11 +50,13 @@ namespace AlienDefense.Pickups
         private Terrain[] _terrains;
 
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
+        private readonly List<Vector3> _plan = new List<Vector3>();
+        private readonly List<Vector3> _bestPlan = new List<Vector3>();
         private float _topUpTimer;
         private bool _isInitialized;
 
-        /// <summary>roadWaypoints and levelBounds are both optional: with no road every cube falls back to open
-        /// scatter, and with no bounds the scatter is confined to the road. Losing both leaves nothing to place
+        /// <summary>roadWaypoints and levelBounds are both optional: with no road every cluster falls back to
+        /// open ground, and with no bounds clusters are confined to the road. Losing both leaves nothing to place
         /// against, and the spawner reports that rather than silently doing nothing.</summary>
         public void Initialize(
             EnergyDropService dropService,
@@ -86,7 +94,10 @@ namespace AlienDefense.Pickups
             _isInitialized = true;
             _topUpTimer = _definition.TopUpInterval;
 
-            SpawnBatch(_definition.InitialCount);
+            for (int i = 0; i < _definition.InitialClusters; i++)
+            {
+                TrySpawnCluster();
+            }
         }
 
         private bool HasRoad => _roadWaypoints != null && _roadWaypoints.Count >= 2;
@@ -105,58 +116,105 @@ namespace AlienDefense.Pickups
             }
 
             _topUpTimer = _definition.TopUpInterval;
-            SpawnBatch(_definition.TopUpCount);
-        }
 
-        /// <summary>Places up to count cubes, stopping early at Max Alive. Individual placements are allowed to
-        /// fail silently - a crowded map simply gets fewer cubes this pass and tries again on the next.</summary>
-        private void SpawnBatch(int count)
-        {
-            for (int i = 0; i < count; i++)
+            // Whole clusters only: a top-up that could only fit half a heap would scatter the very stragglers
+            // clustering exists to avoid, so it waits until the player has cleared room for a full one.
+            if (_registry.Count + _definition.ClusterSize <= _definition.MaxAlive)
             {
-                if (_registry.Count >= _definition.MaxAlive)
-                {
-                    return;
-                }
-
-                if (TryFindSpawnPoint(out Vector3 point))
-                {
-                    _dropService.Spawn(point, _definition.RollEnergyValue(), _definition.ExperienceReward);
-                }
+                TrySpawnCluster();
             }
         }
 
-        private bool TryFindSpawnPoint(out Vector3 point)
+        private void TrySpawnCluster()
         {
-            for (int attempt = 0; attempt < _placementAttempts; attempt++)
-            {
-                // Re-rolled per attempt, not per batch, so a road that happens to be crowded can still fall back
-                // to open ground instead of burning every attempt on the same lane.
-                bool useRoad = HasRoad && Random.value < _definition.RoadShare;
+            _bestPlan.Clear();
 
-                Vector3 candidate = useRoad ? SampleRoadPoint() : SampleOpenPoint();
-                if (!TryResolveGroundHeight(candidate, out float groundY))
+            for (int attempt = 0; attempt < _centreAttempts; attempt++)
+            {
+                if (!TryFindClusterCentre(out Vector3 centre))
                 {
                     continue;
                 }
 
-                candidate.y = groundY + _definition.GroundOffset;
-
-                if (IsBlocked(candidate, groundY) || IsTooCloseToExistingPickup(candidate))
+                PlanCluster(centre);
+                if (_plan.Count > _bestPlan.Count)
                 {
-                    continue;
+                    _bestPlan.Clear();
+                    _bestPlan.AddRange(_plan);
                 }
 
-                point = candidate;
-                return true;
+                if (_bestPlan.Count >= _definition.ClusterSize)
+                {
+                    break;
+                }
             }
 
-            point = default;
-            return false;
+            for (int i = 0; i < _bestPlan.Count; i++)
+            {
+                _dropService.Spawn(_bestPlan[i], _definition.EnergyPerPickup, _definition.ExperienceReward);
+            }
+        }
+
+        /// <summary>A clear, reachable spot far enough from every ball already on the ground that the new cluster
+        /// reads as its own heap.</summary>
+        private bool TryFindClusterCentre(out Vector3 centre)
+        {
+            // Re-rolled per attempt so a crowded road can still fall back to open ground.
+            bool useRoad = HasRoad && Random.value < _definition.RoadShare;
+            Vector3 candidate = useRoad ? SampleRoadPoint() : SampleOpenPoint();
+
+            if (!TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY) ||
+                IsWithinOfExistingPickup(candidate, _definition.ClusterSpacing))
+            {
+                centre = default;
+                return false;
+            }
+
+            centre = new Vector3(candidate.x, groundY, candidate.z);
+            return true;
+        }
+
+        /// <summary>Fills _plan with up to ClusterSize ball positions around centre. Offsets are drawn with a
+        /// linear (not square-rooted) radius, which packs balls towards the middle and leaves only a few out
+        /// near the rim - a heap with stragglers rather than an even disc.</summary>
+        private void PlanCluster(Vector3 centre)
+        {
+            _plan.Clear();
+            float spacingSquared = _definition.PickupSpacing * _definition.PickupSpacing;
+
+            for (int ball = 0; ball < _definition.ClusterSize; ball++)
+            {
+                for (int attempt = 0; attempt < _pickupAttempts; attempt++)
+                {
+                    Vector2 direction = Random.insideUnitCircle.normalized;
+                    if (direction.sqrMagnitude < 0.0001f)
+                    {
+                        direction = Vector2.right;
+                    }
+
+                    float distance = _definition.ClusterRadius * Random.value;
+                    var candidate = new Vector3(centre.x + direction.x * distance, 0f, centre.z + direction.y * distance);
+
+                    if (!TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY))
+                    {
+                        continue;
+                    }
+
+                    if (IsTooCloseToPlan(candidate, spacingSquared) ||
+                        IsWithinOfExistingPickup(candidate, _definition.PickupSpacing))
+                    {
+                        continue;
+                    }
+
+                    candidate.y = groundY + _definition.GroundOffset;
+                    _plan.Add(candidate);
+                    break;
+                }
+            }
         }
 
         /// <summary>A uniformly random point along the road's polyline, pushed sideways by up to the definition's
-        /// lateral spread so cubes line the lane rather than sitting in a single file down its centre.</summary>
+        /// lateral spread.</summary>
         private Vector3 SampleRoadPoint()
         {
             int segment = Random.Range(0, _roadWaypoints.Count - 1);
@@ -190,8 +248,9 @@ namespace AlienDefense.Pickups
 
             // ClampXZ is the only public description of the playable rectangle, so the extremes are read out of
             // it rather than duplicating centre/extents here - two huge opposite corners clamp to the real edges.
-            Vector3 min = _levelBounds.ClampXZ(new Vector3(-99999f, 0f, -99999f), _definition.BoundsPadding);
-            Vector3 max = _levelBounds.ClampXZ(new Vector3(99999f, 0f, 99999f), _definition.BoundsPadding);
+            float padding = _definition.BoundsPadding + _definition.ClusterRadius;
+            Vector3 min = _levelBounds.ClampXZ(new Vector3(-99999f, 0f, -99999f), padding);
+            Vector3 max = _levelBounds.ClampXZ(new Vector3(99999f, 0f, 99999f), padding);
 
             return new Vector3(Random.Range(min.x, max.x), 0f, Random.Range(min.z, max.z));
         }
@@ -226,8 +285,8 @@ namespace AlienDefense.Pickups
             return false;
         }
 
-        /// <summary>True when something solid stands on the terrain here - a building roof, a boulder - so the
-        /// cube would end up buried inside it or perched somewhere the beam can't sensibly reach.</summary>
+        /// <summary>True when something solid stands on the terrain here - a roof, a bush, a boulder - so a ball
+        /// would end up buried inside it or perched somewhere the beam can't sensibly reach.</summary>
         private bool IsBlocked(Vector3 candidate, float groundY)
         {
             var origin = new Vector3(candidate.x, groundY + _obstacleProbeHeight, candidate.z);
@@ -236,12 +295,7 @@ namespace AlienDefense.Pickups
 
             for (int i = 0; i < count; i++)
             {
-                if (_probeHits[i].collider == null)
-                {
-                    continue;
-                }
-
-                if (_probeHits[i].point.y > groundY + _obstacleClearance)
+                if (_probeHits[i].collider != null && _probeHits[i].point.y > groundY + _obstacleClearance)
                 {
                     return true;
                 }
@@ -250,9 +304,24 @@ namespace AlienDefense.Pickups
             return false;
         }
 
-        private bool IsTooCloseToExistingPickup(Vector3 candidate)
+        private bool IsTooCloseToPlan(Vector3 candidate, float spacingSquared)
         {
-            float minSquared = _definition.MinSpacing * _definition.MinSpacing;
+            for (int i = 0; i < _plan.Count; i++)
+            {
+                Vector3 delta = _plan[i] - candidate;
+                delta.y = 0f;
+                if (delta.sqrMagnitude < spacingSquared)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsWithinOfExistingPickup(Vector3 candidate, float distance)
+        {
+            float distanceSquared = distance * distance;
 
             for (int i = 0; i < _registry.Count; i++)
             {
@@ -264,7 +333,7 @@ namespace AlienDefense.Pickups
 
                 Vector3 delta = existing.transform.position - candidate;
                 delta.y = 0f;
-                if (delta.sqrMagnitude < minSquared)
+                if (delta.sqrMagnitude < distanceSquared)
                 {
                     return true;
                 }

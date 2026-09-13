@@ -35,7 +35,21 @@ namespace AlienDefense.Enemies
             _energyDrop = energyDrop;
         }
 
-        public EnemyController Spawn(EnemyDefinition definition, EnemyPath3D path, Vector3 position, Quaternion rotation)
+        public EnemyController Spawn(
+            EnemyDefinition definition,
+            EnemyPath3D path,
+            Vector3 position,
+            Quaternion rotation)
+        {
+            return Spawn(definition, path, position, rotation, EnemySpawnModifiers.Identity);
+        }
+
+        public EnemyController Spawn(
+            EnemyDefinition definition,
+            EnemyPath3D path,
+            Vector3 position,
+            Quaternion rotation,
+            EnemySpawnModifiers modifiers)
         {
             if (definition == null)
             {
@@ -63,7 +77,7 @@ namespace AlienDefense.Enemies
             }
 
             enemy.transform.SetPositionAndRotation(position, rotation);
-            enemy.Initialize(definition, path, _economy, _baseHealth, _enemyRegistry, pool.Release, _cameraTransform);
+            enemy.Initialize(definition, path, _economy, _baseHealth, _enemyRegistry, pool.Release, _cameraTransform, modifiers);
             enemy.gameObject.SetActive(true);
 
             enemy.Resolved -= HandleEnemyResolved;

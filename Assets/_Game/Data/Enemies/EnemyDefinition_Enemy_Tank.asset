@@ -16,6 +16,10 @@ MonoBehaviour:
   _displayName: Tank Enemy
   _icon: {fileID: 0}
   _prefab: {fileID: 3875839926730969246, guid: 5503a458d751afd44965ea0490720c2e, type: 3}
+  _archetype: 2
+  _healthScaleFactor: 1.25
+  _speedScaleFactor: 0.25
+  _damageScaleFactor: 1
   _maxHealth: 350
   _moveSpeed: 1.1
   _rotationSpeed: 240

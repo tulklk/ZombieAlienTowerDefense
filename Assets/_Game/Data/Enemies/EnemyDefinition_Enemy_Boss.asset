@@ -16,6 +16,10 @@ MonoBehaviour:
   _displayName: Alien Overlord
   _icon: {fileID: 0}
   _prefab: {fileID: 3117901915068378761, guid: eb10031017edff14aba587b3282a3801, type: 3}
+  _archetype: 4
+  _healthScaleFactor: 1.2
+  _speedScaleFactor: 0.2
+  _damageScaleFactor: 1.15
   _maxHealth: 1400
   _moveSpeed: 1
   _rotationSpeed: 180

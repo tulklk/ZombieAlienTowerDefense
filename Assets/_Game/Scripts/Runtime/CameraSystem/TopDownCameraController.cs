@@ -98,5 +98,32 @@ namespace AlienDefense.CameraSystem
                 _focusPointAnchor.position = focusPoint;
             }
         }
+
+        /// <summary>Hard-snaps the camera to the current follow target (used after intro teleports).</summary>
+        public void SnapToTargetImmediate()
+        {
+            if (_followTarget == null || _cameraTransform == null)
+            {
+                return;
+            }
+
+            _positionVelocity = Vector3.zero;
+            _lookAheadVelocity = Vector3.zero;
+            _currentLookAhead = Vector3.zero;
+
+            Vector3 focusPoint = _followTarget.position + _lookAtOffset;
+            if (_levelBounds != null)
+            {
+                focusPoint = _levelBounds.ClampXZ(focusPoint, _cameraBoundsPadding);
+            }
+
+            _cameraTransform.position = focusPoint + _positionOffset;
+            _hasSnapped = true;
+
+            if (_focusPointAnchor != null)
+            {
+                _focusPointAnchor.position = focusPoint;
+            }
+        }
     }
 }

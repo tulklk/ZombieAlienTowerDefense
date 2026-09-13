@@ -64,7 +64,7 @@ namespace AlienDefense.Waves
                 if (group == null || !group.IsValid)
                 {
                     Debug.LogError($"[WaveDefinition] '{name}' has an invalid spawn group at index {i} " +
-                        "(missing EnemyDefinition or Count <= 0).", this);
+                        "(no valid EnemySpawnEntry counts).", this);
                 }
             }
         }

@@ -97,10 +97,17 @@ namespace AlienDefense.EditorTools
 
         private static void SetGroup(SerializedProperty groupProperty, EnemyDefinition definition, int count, float delay, float interval)
         {
-            groupProperty.FindPropertyRelative("_enemyDefinition").objectReferenceValue = definition;
-            groupProperty.FindPropertyRelative("_count").intValue = count;
             groupProperty.FindPropertyRelative("_delayBeforeGroup").floatValue = delay;
             groupProperty.FindPropertyRelative("_spawnInterval").floatValue = interval;
+            groupProperty.FindPropertyRelative("_interleaveEntries").boolValue = false;
+            groupProperty.FindPropertyRelative("_enemyDefinition").objectReferenceValue = null;
+            groupProperty.FindPropertyRelative("_count").intValue = 1;
+
+            SerializedProperty entriesProperty = groupProperty.FindPropertyRelative("_entries");
+            entriesProperty.arraySize = 1;
+            SerializedProperty entryProperty = entriesProperty.GetArrayElementAtIndex(0);
+            entryProperty.FindPropertyRelative("_enemyDefinition").objectReferenceValue = definition;
+            entryProperty.FindPropertyRelative("_count").intValue = count;
         }
     }
 }

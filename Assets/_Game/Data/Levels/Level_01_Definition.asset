@@ -15,8 +15,14 @@ MonoBehaviour:
   _levelId: level_01
   _startingResource: 250
   _baseMaxHealth: 100
-  _preparationDuration: 5
+  _preparationDuration: 4
   _targetFrameRate: 60
+  _maxAliveEnemies: 15
+  _healthPerWaveStep: 0.1
+  _speedPerWaveStep: 0.015
+  _damagePerWaveStep: 0.07
+  _maxSpeedMultiplier: 1.22
+  _debugWaveLogs: 0
   _waves:
   - {fileID: 11400000, guid: 66fef40b03fc51b4e8ae2ac8cdaa12c6, type: 2}
   - {fileID: 11400000, guid: 557d0c94cecea2a41b119eb5222b7a11, type: 2}

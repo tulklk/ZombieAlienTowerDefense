@@ -15,8 +15,12 @@ MonoBehaviour:
   _id: wave_01
   _displayName: Wave 1
   _spawnGroups:
-  - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
-    _count: 5
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+      _count: 6
     _delayBeforeGroup: 0
-    _spawnInterval: 1
+    _spawnInterval: 1.35
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
   _preparationDurationOverride: 3

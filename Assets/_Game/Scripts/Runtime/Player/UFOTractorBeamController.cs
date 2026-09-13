@@ -60,6 +60,7 @@ namespace AlienDefense.Player
         private bool _isEnabled = true;
         private float _radiusMultiplier = 1f;
         private float _pullSpeedMultiplier = 1f;
+        private float _broadcastRadius = -1f; // last AttractionRadius sent through BeamGeometryChanged
 
         /// <summary>Runtime-only multipliers stacked on top of the definition's own AttractionRadius/PullSpeed -
         /// never mutates the asset. Intended caller: PlayerSkillEffectApplier, combining the Radius skill's own
@@ -68,6 +69,7 @@ namespace AlienDefense.Player
         {
             _radiusMultiplier = Mathf.Max(0.01f, radiusMultiplier);
             _pullSpeedMultiplier = Mathf.Max(0.01f, pullSpeedMultiplier);
+            UpdateBeamGeometry(); // re-broadcasts the new AttractionRadius so the beam and its ring resize with it
         }
 
         public bool IsEnabled => _isEnabled;
@@ -142,13 +144,20 @@ namespace AlienDefense.Player
             }
 
             float length = Vector3.Distance(_captureSocket.position, _beamGroundAnchor.position);
-            if (Mathf.Approximately(length, BeamLength))
+            float radius = AttractionRadius;
+
+            // Radius counts too, not just length: the Radius/Magnet skills change AttractionRadius at runtime, and
+            // when only length was compared the visuals never heard about it - the beam and its ground ring kept
+            // their level-start size while the real capture area grew around them, so enemies well outside the
+            // ring were being pulled in.
+            if (Mathf.Approximately(length, BeamLength) && Mathf.Approximately(radius, _broadcastRadius))
             {
                 return;
             }
 
             BeamLength = length;
-            BeamGeometryChanged?.Invoke(length, AttractionRadius);
+            _broadcastRadius = radius;
+            BeamGeometryChanged?.Invoke(length, radius);
         }
 
         /// <summary>Gates admission of new captures/absorptions only. Objects already being pulled/lifted keep

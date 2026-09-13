@@ -16,6 +16,10 @@ MonoBehaviour:
   _displayName: Runner Enemy
   _icon: {fileID: 0}
   _prefab: {fileID: 1623452224668563631, guid: c0729d9f813fe5545965b766f727543a, type: 3}
+  _archetype: 1
+  _healthScaleFactor: 0.8
+  _speedScaleFactor: 1
+  _damageScaleFactor: 1
   _maxHealth: 60
   _moveSpeed: 3
   _rotationSpeed: 540

@@ -3,101 +3,114 @@ using UnityEngine;
 namespace AlienDefense.Pickups
 {
     /// <summary>Per-level tuning for the ambient Energy scatter (see EnergyScatterSpawner) - the loose Energy
-    /// cubes lying around the map for the player to hoover up and spend on towers, as opposed to the ones
+    /// balls lying around the map for the player to hoover up and spend on towers, as opposed to the ones
     /// EnergyDropService drops when a specific enemy dies.
     ///
-    /// A ScriptableObject rather than fields on the spawner so each level can carry its own economy pacing: an
-    /// early level can afford a dense, generous field of cubes while a later, larger map wants them sparse and
-    /// worth hunting for. One asset per level, assigned on that level's EnergyScatterSpawner.</summary>
+    /// Energy is placed in clusters rather than one ball at a time: a tight little heap the player can sweep up
+    /// in a single pass of the beam reads as a reward worth flying to, where the same number of balls spread
+    /// evenly just reads as noise. The defaults make one cluster worth exactly one tower (10 balls x 1 Energy
+    /// against a 10-Energy build cost and a 10-Energy wallet), so "clear a cluster, build a tower" is the loop.
+    ///
+    /// A ScriptableObject rather than fields on the spawner so each level carries its own pacing - one asset
+    /// per level, assigned on that level's EnergyScatterSpawner.</summary>
     [CreateAssetMenu(fileName = "EnergyScatterDefinition", menuName = "AlienDefense/Pickups/Energy Scatter Definition")]
     public sealed class EnergyScatterDefinition : ScriptableObject
     {
+        [Header("Clusters")]
+        [SerializeField, Min(1)]
+        [Tooltip("Balls per cluster.")]
+        private int _clusterSize = 10;
+
+        [SerializeField, Min(0.1f)]
+        [Tooltip("How far from the cluster's centre a ball may land. Balls are packed towards the centre and " +
+            "thin out towards this edge, so a few stragglers sit a little apart from the main heap.")]
+        private float _clusterRadius = 1.4f;
+
+        [SerializeField, Min(0.05f)]
+        [Tooltip("Closest two balls may sit to each other. Just above the ball's own size keeps a cluster tight " +
+            "without balls clipping into one another.")]
+        private float _pickupSpacing = 0.45f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("Closest a new cluster's centre may be to any Energy already on the ground, so clusters stay " +
+            "distinct heaps instead of merging into one sprawl.")]
+        private float _clusterSpacing = 10f;
+
         [Header("Population")]
         [SerializeField, Min(0)]
-        [Tooltip("Cubes placed in one go the moment the level starts, so the map never opens empty.")]
-        private int _initialCount = 28;
+        [Tooltip("Clusters placed the moment the level starts, so the map never opens empty.")]
+        private int _initialClusters = 8;
 
         [SerializeField, Min(0)]
-        [Tooltip("Ceiling on cubes lying around at once. Top-ups stop here; this is what keeps a level the " +
-            "player is ignoring from silently filling up with hundreds of pickups.")]
-        private int _maxAlive = 40;
+        [Tooltip("Ceiling on clusters' worth of Energy lying around at once. Top-ups stop here, which is what " +
+            "keeps a level the player is ignoring from silently filling up.")]
+        private int _maxClusters = 10;
 
         [Header("Top-up")]
         [SerializeField, Min(0.1f)]
-        [Tooltip("Seconds between top-up passes that refill what the player has collected.")]
-        private float _topUpInterval = 4f;
-
-        [SerializeField, Min(0)]
-        [Tooltip("Cubes added per top-up pass, while under Max Alive.")]
-        private int _topUpCount = 3;
+        [Tooltip("Seconds between top-up passes. Each pass adds one whole cluster, and only when there is room " +
+            "for all of it under Max Clusters.")]
+        private float _topUpInterval = 7f;
 
         [Header("Placement")]
         [SerializeField, Range(0f, 1f)]
-        [Tooltip("Share of cubes placed along the zombie road instead of loose around the map. 1 = road only, " +
+        [Tooltip("Share of clusters placed on the zombie road instead of out in the fields. 1 = road only, " +
             "0 = never on the road. The road share is what pulls the player into the lane where the fighting is.")]
-        private float _roadShare = 0.45f;
+        private float _roadShare = 0.4f;
 
         [SerializeField, Min(0f)]
-        [Tooltip("How far to either side of the road's centre line road-placed cubes may sit. Keep this near the " +
-            "visual width of the road or cubes will drift into the fields and stop reading as 'on the road'.")]
-        private float _roadLateralSpread = 2.5f;
+        [Tooltip("How far to either side of the road's centre line a road cluster's centre may sit. The cluster " +
+            "radius is added on top, so keep this modest or road clusters spill into the verges.")]
+        private float _roadLateralSpread = 1.5f;
 
         [SerializeField, Min(0f)]
-        [Tooltip("Padding kept clear inside the level bounds, so cubes never spawn hard against the edge where " +
+        [Tooltip("Padding kept clear inside the level bounds, so clusters never land hard against the edge where " +
             "the camera can't comfortably frame them.")]
         private float _boundsPadding = 4f;
 
         [SerializeField, Min(0f)]
-        [Tooltip("Closest two cubes may be placed to each other. Stops the scatter clumping into a single pile " +
-            "the beam swallows in one pass.")]
-        private float _minSpacing = 2.2f;
-
-        [SerializeField, Min(0f)]
-        [Tooltip("Height above the ground surface a cube is placed at.")]
+        [Tooltip("Height above the ground surface a ball is placed at.")]
         private float _groundOffset = 0.35f;
 
         [Header("Reward")]
         [SerializeField, Min(1)]
-        private int _energyValueMin = 1;
-
-        [SerializeField, Min(1)]
-        private int _energyValueMax = 3;
+        [Tooltip("Energy per ball. The wallet caps at its Max Energy and discards any overflow, so this wants to " +
+            "stay small - a cluster should add up to roughly one build, not overflow the wallet on its own.")]
+        private int _energyPerPickup = 1;
 
         [SerializeField, Range(0, 2)]
-        [Tooltip("XP granted alongside the Energy. 0 keeps scattered cubes a pure economy source, leaving " +
-            "levelling to absorbed props and kills.")]
+        [Tooltip("XP granted per ball alongside the Energy. 0 keeps scattered Energy a pure economy source, " +
+            "leaving levelling to absorbed props and kills.")]
         private int _experienceReward = 0;
 
-        public int InitialCount => _initialCount;
-        public int MaxAlive => _maxAlive;
+        public int ClusterSize => _clusterSize;
+        public float ClusterRadius => _clusterRadius;
+        public float PickupSpacing => _pickupSpacing;
+        public float ClusterSpacing => _clusterSpacing;
+        public int InitialClusters => _initialClusters;
+        public int MaxClusters => _maxClusters;
         public float TopUpInterval => _topUpInterval;
-        public int TopUpCount => _topUpCount;
         public float RoadShare => _roadShare;
         public float RoadLateralSpread => _roadLateralSpread;
         public float BoundsPadding => _boundsPadding;
-        public float MinSpacing => _minSpacing;
         public float GroundOffset => _groundOffset;
+        public int EnergyPerPickup => _energyPerPickup;
         public int ExperienceReward => _experienceReward;
 
-        /// <summary>Inclusive on both ends - Random.Range's int overload is exclusive on the upper bound, which
-        /// would quietly make Energy Value Max unreachable.</summary>
-        public int RollEnergyValue()
-        {
-            int min = Mathf.Min(_energyValueMin, _energyValueMax);
-            int max = Mathf.Max(_energyValueMin, _energyValueMax);
-            return Random.Range(min, max + 1);
-        }
+        /// <summary>Most balls that may be on the ground at once - whole clusters' worth.</summary>
+        public int MaxAlive => _maxClusters * _clusterSize;
 
         private void OnValidate()
         {
-            if (_energyValueMax < _energyValueMin)
+            if (_maxClusters < _initialClusters)
             {
-                _energyValueMax = _energyValueMin;
+                _maxClusters = _initialClusters;
             }
 
-            if (_maxAlive < _initialCount)
+            // A spacing wider than the cluster itself makes a full cluster geometrically impossible to place.
+            if (_pickupSpacing > _clusterRadius)
             {
-                _maxAlive = _initialCount;
+                _pickupSpacing = _clusterRadius;
             }
         }
     }

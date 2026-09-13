@@ -63,6 +63,7 @@ namespace AlienDefense.Enemies
         private BaseHealthService _baseHealth;
         private EnemyRegistry _registry;
         private Action<EnemyController> _releaseToPool;
+        private int _scaledBaseDamage = 1;
 
         private bool _isResolved;
         private bool _isCaptured;
@@ -72,6 +73,7 @@ namespace AlienDefense.Enemies
         public Transform TargetPoint => _targetPoint;
         public EnemyHealth Health => _health;
         public EnemyMovement Movement => _movement;
+        public int ScaledBaseDamage => _scaledBaseDamage;
 
         public bool IsTargetable => !_isResolved && !_isCaptured && _health != null && _health.IsDamageable;
         public int Generation => _generation;
@@ -109,8 +111,16 @@ namespace AlienDefense.Enemies
             BaseHealthService baseHealth,
             EnemyRegistry registry,
             Action<EnemyController> releaseToPool,
-            Transform cameraTransform)
+            Transform cameraTransform,
+            EnemySpawnModifiers modifiers = default)
         {
+            if (modifiers.HealthMultiplier <= 0f
+                && modifiers.SpeedMultiplier <= 0f
+                && modifiers.DamageMultiplier <= 0f)
+            {
+                modifiers = EnemySpawnModifiers.Identity;
+            }
+
             _definition = definition;
             _economy = economy;
             _baseHealth = baseHealth;
@@ -120,9 +130,13 @@ namespace AlienDefense.Enemies
             _isCaptured = false;
             _generation++;
 
-            _health.Initialize(definition.MaxHealth);
+            float health = definition.MaxHealth * modifiers.HealthMultiplier;
+            float moveSpeed = definition.MoveSpeed * modifiers.SpeedMultiplier;
+            _scaledBaseDamage = Mathf.Max(1, Mathf.RoundToInt(definition.BaseDamage * modifiers.DamageMultiplier));
+
+            _health.Initialize(health);
             _health.SetDefenseAndShield(_defense, _shield);
-            _movement.Initialize(path, definition.MoveSpeed, definition.RotationSpeed, definition.ArrivalThreshold);
+            _movement.Initialize(path, moveSpeed, definition.RotationSpeed, definition.ArrivalThreshold);
 
             _defense?.ResetState();
             _shield?.ResetState();
@@ -177,6 +191,7 @@ namespace AlienDefense.Enemies
             _bossController?.ResetState();
             _captureController?.ResetState();
             _isCaptured = false;
+            _scaledBaseDamage = 1;
         }
 
         private void HandleDied()
@@ -237,7 +252,7 @@ namespace AlienDefense.Enemies
                     yield break;
                 }
 
-                _baseHealth?.TakeDamage(_definition.BaseDamage);
+                _baseHealth?.TakeDamage(_scaledBaseDamage);
             }
         }
 
@@ -263,7 +278,7 @@ namespace AlienDefense.Enemies
                     _economy?.Add(_definition.RewardResource);
                     break;
                 case EnemyResolveReason.ReachedBase:
-                    _baseHealth?.TakeDamage(_definition.BaseDamage);
+                    _baseHealth?.TakeDamage(_scaledBaseDamage);
                     break;
 
                 // Captured (UFO tractor beam) intentionally falls through to no-op: capturing an enemy only

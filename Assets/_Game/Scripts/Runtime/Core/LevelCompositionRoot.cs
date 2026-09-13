@@ -40,6 +40,10 @@ namespace AlienDefense.Core
         private UFOTractorBeamController _tractorBeamController;
 
         [SerializeField]
+        [Tooltip("Optional. Level-start takeoff cinematic from landing pad to sky start.")]
+        private UFOFlightIntro _ufoFlightIntro;
+
+        [SerializeField]
         [Tooltip("Optional.")]
         private UFOTractorBeamVisual _tractorBeamVisual;
 
@@ -280,7 +284,44 @@ namespace AlienDefense.Core
             }
 
             BuildLevel(levelDefinition);
-            GameFlow.BeginPreparingWave();
+
+            if (ShouldDeferGameplayForIntro())
+            {
+                _ufoFlightIntro.IntroCompleted += HandleUfoIntroCompleted;
+                if (_ufoFlightIntro.IsIntroCompleted)
+                {
+                    HandleUfoIntroCompleted();
+                }
+            }
+            else
+            {
+                GameFlow.BeginPreparingWave();
+            }
+        }
+
+        private bool ShouldDeferGameplayForIntro()
+        {
+            return _ufoFlightIntro != null && !_ufoFlightIntro.SkipIntro;
+        }
+
+        private void HandleUfoIntroCompleted()
+        {
+            if (_ufoFlightIntro != null)
+            {
+                _ufoFlightIntro.IntroCompleted -= HandleUfoIntroCompleted;
+            }
+
+            if (_waveController != null && _waveController.CurrentWaveIndex < 0)
+            {
+                _waveController.StartFirstWave();
+            }
+
+            if (GameFlow != null && GameFlow.CurrentState == GameState.Initializing)
+            {
+                GameFlow.BeginPreparingWave();
+            }
+
+            _ufoFlightIntro?.NotifyGameplaySystemsReady();
         }
 
         private LevelDefinition ResolveLevelDefinition()
@@ -381,6 +422,11 @@ namespace AlienDefense.Core
                 _waveController.WaveCompleted -= HandleWaveCompletedForFlow;
                 _waveController.AllWavesCompleted -= HandleAllWavesCompleted;
                 _waveController.BossSpawned -= HandleBossSpawned;
+            }
+
+            if (_ufoFlightIntro != null)
+            {
+                _ufoFlightIntro.IntroCompleted -= HandleUfoIntroCompleted;
             }
 
             _buildLifecycleVfx?.Unsubscribe();
@@ -674,7 +720,12 @@ namespace AlienDefense.Core
                 waves[i] = _resolvedLevelDefinition.GetWave(i);
             }
 
-            _waveController.Initialize(EnemySpawner, waves, _resolvedLevelDefinition.PreparationDuration);
+            _waveController.Initialize(
+                EnemySpawner,
+                waves,
+                _resolvedLevelDefinition.PreparationDuration,
+                _resolvedLevelDefinition.CreateWaveSpawnSettings(),
+                autoStartFirstWave: !ShouldDeferGameplayForIntro());
 
             _waveController.WaveStarted += HandleWaveStarted;
             _waveController.WaveCompleted += HandleWaveCompletedForFlow;
@@ -706,10 +757,20 @@ namespace AlienDefense.Core
                 for (int g = 0; g < wave.SpawnGroupCount; g++)
                 {
                     EnemySpawnGroup group = wave.GetSpawnGroup(g);
-                    if (group != null && group.IsValid && seenDefinitions.Add(group.EnemyDefinition))
+                    if (group == null)
                     {
-                        _enemyPoolRegistry.GetOrCreatePool(group.EnemyDefinition);
+                        continue;
                     }
+
+                    group.CollectDefinitions(seenDefinitions);
+                }
+            }
+
+            foreach (EnemyDefinition definition in seenDefinitions)
+            {
+                if (definition != null)
+                {
+                    _enemyPoolRegistry.GetOrCreatePool(definition);
                 }
             }
         }

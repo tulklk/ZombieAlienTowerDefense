@@ -21,6 +21,22 @@ namespace AlienDefense.Enemies
         [SerializeField]
         private EnemyController _prefab;
 
+        [Header("Archetype / Wave Scaling")]
+        [SerializeField]
+        private EnemyArchetype _archetype = EnemyArchetype.Normal;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("How strongly wave HP scaling applies. 1 = full curve, 0.8 = Fast (less HP growth), 1.25 = Tank.")]
+        private float _healthScaleFactor = 1f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("How strongly wave speed scaling applies. Tank should stay near 0–0.25; Fast near 1.")]
+        private float _speedScaleFactor = 1f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("How strongly wave damage scaling applies.")]
+        private float _damageScaleFactor = 1f;
+
         [Header("Stats")]
         [SerializeField, Min(1f)]
         private float _maxHealth = 100f;
@@ -75,6 +91,10 @@ namespace AlienDefense.Enemies
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
         public EnemyController Prefab => _prefab;
+        public EnemyArchetype Archetype => _archetype;
+        public float HealthScaleFactor => _healthScaleFactor;
+        public float SpeedScaleFactor => _speedScaleFactor;
+        public float DamageScaleFactor => _damageScaleFactor;
         public float MaxHealth => _maxHealth;
         public float MoveSpeed => _moveSpeed;
         public float RotationSpeed => _rotationSpeed;
@@ -105,6 +125,21 @@ namespace AlienDefense.Enemies
             if (_prefab == null)
             {
                 Debug.LogError($"[EnemyDefinition] '{name}' has no Prefab assigned.", this);
+            }
+
+            if (_healthScaleFactor < 0f)
+            {
+                _healthScaleFactor = 0f;
+            }
+
+            if (_speedScaleFactor < 0f)
+            {
+                _speedScaleFactor = 0f;
+            }
+
+            if (_damageScaleFactor < 0f)
+            {
+                _damageScaleFactor = 0f;
             }
 
             if (_maxHealth < 1f)

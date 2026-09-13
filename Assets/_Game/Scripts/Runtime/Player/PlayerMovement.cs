@@ -67,6 +67,24 @@ namespace AlienDefense.Player
             _isInitialized = true;
         }
 
+        /// <summary>The world-space Y this component holds the UFO at over <paramref name="worldPosition"/> - ground
+        /// plus hover offset, the same value every movement frame snaps to. False until Initialize has run.
+        ///
+        /// For scripted flights (UFOFlightIntro) that hand the UFO back to this component: ending the flight at
+        /// exactly this height means the first movement frame has nothing to correct, instead of teleporting the
+        /// UFO from wherever the flight's authored end point happened to sit.</summary>
+        public bool TryGetHoverY(Vector3 worldPosition, out float hoverY)
+        {
+            if (_definition == null)
+            {
+                hoverY = 0f;
+                return false;
+            }
+
+            hoverY = SampleHoverY(worldPosition);
+            return true;
+        }
+
         /// <summary>Ground height (from Terrain.SampleHeight, world space) plus the definition's hover offset.
         /// Falls back to the definition's hover height as an absolute world-Y if worldPosition isn't over any
         /// active Terrain tile (e.g. a non-terrain floor area).</summary>

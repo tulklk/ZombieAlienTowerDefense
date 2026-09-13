@@ -15,12 +15,22 @@ MonoBehaviour:
   _id: wave_04
   _displayName: Wave 4
   _spawnGroups:
-  - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
-    _count: 8
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+      _count: 7
     _delayBeforeGroup: 0
-    _spawnInterval: 0.7
-  - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
-    _count: 5
+    _spawnInterval: 1.1
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
+      _count: 4
+    - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+      _count: 2
     _delayBeforeGroup: 1
-    _spawnInterval: 0.65
+    _spawnInterval: 1.1
+    _interleaveEntries: 1
+    _enemyDefinition: {fileID: 0}
+    _count: 1
   _preparationDurationOverride: -1

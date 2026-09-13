@@ -16,6 +16,10 @@ MonoBehaviour:
   _displayName: Normal Enemy
   _icon: {fileID: 0}
   _prefab: {fileID: 2895546161493411235, guid: a9906db529ae2e04592b960ccc7a787d, type: 3}
+  _archetype: 0
+  _healthScaleFactor: 1
+  _speedScaleFactor: 1
+  _damageScaleFactor: 1
   _maxHealth: 100
   _moveSpeed: 1.8
   _rotationSpeed: 360

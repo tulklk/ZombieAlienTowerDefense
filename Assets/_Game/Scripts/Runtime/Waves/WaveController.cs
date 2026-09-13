@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Text;
 using AlienDefense.Enemies;
 using UnityEngine;
 
@@ -22,6 +24,7 @@ namespace AlienDefense.Waves
         private EnemyFactory _enemyFactory;
         private WaveDefinition[] _waves;
         private float _defaultPreparationDuration;
+        private WaveSpawnSettings _spawnSettings;
         private Coroutine _schedulingCoroutine;
         private int _waveRunId;
         private bool _isInitialized;
@@ -43,6 +46,26 @@ namespace AlienDefense.Waves
         public event Action<EnemyController, BossController> BossSpawned;
 
         public void Initialize(EnemyFactory enemyFactory, WaveDefinition[] waves, float defaultPreparationDuration)
+        {
+            Initialize(enemyFactory, waves, defaultPreparationDuration, WaveSpawnSettings.CreateDefault(), autoStartFirstWave: null);
+        }
+
+        public void Initialize(
+            EnemyFactory enemyFactory,
+            WaveDefinition[] waves,
+            float defaultPreparationDuration,
+            WaveSpawnSettings spawnSettings)
+        {
+            Initialize(enemyFactory, waves, defaultPreparationDuration, spawnSettings, autoStartFirstWave: null);
+        }
+
+        /// <param name="autoStartFirstWave">Null keeps the serialized inspector flag; otherwise overrides it for this run.</param>
+        public void Initialize(
+            EnemyFactory enemyFactory,
+            WaveDefinition[] waves,
+            float defaultPreparationDuration,
+            WaveSpawnSettings spawnSettings,
+            bool? autoStartFirstWave)
         {
             if (_isInitialized)
             {
@@ -71,6 +94,17 @@ namespace AlienDefense.Waves
             _enemyFactory = enemyFactory;
             _waves = waves;
             _defaultPreparationDuration = Mathf.Max(0f, defaultPreparationDuration);
+            _spawnSettings = spawnSettings;
+            if (_spawnSettings.MaxSpeedMultiplier < 1f)
+            {
+                _spawnSettings.MaxSpeedMultiplier = 1f;
+            }
+
+            if (autoStartFirstWave.HasValue)
+            {
+                _autoStartFirstWave = autoStartFirstWave.Value;
+            }
+
             _isInitialized = true;
 
             if (_autoStartFirstWave)
@@ -194,17 +228,31 @@ namespace AlienDefense.Waves
             _waveRunId++;
             int runId = _waveRunId;
 
-            _tracker.Initialize(wave.TotalPlannedEnemyCount());
+            int planned = wave.TotalPlannedEnemyCount();
+            if (planned <= 0)
+            {
+                Debug.LogWarning($"[WaveController] Wave '{wave.name}' has no valid enemies; completing immediately.", this);
+                _tracker.Initialize(0);
+                _tracker.MarkSpawnSchedulingCompleted();
+                CurrentState = WaveState.Spawning;
+                WaveStarted?.Invoke(CurrentWaveNumber, TotalWaveCount);
+                RaiseProgressChanged();
+                TryCompleteWave(runId);
+                yield break;
+            }
+
+            _tracker.Initialize(planned);
             CurrentState = WaveState.Spawning;
             WaveStarted?.Invoke(CurrentWaveNumber, TotalWaveCount);
             RaiseProgressChanged();
+            LogWaveDebug(wave);
 
             for (int groupIndex = 0; groupIndex < wave.SpawnGroupCount; groupIndex++)
             {
                 EnemySpawnGroup group = wave.GetSpawnGroup(groupIndex);
                 if (group == null || !group.IsValid)
                 {
-                    Debug.LogError($"[WaveController] Skipping invalid spawn group {groupIndex} in wave '{wave.name}'.", this);
+                    Debug.LogWarning($"[WaveController] Skipping invalid spawn group {groupIndex} in wave '{wave.name}'.", this);
                     continue;
                 }
 
@@ -213,13 +261,30 @@ namespace AlienDefense.Waves
                     yield return WaitSeconds(group.DelayBeforeGroup);
                 }
 
-                for (int i = 0; i < group.Count; i++)
+                List<EnemyDefinition> queue = group.BuildSpawnQueue();
+                float interval = Mathf.Max(0f, group.SpawnInterval);
+                for (int i = 0; i < queue.Count; i++)
                 {
-                    SpawnOneEnemy(group.EnemyDefinition, runId);
-
-                    if (i < group.Count - 1 && group.SpawnInterval > 0f)
+                    EnemyDefinition definition = queue[i];
+                    if (definition == null)
                     {
-                        yield return WaitSeconds(group.SpawnInterval);
+                        Debug.LogWarning("[WaveController] Skipping null EnemyDefinition in spawn queue.");
+                        _tracker.RecordSpawnFailure();
+                        RaiseProgressChanged();
+                        continue;
+                    }
+
+                    yield return WaitForAliveCapacity(runId);
+                    if (runId != _waveRunId)
+                    {
+                        yield break;
+                    }
+
+                    SpawnTrackedEnemy(definition, runId);
+
+                    if (i < queue.Count - 1 && interval > 0f)
+                    {
+                        yield return WaitSeconds(interval);
                     }
                 }
             }
@@ -234,6 +299,20 @@ namespace AlienDefense.Waves
             TryCompleteWave(runId);
         }
 
+        private IEnumerator WaitForAliveCapacity(int runId)
+        {
+            int maxAlive = _spawnSettings.MaxAliveEnemies;
+            if (maxAlive <= 0)
+            {
+                yield break;
+            }
+
+            while (runId == _waveRunId && _tracker.ActiveEnemyCount >= maxAlive)
+            {
+                yield return null;
+            }
+        }
+
         private static IEnumerator WaitSeconds(float seconds)
         {
             float elapsed = 0f;
@@ -242,11 +321,6 @@ namespace AlienDefense.Waves
                 yield return null;
                 elapsed += Time.deltaTime;
             }
-        }
-
-        private void SpawnOneEnemy(EnemyDefinition definition, int runId)
-        {
-            SpawnTrackedEnemy(definition, runId);
         }
 
         /// <summary>IEnemySpawnCoordinator entry point: spawns and tracks an enemy outside the normal group-spawn
@@ -260,8 +334,9 @@ namespace AlienDefense.Waves
         {
             Vector3 spawnPosition = _path.GetPoint(0);
             Quaternion spawnRotation = ComputeSpawnRotation();
+            EnemySpawnModifiers modifiers = ComputeModifiers(CurrentWaveNumber, definition);
 
-            EnemyController enemy = _enemyFactory.Spawn(definition, _path, spawnPosition, spawnRotation);
+            EnemyController enemy = _enemyFactory.Spawn(definition, _path, spawnPosition, spawnRotation, modifiers);
             if (enemy == null)
             {
                 _tracker.RecordSpawnFailure();
@@ -294,6 +369,75 @@ namespace AlienDefense.Waves
             }
 
             return enemy;
+        }
+
+        public EnemySpawnModifiers ComputeModifiers(int waveNumber, EnemyDefinition definition)
+        {
+            int safeWave = Mathf.Max(1, waveNumber);
+            float baseHp = 1f + (safeWave - 1) * _spawnSettings.HealthPerWaveStep;
+            float baseSpd = 1f + (safeWave - 1) * _spawnSettings.SpeedPerWaveStep;
+            float baseDmg = 1f + (safeWave - 1) * _spawnSettings.DamagePerWaveStep;
+
+            float hpFactor = definition != null ? definition.HealthScaleFactor : 1f;
+            float spdFactor = definition != null ? definition.SpeedScaleFactor : 1f;
+            float dmgFactor = definition != null ? definition.DamageScaleFactor : 1f;
+
+            float hpMul = 1f + (baseHp - 1f) * hpFactor;
+            float spdMul = Mathf.Min(_spawnSettings.MaxSpeedMultiplier, 1f + (baseSpd - 1f) * spdFactor);
+            float dmgMul = 1f + (baseDmg - 1f) * dmgFactor;
+            return new EnemySpawnModifiers(hpMul, spdMul, dmgMul);
+        }
+
+        private void LogWaveDebug(WaveDefinition wave)
+        {
+            if (!_spawnSettings.DebugWaveLogs || wave == null)
+            {
+                return;
+            }
+
+            var counts = new Dictionary<string, int>();
+            for (int g = 0; g < wave.SpawnGroupCount; g++)
+            {
+                EnemySpawnGroup group = wave.GetSpawnGroup(g);
+                if (group == null || !group.IsValid)
+                {
+                    continue;
+                }
+
+                List<EnemyDefinition> queue = group.BuildSpawnQueue();
+                for (int i = 0; i < queue.Count; i++)
+                {
+                    EnemyDefinition def = queue[i];
+                    if (def == null)
+                    {
+                        continue;
+                    }
+
+                    string key = def.DisplayName;
+                    counts.TryGetValue(key, out int n);
+                    counts[key] = n + 1;
+                }
+            }
+
+            var sb = new StringBuilder(128);
+            sb.Append("[Wave ").Append(CurrentWaveNumber).Append("]\n");
+            foreach (KeyValuePair<string, int> pair in counts)
+            {
+                sb.Append(pair.Key).Append(": ").Append(pair.Value).Append('\n');
+            }
+
+            EnemySpawnModifiers sample = ComputeModifiers(CurrentWaveNumber, null);
+            sb.Append("HP Multiplier (Normal curve): ").Append(sample.HealthMultiplier.ToString("0.00")).Append('\n');
+            if (wave.SpawnGroupCount > 0)
+            {
+                EnemySpawnGroup first = wave.GetSpawnGroup(0);
+                if (first != null)
+                {
+                    sb.Append("Spawn Interval: ").Append(first.SpawnInterval.ToString("0.00"));
+                }
+            }
+
+            Debug.Log(sb.ToString(), this);
         }
 
         private Quaternion ComputeSpawnRotation()

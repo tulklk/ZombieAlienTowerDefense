@@ -9,7 +9,16 @@ namespace AlienDefense.Enemies
         [SerializeField]
         private Transform[] _waypoints;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("Half the usable width of the road this path runs down the middle of. Each enemy picks a fixed " +
+            "sideways lane inside +/- this and keeps it the whole way, so a wave fans out across the road instead " +
+            "of marching single file. Keep it a little inside the painted road edge so enemy bodies don't hang " +
+            "over the verge. 0 = every enemy on the centre line.")]
+        private float _laneHalfWidth;
+
         public int Count => _waypoints?.Length ?? 0;
+
+        public float LaneHalfWidth => _laneHalfWidth;
 
         /// <summary>Read-only access to the underlying waypoint Transforms, in path order. Purely additive (no
         /// existing member changed) - added so other systems (e.g. the minimap) can reuse this path's own data
@@ -19,6 +28,51 @@ namespace AlienDefense.Enemies
         public Vector3 GetPoint(int index)
         {
             return _waypoints[index].position;
+        }
+
+        /// <summary>Waypoint <paramref name="index"/> pushed sideways by <paramref name="lateralOffset"/> metres
+        /// (positive = right of the direction of travel) - one point of a lane running parallel to the centre
+        /// line.
+        ///
+        /// At a bend the push is along the bisector of the two segments meeting there and stretched by
+        /// 1/cos(half the turn angle) (a mitre join), which is what keeps the lane the same distance from BOTH
+        /// segments; a plain per-segment perpendicular would make every enemy on the outside of a bend cut the
+        /// corner and the ones on the inside overshoot it. The stretch is capped so a hairpin can't fling the
+        /// point far off the road. Y is left at the waypoint's own height - enemies ground-snap as they walk.</summary>
+        public Vector3 GetLanePoint(int index, float lateralOffset)
+        {
+            Vector3 point = _waypoints[index].position;
+            if (Mathf.Approximately(lateralOffset, 0f) || Count < 2)
+            {
+                return point;
+            }
+
+            Vector3 incoming = index > 0 ? FlatDirection(_waypoints[index - 1].position, point) : Vector3.zero;
+            Vector3 outgoing = index < Count - 1 ? FlatDirection(point, _waypoints[index + 1].position) : Vector3.zero;
+
+            Vector3 tangent = incoming + outgoing;
+            if (tangent.sqrMagnitude < 0.0001f)
+            {
+                // An end point (only one neighbour), or a perfect U-turn where the two directions cancel out.
+                tangent = outgoing.sqrMagnitude > 0f ? outgoing : incoming;
+            }
+
+            tangent.Normalize();
+            Vector3 lateral = Vector3.Cross(Vector3.up, tangent);
+
+            Vector3 reference = incoming.sqrMagnitude > 0f ? incoming : outgoing;
+            float cosHalfTurn = Vector3.Dot(lateral, Vector3.Cross(Vector3.up, reference));
+            const float maxMitreStretch = 1f / 0.6f;
+            float mitre = Mathf.Min(maxMitreStretch, 1f / Mathf.Max(0.0001f, cosHalfTurn));
+
+            return point + lateral * (lateralOffset * mitre);
+        }
+
+        private static Vector3 FlatDirection(Vector3 from, Vector3 to)
+        {
+            Vector3 direction = to - from;
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.zero;
         }
 
         public bool TryGetPoint(int index, out Vector3 point)
@@ -90,6 +144,25 @@ namespace AlienDefense.Enemies
                     Vector3 midpoint = Vector3.Lerp(from, to, 0.5f);
                     Gizmos.DrawLine(midpoint, midpoint - direction * 0.5f + Vector3.up * 0.3f);
                 }
+            }
+
+            DrawLaneEdgeGizmos();
+        }
+
+        /// <summary>The two outermost lanes, so the spread can be checked against the painted road in the Scene
+        /// view.</summary>
+        private void DrawLaneEdgeGizmos()
+        {
+            if (_laneHalfWidth <= 0f || _waypoints.Length < 2 || System.Array.IndexOf(_waypoints, null) >= 0)
+            {
+                return;
+            }
+
+            Gizmos.color = new Color(1f, 0.85f, 0f, 0.45f);
+            for (int i = 0; i + 1 < _waypoints.Length; i++)
+            {
+                Gizmos.DrawLine(GetLanePoint(i, _laneHalfWidth), GetLanePoint(i + 1, _laneHalfWidth));
+                Gizmos.DrawLine(GetLanePoint(i, -_laneHalfWidth), GetLanePoint(i + 1, -_laneHalfWidth));
             }
         }
     }

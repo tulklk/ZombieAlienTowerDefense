@@ -13,6 +13,10 @@ namespace AlienDefense.Enemies
 
         private int _targetWaypointIndex;
         private float _segmentLength;
+
+        // This enemy's sideways lane across the road, fixed for its whole walk (see EnemyPath3D.LaneHalfWidth).
+        // Re-rolled on every Initialize, so a pooled enemy coming back for the next wave gets a fresh lane.
+        private float _laneOffset;
         private bool _isInitialized;
         private bool _isMoving;
         private bool _destinationReachedFired;
@@ -56,7 +60,12 @@ namespace AlienDefense.Enemies
                 return;
             }
 
-            Vector3 spawnPoint = _path.GetPoint(0);
+            // Uniform across the whole usable road width, so a wave fans out edge to edge rather than bunching
+            // on the centre line. Fully qualified: this file has `using System`, which makes a bare Random
+            // ambiguous.
+            _laneOffset = UnityEngine.Random.Range(-_path.LaneHalfWidth, _path.LaneHalfWidth);
+
+            Vector3 spawnPoint = LanePoint(0);
             spawnPoint.y = SampleGroundHeight(spawnPoint, spawnPoint.y);
             transform.position = spawnPoint;
             _targetWaypointIndex = 1;
@@ -96,7 +105,7 @@ namespace AlienDefense.Enemies
                 return;
             }
 
-            Vector3 targetPosition = _path.GetPoint(_targetWaypointIndex);
+            Vector3 targetPosition = LanePoint(_targetWaypointIndex);
             Vector3 currentPosition = transform.position;
             Vector3 toTarget = targetPosition - currentPosition;
 
@@ -146,7 +155,7 @@ namespace AlienDefense.Enemies
 
             if (_segmentLength > 0.0001f)
             {
-                Vector3 segmentStart = _path.GetPoint(segmentIndex);
+                Vector3 segmentStart = LanePoint(segmentIndex);
                 float traveled = Vector3.Distance(segmentStart, currentPosition);
                 segmentProgress = Mathf.Clamp01(traveled / _segmentLength);
             }
@@ -176,9 +185,17 @@ namespace AlienDefense.Enemies
 
         private void CacheSegmentLength()
         {
-            Vector3 from = _path.GetPoint(_targetWaypointIndex - 1);
-            Vector3 to = _path.GetPoint(_targetWaypointIndex);
+            Vector3 from = LanePoint(_targetWaypointIndex - 1);
+            Vector3 to = LanePoint(_targetWaypointIndex);
             _segmentLength = Vector3.Distance(from, to);
+        }
+
+        /// <summary>Waypoint <paramref name="index"/> on this enemy's own lane. Every position this component
+        /// steers towards or measures progress against goes through here, so movement, arrival and PathProgress
+        /// all agree on the same parallel line.</summary>
+        private Vector3 LanePoint(int index)
+        {
+            return _path.GetLanePoint(index, _laneOffset);
         }
     }
 }

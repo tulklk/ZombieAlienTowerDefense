@@ -15,16 +15,54 @@ MonoBehaviour:
   _id: wave_09
   _displayName: Wave 9
   _spawnGroups:
-  - _enemyDefinition: {fileID: 11400000, guid: 30d4af70123ffa1438fb5b57fc5013ad, type: 2}
-    _count: 5
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+      _count: 6
+    - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
+      _count: 6
     _delayBeforeGroup: 0
-    _spawnInterval: 0.9
-  - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
-    _count: 12
+    _spawnInterval: 0.8
+    _interleaveEntries: 1
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 30d4af70123ffa1438fb5b57fc5013ad, type: 2}
+      _count: 1
     _delayBeforeGroup: 1
-    _spawnInterval: 0.4
-  - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
-    _count: 12
-    _delayBeforeGroup: 1
-    _spawnInterval: 0.4
+    _spawnInterval: 1
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 30d4af70123ffa1438fb5b57fc5013ad, type: 2}
+      _count: 1
+    _delayBeforeGroup: 0.85
+    _spawnInterval: 1
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 30d4af70123ffa1438fb5b57fc5013ad, type: 2}
+      _count: 1
+    _delayBeforeGroup: 0.85
+    _spawnInterval: 1
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 30d4af70123ffa1438fb5b57fc5013ad, type: 2}
+      _count: 1
+    _delayBeforeGroup: 0.85
+    _spawnInterval: 1
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 43cdf1b094682e5498489602d5005976, type: 2}
+      _count: 1
+    _delayBeforeGroup: 1.2
+    _spawnInterval: 0
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
   _preparationDurationOverride: -1

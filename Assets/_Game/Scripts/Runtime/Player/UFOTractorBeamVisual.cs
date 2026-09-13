@@ -18,6 +18,7 @@ namespace AlienDefense.Player
         // use _BeamColor, not URP _BaseColor. Scaling its alpha drives idle/capturing fade via MPB.
         private static readonly int BeamColorId = Shader.PropertyToID("_BeamColor");
         private static readonly int FlowSpeedId = Shader.PropertyToID("_FlowSpeed");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         [Header("Cone (top small -> bottom wide, scaled via Transform only)")]
         [SerializeField]
@@ -27,10 +28,10 @@ namespace AlienDefense.Player
         private MeshRenderer _beamConeInner;
 
         [SerializeField, Range(0.1f, 1f)]
-        [Tooltip("Cone/ground-glow radius as a fraction of the gameplay AttractionRadius — keeps the visual " +
-            "beam narrower than the actual capture area (see SetBeamRadius) instead of rendering it exactly " +
-            "as wide as enemies can be pulled in from. Kept at its narrowest baseline on purpose: a future " +
-            "level-up system is expected to raise this value as the player upgrades the tractor beam.")]
+        [Tooltip("The cone's base radius as a fraction of the gameplay AttractionRadius. The ground ring always " +
+            "marks the full capture area (see SetBeamRadius), so keep this just under 1: the cone then lands " +
+            "inside the ring's rim. Only the cone's width - never what the beam can actually reach - depends " +
+            "on this value.")]
         private float _visualRadiusScale = 0.28f;
 
         [Header("Ground")]
@@ -38,7 +39,34 @@ namespace AlienDefense.Player
         private GameObject _groundGlow;
 
         [SerializeField]
+        [Tooltip("The glowing circle the beam paints on the ground. Sized to the beam's footprint (see " +
+            "SetBeamRadius), breathes with the pulse, and is kept lying flat on the actual terrain every frame " +
+            "rather than at the beam's fixed ground anchor, which floats above or sinks below the surface as the " +
+            "ground rises and falls.")]
         private GameObject _groundRing;
+
+        [SerializeField]
+        [Tooltip("Optional. A thin ring inside Ground Ring that keeps expanding from the centre out to the rim and " +
+            "fading - the ripple of the beam hitting the ground. Its scale is relative to Ground Ring, so it " +
+            "follows the beam radius automatically.")]
+        private Renderer _groundRipple;
+
+        [SerializeField, Min(0.1f)]
+        [Tooltip("Seconds for one ripple to travel from the centre to the rim.")]
+        private float _groundRippleDuration = 1.3f;
+
+        [SerializeField, Range(0f, 1f)]
+        [Tooltip("Ripple size, as a fraction of the ring, at the moment it appears.")]
+        private float _groundRippleStartScale = 0.25f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("How far above the terrain the ring floats - just enough never to z-fight the ground.")]
+        private float _groundRingHeightOffset = 0.05f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("How much longer than its gameplay length the beam cone may stretch so it still reaches the " +
+            "ground over low terrain. Past this (flying off a cliff edge) the cone simply ends in the air.")]
+        private float _maxGroundReachExtension = 4f;
 
         [Header("Top (bright patch just under the UFO)")]
         [SerializeField]
@@ -121,6 +149,24 @@ namespace AlienDefense.Player
         private float _displayedIntensity;
         private Tweener _intensityTween;
         private Tweener _groundRingTween;
+        private Tweener _groundRippleTween;
+        private MaterialPropertyBlock _rippleBlock;
+        private Color _rippleBaseColor = Color.white;
+        private float _rippleProgress;
+        private Terrain[] _terrains;
+
+        // The beam's gameplay geometry (see SetBeamLength) and where the cone's base was authored, in beam-root
+        // space. The cone's top never moves - it's the capture socket - so reaching the ground only ever means
+        // lowering the base and lengthening the cone to match.
+        private float _beamLength;
+        private float _beamBaseLocalY;
+        private bool _hasBeamBaseLocalY;
+        private const int GroundSampleCount = 8;
+        private const float MinVisualBeamLength = 0.5f;
+
+        // Where T_BeamGroundRing draws its bright rim, as a fraction of the quad's half-size (the texture fades out
+        // between here and the quad edge). Keep in sync with the texture if it is ever regenerated.
+        private const float RingTextureRimRadius = 0.9f;
         private bool _hasEmissionModule;
         private ParticleSystem.EmissionModule _emissionModule;
         private bool _hasStreakEmissionModule;
@@ -157,6 +203,23 @@ namespace AlienDefense.Player
             if (_groundRing != null)
             {
                 _groundRingBaseScale = _groundRing.transform.localScale;
+            }
+
+            // Cached once: Terrain.activeTerrains allocates a fresh array on every call.
+            _terrains = Terrain.activeTerrains;
+
+            // Captured once, before LateUpdate ever moves the cone - a later re-Initialize must not mistake an
+            // already-lowered base for the authored one.
+            if (!_hasBeamBaseLocalY && _beamConeOuter != null)
+            {
+                _beamBaseLocalY = _beamConeOuter.transform.localPosition.y;
+                _hasBeamBaseLocalY = true;
+            }
+
+            if (_groundRipple != null && _groundRipple.sharedMaterial != null &&
+                _groundRipple.sharedMaterial.HasProperty(BaseColorId))
+            {
+                _rippleBaseColor = _groundRipple.sharedMaterial.GetColor(BaseColorId);
             }
 
             if (_beamConeInner != null)
@@ -261,6 +324,196 @@ namespace AlienDefense.Player
                 .SetLoops(-1, LoopType.Yoyo);
         }
 
+        /// <summary>Loops a ripple from the middle of the ground ring out to its rim, fading in quickly and out
+        /// slowly so it never pops on or cuts off at the edge. One value tween drives both scale and alpha; the
+        /// alpha goes through a MaterialPropertyBlock so the shared material asset is never modified.</summary>
+        private void RestartGroundRipple()
+        {
+            _groundRippleTween?.Kill();
+            _groundRippleTween = null;
+
+            if (_groundRipple == null)
+            {
+                return;
+            }
+
+            _rippleBlock ??= new MaterialPropertyBlock();
+
+            if (!_isBeamEnabled)
+            {
+                ApplyGroundRipple(1f); // fully faded
+                return;
+            }
+
+            _rippleProgress = 0f;
+            _groundRippleTween = DOTween.To(() => _rippleProgress, ApplyGroundRipple, 1f, _groundRippleDuration)
+                .SetEase(Ease.OutSine) // bursts out of the centre, then eases as it reaches the rim
+                .SetLoops(-1, LoopType.Restart);
+        }
+
+        private void ApplyGroundRipple(float progress)
+        {
+            _rippleProgress = progress;
+            if (_groundRipple == null)
+            {
+                return;
+            }
+
+            // The ripple quad lies flat through a 90-degree X rotation, so its ground-plane axes are local X/Y.
+            float scale = Mathf.Lerp(_groundRippleStartScale, 1f, progress);
+            _groundRipple.transform.localScale = new Vector3(scale, scale, 1f);
+
+            const float fadeInPortion = 0.2f;
+            float alpha = progress < fadeInPortion
+                ? progress / fadeInPortion
+                : 1f - (progress - fadeInPortion) / (1f - fadeInPortion);
+
+            Color color = _rippleBaseColor;
+            color.a *= Mathf.Clamp01(alpha);
+            _rippleBlock.SetColor(BaseColorId, color);
+            _groundRipple.SetPropertyBlock(_rippleBlock);
+        }
+
+        /// <summary>Grounds the beam every frame: the ring lies on the terrain and the cone reaches down to meet
+        /// it. BeamGroundAnchor sits a fixed distance under the UFO (1.5m above the ground on flat terrain), so
+        /// left to the anchor the cone stopped in mid-air with the ring floating detached below it.
+        ///
+        /// Terrain only, on purpose: a physics raycast would also hit the trees and bushes the beam sweeps over
+        /// and make the ring and cone jump onto their tops.</summary>
+        private void LateUpdate()
+        {
+            if (!TrySampleGroundUnderBeam(out float groundY))
+            {
+                return;
+            }
+
+            PlaceGroundRing(groundY);
+            StretchBeamToGround(groundY);
+        }
+
+        /// <summary>Highest terrain point under the ring - its centre plus points around its edge. Sampling the
+        /// centre alone let the uphill side of the ring sink into sloped ground and vanish.</summary>
+        private bool TrySampleGroundUnderBeam(out float groundY)
+        {
+            groundY = float.MinValue;
+            if (_terrains == null)
+            {
+                return false;
+            }
+
+            Vector3 centre = transform.position;
+            float radius = _groundRing != null ? _groundRingBaseScale.x * 0.5f : 0f;
+            bool found = false;
+
+            for (int i = -1; i < GroundSampleCount; i++)
+            {
+                Vector3 point = centre;
+                if (i >= 0)
+                {
+                    float angle = i * Mathf.PI * 2f / GroundSampleCount;
+                    point.x += Mathf.Cos(angle) * radius;
+                    point.z += Mathf.Sin(angle) * radius;
+                }
+
+                if (TrySampleTerrainHeight(point, out float height))
+                {
+                    groundY = Mathf.Max(groundY, height);
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
+        private bool TrySampleTerrainHeight(Vector3 point, out float height)
+        {
+            for (int i = 0; i < _terrains.Length; i++)
+            {
+                Terrain terrain = _terrains[i];
+                if (terrain == null || terrain.terrainData == null)
+                {
+                    continue;
+                }
+
+                Vector3 origin = terrain.transform.position;
+                Vector3 size = terrain.terrainData.size;
+                if (point.x < origin.x || point.x > origin.x + size.x ||
+                    point.z < origin.z || point.z > origin.z + size.z)
+                {
+                    continue;
+                }
+
+                height = origin.y + terrain.SampleHeight(point);
+                return true;
+            }
+
+            height = 0f;
+            return false;
+        }
+
+        private void PlaceGroundRing(float groundY)
+        {
+            if (_groundRing == null || !_groundRing.activeInHierarchy)
+            {
+                return;
+            }
+
+            Vector3 centre = transform.position;
+            _groundRing.transform.SetPositionAndRotation(
+                new Vector3(centre.x, groundY + _groundRingHeightOffset, centre.z),
+                Quaternion.identity); // flat on the ground even if the UFO banks while flying
+        }
+
+        /// <summary>Keeps the cone's top pinned at the capture socket and moves its base down (or up) to the
+        /// ground, lengthening the cone to match; the particle emitters and their height clamps follow, so the
+        /// sparkles rise out of the ring rather than out of thin air. Visual only - gameplay keeps using
+        /// BeamGroundAnchor and the controller's BeamLength untouched.</summary>
+        private void StretchBeamToGround(float groundY)
+        {
+            if (!_hasBeamBaseLocalY || _beamLength <= 0f)
+            {
+                return;
+            }
+
+            float topWorldY = transform.TransformPoint(0f, _beamBaseLocalY + _beamLength, 0f).y;
+            float visualLength = Mathf.Clamp(topWorldY - groundY, MinVisualBeamLength, _beamLength + _maxGroundReachExtension);
+            float baseWorldY = topWorldY - visualLength;
+
+            PlaceConeBase(_beamConeOuter, baseWorldY, visualLength);
+            PlaceConeBase(_beamConeInner, baseWorldY, visualLength);
+
+            SetWorldHeight(_beamParticles != null ? _beamParticles.transform : null, baseWorldY);
+            SetWorldHeight(_beamStreakParticles != null ? _beamStreakParticles.transform : null, baseWorldY);
+            SetWorldHeight(_beamOrbParticles != null ? _beamOrbParticles.transform : null, baseWorldY);
+
+            _beamSparkAttractor?.SetMaxHeight(visualLength);
+            _beamStreakAttractor?.SetMaxHeight(visualLength);
+            _beamOrbAttractor?.SetMaxHeight(visualLength);
+        }
+
+        private static void PlaceConeBase(MeshRenderer cone, float baseWorldY, float length)
+        {
+            if (cone == null)
+            {
+                return;
+            }
+
+            SetWorldHeight(cone.transform, baseWorldY);
+            ApplyConeScale(cone, length, keepRadius: true);
+        }
+
+        private static void SetWorldHeight(Transform target, float worldY)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            Vector3 position = target.position;
+            position.y = worldY;
+            target.position = position;
+        }
+
         /// <summary>Beam length: distance from CaptureSocket to BeamGroundAnchor. Beam radius: gameplay
         /// AttractionRadius. Only the Transform is touched — the cone mesh itself is never regenerated.</summary>
         private void HandleBeamGeometryChanged(float length, float radius)
@@ -271,6 +524,7 @@ namespace AlienDefense.Player
 
         public void SetBeamLength(float length)
         {
+            _beamLength = length;
             ApplyConeScale(_beamConeOuter, length, keepRadius: true);
             ApplyConeScale(_beamConeInner, length, keepRadius: true);
             _beamSparkAttractor?.SetMaxHeight(length);
@@ -299,7 +553,12 @@ namespace AlienDefense.Player
 
             if (_groundRing != null)
             {
-                _groundRingBaseScale = new Vector3(visualRadius * 2f, 1f, visualRadius * 2f);
+                // The ring IS the capture area: sized from the gameplay radius itself (not the narrower cone), so
+                // anything the beam can grab is inside the rim the player sees. The ring texture draws its bright
+                // rim at RingTextureRimRadius of the quad, not at the quad's edge, so the quad is scaled up to put
+                // that visible rim - rather than the invisible quad border - exactly on AttractionRadius.
+                float ringDiameter = radius * 2f / RingTextureRimRadius;
+                _groundRingBaseScale = new Vector3(ringDiameter, 1f, ringDiameter);
                 _groundRing.transform.localScale = _groundRingBaseScale;
                 RestartGroundRingPulse(); // the loop tweens around this base scale, so it has to be rebuilt
             }
@@ -471,6 +730,7 @@ namespace AlienDefense.Player
             _targetIntensity = isEnabled ? (currentCount > 0 ? 1f : _idleIntensity) : 0f;
             RetargetIntensity();
             RestartGroundRingPulse(); // stops breathing when the beam is switched off, resumes when it's back
+            RestartGroundRipple();
 
             if (_beamParticles != null)
             {
@@ -546,8 +806,10 @@ namespace AlienDefense.Player
 
             _intensityTween?.Kill();
             _groundRingTween?.Kill();
+            _groundRippleTween?.Kill();
             _intensityTween = null;
             _groundRingTween = null;
+            _groundRippleTween = null;
         }
     }
 }

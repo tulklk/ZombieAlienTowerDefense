@@ -15,12 +15,20 @@ MonoBehaviour:
   _id: wave_03
   _displayName: Wave 3
   _spawnGroups:
-  - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
-    _count: 6
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+      _count: 6
     _delayBeforeGroup: 0
-    _spawnInterval: 0.8
-  - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
-    _count: 3
-    _delayBeforeGroup: 1.5
-    _spawnInterval: 0.9
+    _spawnInterval: 1.15
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
+  - _entries:
+    - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
+      _count: 2
+    _delayBeforeGroup: 1.2
+    _spawnInterval: 1.15
+    _interleaveEntries: 0
+    _enemyDefinition: {fileID: 0}
+    _count: 1
   _preparationDurationOverride: -1
