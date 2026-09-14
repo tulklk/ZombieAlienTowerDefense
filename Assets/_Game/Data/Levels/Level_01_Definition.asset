@@ -24,13 +24,5 @@ MonoBehaviour:
   _maxSpeedMultiplier: 1.22
   _debugWaveLogs: 0
   _waves:
-  - {fileID: 11400000, guid: 66fef40b03fc51b4e8ae2ac8cdaa12c6, type: 2}
-  - {fileID: 11400000, guid: 557d0c94cecea2a41b119eb5222b7a11, type: 2}
-  - {fileID: 11400000, guid: 9e79d8fbd0c535b47987e0160ce9dc67, type: 2}
-  - {fileID: 11400000, guid: 555ea1184a3448248aefec478f82001d, type: 2}
-  - {fileID: 11400000, guid: 9f0ded07f0463674689b6987882e7e6a, type: 2}
-  - {fileID: 11400000, guid: 3cab927218ede3f48a7658592789b2c6, type: 2}
-  - {fileID: 11400000, guid: 49c4968097b322640b39d8e0f21bfaf0, type: 2}
-  - {fileID: 11400000, guid: 875370d789bce5149806c67ecf729c27, type: 2}
-  - {fileID: 11400000, guid: 3eb88c02be914f7429028db0b11487dc, type: 2}
-  - {fileID: 11400000, guid: 479bbf7c75b1df240814514b849aabf8, type: 2}
+  - {fileID: 11400000, guid: c89e129dcc9c60e45b93709e2f974cbb, type: 2}
+  _bossEncounter: {fileID: 11400000, guid: da863f9ed8dd58a4ba36d9fe004eea69, type: 2}

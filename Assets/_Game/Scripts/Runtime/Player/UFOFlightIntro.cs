@@ -1,5 +1,6 @@
 using System;
 using AlienDefense.CameraSystem;
+using AlienDefense.Vfx;
 using DG.Tweening;
 using UnityEngine;
 
@@ -36,6 +37,11 @@ namespace AlienDefense.Player
         [SerializeField]
         [Tooltip("Optional. Hidden during intro (e.g. Canvas/.../BottomControls).")]
         private GameObject _joystickRoot;
+
+        [SerializeField]
+        [Tooltip("Optional. Takeoff effects - cued at this sequence's phase boundaries (startup, lift-off, travel, " +
+            "finish). Visual only; the flight works the same without it.")]
+        private UFOTakeoffVFX _takeoffVfx;
 
         [Header("Timing")]
         [SerializeField, Min(0f)]
@@ -128,6 +134,7 @@ namespace AlienDefense.Player
             // Re-assert launch pose after PlayerMovement.Initialize hover snap in Awake.
             BeginLockedStartPose();
             _cameraController?.SnapToTargetImmediate();
+            _takeoffVfx?.Prepare(); // clean slate - nothing left over from a previous run of the intro
             PlayIntroSequence();
         }
 
@@ -231,6 +238,18 @@ namespace AlienDefense.Player
                 _introSequence.Append(_ufo.DOMove(skyPosition, _settleDuration * 0.5f).SetEase(_settleEase));
             }
 
+            // Takeoff VFX cues, at the absolute times the flight phases above begin. Inserted rather than appended so
+            // they sit on the existing timeline without shifting any movement.
+            if (_takeoffVfx != null)
+            {
+                // Startup is started right here rather than from a callback at 0: a tween created inside a sequence
+                // callback only starts updating on the following frame, and the level's first frame is a long one -
+                // that put every startup cue a whole hitch behind the movement. Created now, both share that update.
+                _takeoffVfx.PlayStartup();
+                _introSequence.InsertCallback(_startDelay, _takeoffVfx.PlayLiftOff);
+                _introSequence.InsertCallback(_startDelay + _liftDuration, _takeoffVfx.PlayTravel);
+            }
+
             _introSequence.OnComplete(CompleteIntro);
         }
 
@@ -244,6 +263,7 @@ namespace AlienDefense.Player
             ApplySkyPose();
             RestoreCharacterController(true);
             SetJoystickVisible(true);
+            _takeoffVfx?.StopTakeoff();
             if (_tractorBeam != null)
             {
                 _tractorBeam.SetEnabled(true);

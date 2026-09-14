@@ -25,6 +25,13 @@ namespace AlienDefense.UI
         /// popup is even worth it (see PlayerBuildNodeProximityController.ResolveChannelComplete).</summary>
         public bool HasAnyAffordableTower()
         {
+            return HasAnyAffordableTower(null);
+        }
+
+        /// <summary>Same, counting the Energy already deposited into <paramref name="node"/> (see
+        /// EnergyTowerTransactionService.TryDeposit).</summary>
+        public bool HasAnyAffordableTower(BuildNode node)
+        {
             if (_catalog == null || _transactionService == null)
             {
                 return false;
@@ -32,7 +39,7 @@ namespace AlienDefense.UI
 
             for (int i = 0; i < _catalog.Length; i++)
             {
-                if (_catalog[i] != null && _transactionService.CanAffordBuild(_catalog[i]))
+                if (_catalog[i] != null && _transactionService.CanAffordBuild(node, _catalog[i]))
                 {
                     return true;
                 }
@@ -105,7 +112,7 @@ namespace AlienDefense.UI
                 }
 
                 int cost = _transactionService != null ? _transactionService.GetBuildCost(definition) : 0;
-                bool affordable = _transactionService != null && _transactionService.CanAffordBuild(definition);
+                bool affordable = _transactionService != null && _transactionService.CanAffordBuild(node, definition);
                 cards[i] = new TowerCardData(definition.DisplayName, definition.Description, cost + " Energy", definition.Icon, affordable);
             }
 

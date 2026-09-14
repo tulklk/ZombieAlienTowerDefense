@@ -172,7 +172,7 @@ namespace AlienDefense.EditorTools
             Image fillImage = contents.transform.Find("HealthBarAnchor/EnemyHealthBarCanvas/Fill")?.GetComponent<Image>();
             if (fillImage != null && fillImage.sprite == null)
             {
-                fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                fillImage.sprite = EditorScreenBuildingBlocks.SquareBarSprite();
                 PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
                 Debug.Log("[AlienDefense Setup] Migrated " + prefabPath + ": assigned Fill sprite so the health bar reflects damage.");
             }
@@ -337,7 +337,7 @@ namespace AlienDefense.EditorTools
             fillRect.offsetMin = new Vector2(2f, 2f);
             fillRect.offsetMax = new Vector2(-2f, -2f);
             var fillImage = fill.GetComponent<Image>();
-            fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            fillImage.sprite = EditorScreenBuildingBlocks.SquareBarSprite();
             fillImage.color = new Color(0.2f, 0.85f, 0.3f);
             fillImage.type = Image.Type.Filled;
             fillImage.fillMethod = Image.FillMethod.Horizontal;

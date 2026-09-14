@@ -72,6 +72,12 @@ namespace AlienDefense.Building
             tower.SetBuildNodeOwner(node);
             tower.RegisterInvestment(definition.BuildCost);
 
+            // Visual only - the tower is already fully active.
+            if (tower.TryGetComponent(out TowerConstructionVFX construction))
+            {
+                construction.PlayConstruction();
+            }
+
             var result = new BuildOperationResult(BuildResult.Success, tower, _economy.CurrentResource);
             BuildCompleted?.Invoke(node, tower);
             return result;

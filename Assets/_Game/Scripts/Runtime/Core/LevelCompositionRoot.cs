@@ -9,6 +9,7 @@ using AlienDefense.DebugTools;
 using AlienDefense.Economy;
 using AlienDefense.Enemies;
 using AlienDefense.Environment;
+using AlienDefense.Level;
 using AlienDefense.Pickups;
 using AlienDefense.Player;
 using AlienDefense.Progression;
@@ -140,6 +141,11 @@ namespace AlienDefense.Core
         [SerializeField]
         [Tooltip("Optional. Shown only while a Boss is alive.")]
         private BossHealthBarPresenter _bossHealthBarPresenter;
+
+        [SerializeField]
+        [Tooltip("Optional. Plays the boss introduction cinematic for a LevelDefinition with a Boss Encounter. " +
+            "Without it the boss group is released the moment it spawns.")]
+        private BossIntroController _bossIntroController;
 
         [SerializeField]
         [Tooltip("Optional (Phase 6, before the Building system exists).")]
@@ -409,6 +415,7 @@ namespace AlienDefense.Core
             if (_tractorBeamController != null)
             {
                 _tractorBeamController.PropAbsorbed -= HandlePropAbsorbedForExperience;
+                _tractorBeamController.EnergyCargoFullRefused -= HandleEnergyCargoFullRefused;
             }
 
             if (GameFlow != null)
@@ -555,9 +562,10 @@ namespace AlienDefense.Core
                 return;
             }
 
-            _tractorBeamController.Initialize(Enemies, _energyPickupRegistry, _environmentPropRegistry);
+            _tractorBeamController.Initialize(Enemies, _energyPickupRegistry, _environmentPropRegistry, EnergyWallet, _applicationServices?.SettingsService);
             _tractorBeamVisual?.Initialize(_tractorBeamController, _cameraTransform);
             _tractorBeamController.PropAbsorbed += HandlePropAbsorbedForExperience;
+            _tractorBeamController.EnergyCargoFullRefused += HandleEnergyCargoFullRefused;
 
             _tractorBeamAudio = new TractorBeamAudioController(_audioService, _tractorBeamLoopSource, _tractorBeamLoopClip, _tractorBeamCaptureClip);
             _tractorBeamAudio.Initialize(_tractorBeamController);
@@ -581,6 +589,11 @@ namespace AlienDefense.Core
         private void HandlePropAbsorbedForExperience(TractorAbsorbableProp prop)
         {
             PlayerLevelProgression?.AddExperience(prop.ExperienceReward);
+        }
+
+        private void HandleEnergyCargoFullRefused()
+        {
+            _gameHUDPresenter?.NotifyCargoFullRefuse();
         }
 
         private void InitializeTowerSystem()
@@ -664,9 +677,9 @@ namespace AlienDefense.Core
             }
         }
 
-        /// <summary>Keeps every BuildNode's "{wallet}/{cost}" Energy badge showing the current wallet balance -
-        /// cheap (just text), so it's fine to refresh every node on every wallet change rather than only the
-        /// nearest one.</summary>
+        /// <summary>Keeps every BuildNode's "{deposited}/{cost}" Energy badge and its "can finish" arrow current -
+        /// deposits move Energy out of the wallet, and the arrow depends on the wallet balance. Cheap (just text),
+        /// so it's fine to refresh every node on every wallet change rather than only the nearest one.</summary>
         private void HandleEnergyChangedForBuildBadges(int currentEnergy)
         {
             _playerBuildNodeProximity?.RefreshAllCostBadges();
@@ -720,6 +733,12 @@ namespace AlienDefense.Core
                 waves[i] = _resolvedLevelDefinition.GetWave(i);
             }
 
+            _waveController.ConfigureBossEncounter(_resolvedLevelDefinition.BossEncounter);
+            if (_bossIntroController != null)
+            {
+                _bossIntroController.Initialize(_waveController);
+            }
+
             _waveController.Initialize(
                 EnemySpawner,
                 waves,
@@ -763,6 +782,20 @@ namespace AlienDefense.Core
                     }
 
                     group.CollectDefinitions(seenDefinitions);
+                }
+            }
+
+            BossEncounterDefinition encounter = _resolvedLevelDefinition.BossEncounter;
+            if (encounter != null && encounter.IsValid)
+            {
+                seenDefinitions.Add(encounter.BossDefinition);
+                for (int e = 0; e < encounter.EscortEntryCount; e++)
+                {
+                    EnemySpawnEntry entry = encounter.GetEscortEntry(e);
+                    if (entry != null && entry.IsValid)
+                    {
+                        seenDefinitions.Add(entry.EnemyDefinition);
+                    }
                 }
             }
 
@@ -836,7 +869,12 @@ namespace AlienDefense.Core
                 }
             }
 
-            if (_player != null)
+            // The boss intro owns player input while it plays and hands it back itself when it ends - a pause /
+            // resume in the middle must not re-enable movement or build input underneath the cinematic.
+            bool bossIntroOwnsInput = _bossIntroController != null && _bossIntroController.IsPlaying
+                && current != GameState.Victory && current != GameState.Defeat;
+
+            if (_player != null && !bossIntroOwnsInput)
             {
                 bool movementEnabled = current != GameState.Paused
                     && current != GameState.Victory
@@ -852,7 +890,7 @@ namespace AlienDefense.Core
                 _worldSelectionController.SetInputEnabled(buildInputEnabled);
             }
 
-            if (_playerBuildNodeProximity != null)
+            if (_playerBuildNodeProximity != null && !bossIntroOwnsInput)
             {
                 bool buildInputEnabled = current != GameState.Paused
                     && current != GameState.Victory

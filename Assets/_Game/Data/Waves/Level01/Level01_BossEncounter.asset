@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edce92aef2e0afb4cb3fb1fc223f3710, type: 3}
+  m_Name: Level01_BossEncounter
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Waves.BossEncounterDefinition
+  _bossDefinition: {fileID: 11400000, guid: 08ba340cee5d86b45ada6126c150fac0, type: 2}
+  _bossSlot:
+    DistanceAlongPath: 12
+    LateralOffset: 0
+  _bossMinionsEnabled: 0
+  _escorts:
+  - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+    _count: 8
+  - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
+    _count: 2
+  _escortSlots:
+  - DistanceAlongPath: 9.4
+    LateralOffset: -3
+  - DistanceAlongPath: 9.4
+    LateralOffset: 3
+  - DistanceAlongPath: 7.3
+    LateralOffset: -1.6
+  - DistanceAlongPath: 7.3
+    LateralOffset: 1.6
+  - DistanceAlongPath: 5.6
+    LateralOffset: -3.3
+  - DistanceAlongPath: 5.6
+    LateralOffset: 3.3
+  - DistanceAlongPath: 3.6
+    LateralOffset: -1.7
+  - DistanceAlongPath: 3.6
+    LateralOffset: 1.7
+  - DistanceAlongPath: 1.6
+    LateralOffset: -3
+  - DistanceAlongPath: 1.6
+    LateralOffset: 3
+  _delayAfterNormalWaves: 0.75
+  _debugSkipNormalWaves: 0

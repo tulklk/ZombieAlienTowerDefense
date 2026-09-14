@@ -19,6 +19,7 @@ namespace AlienDefense.Enemies
         private float _laneOffset;
         private bool _isInitialized;
         private bool _isMoving;
+        private bool _isPaused;
         private bool _destinationReachedFired;
 
         private float _statusSpeedMultiplier = 1f;
@@ -78,12 +79,68 @@ namespace AlienDefense.Enemies
             _behaviorSpeedMultiplier = 1f;
             _isInitialized = true;
             _isMoving = true;
+            _isPaused = false;
         }
 
         public void StopMovement()
         {
             _isMoving = false;
             CurrentMoveDirection = Vector2.zero;
+        }
+
+        /// <summary>Holds this enemy in place without ending its walk (used while a boss intro is on screen).
+        /// Unlike StopMovement, un-pausing resumes the path exactly where it was.</summary>
+        public void SetPaused(bool paused)
+        {
+            _isPaused = paused;
+            if (paused)
+            {
+                CurrentMoveDirection = Vector2.zero;
+            }
+        }
+
+        /// <summary>Re-places a freshly initialized enemy <paramref name="distanceAlongPath"/> metres down its path on
+        /// a chosen lane (instead of the random lane at waypoint 0 that Initialize picks), facing the direction of
+        /// travel. Used to lay out a boss encounter's formation; the enemy then walks on from there normally.</summary>
+        public void PlaceAlongPath(float distanceAlongPath, float laneOffset)
+        {
+            if (!_isInitialized || _path == null)
+            {
+                return;
+            }
+
+            _laneOffset = Mathf.Clamp(laneOffset, -_path.LaneHalfWidth - 1f, _path.LaneHalfWidth + 1f);
+
+            float remaining = Mathf.Max(0f, distanceAlongPath);
+            int segment = 1;
+            Vector3 from = LanePoint(0);
+            Vector3 to = LanePoint(1);
+            while (true)
+            {
+                float length = Vector3.Distance(from, to);
+                if (remaining <= length || segment >= _path.Count - 1)
+                {
+                    Vector3 position = length > 0.0001f ? Vector3.Lerp(from, to, Mathf.Clamp01(remaining / length)) : from;
+                    position.y = SampleGroundHeight(position, position.y);
+                    transform.position = position;
+
+                    Vector3 flat = new Vector3(to.x - from.x, 0f, to.z - from.z);
+                    if (flat.sqrMagnitude > 0.0001f)
+                    {
+                        transform.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
+                    }
+
+                    _targetWaypointIndex = segment;
+                    CacheSegmentLength();
+                    UpdatePathProgress(position);
+                    return;
+                }
+
+                remaining -= length;
+                segment++;
+                from = to;
+                to = LanePoint(segment);
+            }
         }
 
         /// <summary>Driven by EnemyStatusController (e.g. Slow). Not editable directly on EnemyDefinition.</summary>
@@ -100,7 +157,7 @@ namespace AlienDefense.Enemies
 
         private void Update()
         {
-            if (!_isInitialized || !_isMoving)
+            if (!_isInitialized || !_isMoving || _isPaused)
             {
                 return;
             }

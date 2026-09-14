@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using AlienDefense.Enemies;
 using UnityEditor;
@@ -28,20 +30,29 @@ namespace AlienDefense.EditorTools
         private struct Variant
         {
             public int Number;
+            /// <summary>Folder under Prefabs/ — defaults to Number.ToString(); use "Boss" for the boss pack.</summary>
+            public string FolderKey;
             public string FbxFileName;
             public string ObjFolderName;
             public string ObjBaseName;
             public string DisplayName;
             public string AttackFbxFileName;
+            /// <summary>When set, remap the walk FBX to this existing Materials/{name}.mat instead of OBJ textures.</summary>
+            public string ExistingMaterialName;
 
-            public Variant(int number, string fbxFileName, string objFolderName, string objBaseName, string displayName, string attackFbxFileName)
+            public string Folder => string.IsNullOrEmpty(FolderKey) ? Number.ToString() : FolderKey;
+
+            public Variant(int number, string fbxFileName, string objFolderName, string objBaseName, string displayName, string attackFbxFileName,
+                string folderKey = null, string existingMaterialName = null)
             {
                 Number = number;
+                FolderKey = folderKey;
                 FbxFileName = fbxFileName;
                 ObjFolderName = objFolderName;
                 ObjBaseName = objBaseName;
                 DisplayName = displayName;
                 AttackFbxFileName = attackFbxFileName;
+                ExistingMaterialName = existingMaterialName;
             }
         }
 
@@ -52,6 +63,18 @@ namespace AlienDefense.EditorTools
             new Variant(3, "Walking3.fbx", "zomb3", "zomb3", "ZombieVariant3", "Attack3.fbx"),
             new Variant(4, "Walking5.fbx", "zomb5", "zomb5", "ZombieVariant4", "Attack4.fbx"),
         };
+
+        /// <summary>Folder 5 / 7 / Boss — replace duplicate Enemy_Shield / Armored / Boss visuals.</summary>
+        private static readonly Variant[] ExtendedVariants =
+        {
+            new Variant(5, "Walking5.fbx", "zom5", null, "ZombieVariant5", "Attack5.fbx",
+                existingMaterialName: "ZombieVariant5_Mat"),
+            new Variant(7, "Walking7.fbx", "zomb7", "zomb7", "ZombieVariant7", "Attack7.fbx"),
+            new Variant(0, "BossWalk.fbx", "bossmodel", null, "BossVariant", "BossAttack.fbx",
+                folderKey: "Boss", existingMaterialName: "BossModel_Mat"),
+        };
+
+        private static IEnumerable<Variant> AllVariants => Variants.Concat(ExtendedVariants);
 
         /// <summary>Convenience wrapper for the menu item — runs both phases back to back. When driving this
         /// from an external script-execution tool (RunCommand-style, one Editor tick per call), call
@@ -84,9 +107,11 @@ namespace AlienDefense.EditorTools
 
         private static void BuildOneVariantImportsAndController(Variant variant)
         {
-            string variantFolder = RootFolder + "/" + variant.Number;
+            string variantFolder = RootFolder + "/" + variant.Folder;
             string fbxPath = variantFolder + "/" + variant.FbxFileName;
-            string objFolder = variantFolder + "/" + variant.ObjFolderName;
+            string objFolder = string.IsNullOrEmpty(variant.ObjFolderName)
+                ? null
+                : variantFolder + "/" + variant.ObjFolderName;
 
             var modelImporter = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
             if (modelImporter == null)
@@ -121,10 +146,15 @@ namespace AlienDefense.EditorTools
 
             // Bug 3: the FBX's embedded material has no textures (Mixamo's re-export drops the original PBR
             // textures entirely — confirmed directly, _BaseMap/_BumpMap both read back null before this fix).
-            // The matching textures still exist right next to the static OBJ in the same numbered folder
-            // (same "tripo_node_*"/"tripo_material_*" GUID as the FBX's mesh/material, i.e. the same source
-            // model), so re-apply them here instead of leaving the character plain white.
-            FixMaterial(fbxPath, objFolder, variant.ObjBaseName, variant.DisplayName, variantFolder);
+            // Folder 5/Boss already have extracted URP mats from Fix Tripo Textures; folder 7 uses OBJ textures.
+            if (!string.IsNullOrEmpty(variant.ExistingMaterialName))
+            {
+                RemapToExistingMaterial(fbxPath, variantFolder, variant.ExistingMaterialName);
+            }
+            else
+            {
+                FixMaterial(fbxPath, objFolder, variant.ObjBaseName, variant.DisplayName, variantFolder);
+            }
 
             // Picking the walk clip by "first AnimationClip sub-asset found" was the actual bug behind the
             // zombies standing frozen instead of looping: Unity's ModelImporter also leaves a SEPARATE,
@@ -145,6 +175,29 @@ namespace AlienDefense.EditorTools
             BuildWalkOnlyController(variantFolder, variant.DisplayName, walkClip);
         }
 
+        private static void RemapToExistingMaterial(string fbxPath, string variantFolder, string materialAssetName)
+        {
+            var modelImporter = (ModelImporter)AssetImporter.GetAtPath(fbxPath);
+            Material embedded = AssetDatabase.LoadAllAssetsAtPath(fbxPath).OfType<Material>().FirstOrDefault();
+            if (embedded == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] No embedded material in " + fbxPath);
+                return;
+            }
+
+            string matPath = variantFolder + "/Materials/" + materialAssetName + ".mat";
+            Material extracted = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (extracted == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] Existing material not found: " + matPath +
+                                 " (run Fix Tripo Textures first).");
+                return;
+            }
+
+            modelImporter.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), embedded.name), extracted);
+            modelImporter.SaveAndReimport();
+        }
+
         /// <summary>Phase B: builds the standalone prefab for each variant and wires it onto its assigned
         /// Enemy_* prefab. Must run as a genuinely separate top-level call from BuildImportsAndControllers
         /// (a fresh Editor tick later, e.g. a second RunCommand invocation) — NOT merely later in the same
@@ -159,7 +212,7 @@ namespace AlienDefense.EditorTools
         {
             foreach (var variant in Variants)
             {
-                string variantFolder = RootFolder + "/" + variant.Number;
+                string variantFolder = RootFolder + "/" + variant.Folder;
                 string fbxPath = variantFolder + "/" + variant.FbxFileName;
                 string controllerPath = variantFolder + "/" + variant.DisplayName + "_Walk.controller";
 
@@ -243,6 +296,677 @@ namespace AlienDefense.EditorTools
 
             modelImporter.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), embedded.name), extracted);
             modelImporter.SaveAndReimport();
+        }
+
+        private const string Zom5TripoFbxPath =
+            RootFolder + "/5/zom5/tripo_convert_2d217258-1158-420c-953b-0a278db197cf.fbx";
+        private const string BossTripoFbxPath =
+            RootFolder + "/Boss/bossmodel/tripo_convert_2b99b395-9234-465e-9cf3-2dd32c4de928.fbx";
+        private const string FixTripoTexturesRequestPath = "Assets/_Game/EditorReports/FixTripoTextures.request";
+
+        [InitializeOnLoadMethod]
+        private static void AutoRunFixTripoIfRequested()
+        {
+            if (!File.Exists(FixTripoTexturesRequestPath))
+            {
+                return;
+            }
+
+            EditorApplication.delayCall += () =>
+            {
+                if (!File.Exists(FixTripoTexturesRequestPath))
+                {
+                    return;
+                }
+
+                try
+                {
+                    File.Delete(FixTripoTexturesRequestPath);
+                    string meta = FixTripoTexturesRequestPath + ".meta";
+                    if (File.Exists(meta))
+                    {
+                        File.Delete(meta);
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                FixTripoTexturesZombie5AndBoss();
+            };
+        }
+
+        /// <summary>Fixes Tripo FBX models whose PBR textures live in a sibling .fbm folder.
+        /// Note: folder 5's Walking5 Mixamo mesh must NOT use the static Tripo BaseColor (UV mismatch) —
+        /// use FixZombieVariant5MixamoTextures for that. This only remaps the static zom5 / bossmodel FBXs.</summary>
+        [MenuItem("AlienDefense/Setup/Fix Tripo Textures (Zombie 5 + Boss)")]
+        public static void FixTripoTexturesZombie5AndBoss()
+        {
+            // Static Tripo FBX only — do not overwrite ZombieVariant5_Mat (used by Walking5 Mixamo mesh).
+            FixTripoFbmMaterial(Zom5TripoFbxPath, "Zom5Static", RootFolder + "/5");
+            FixTripoFbmMaterial(BossTripoFbxPath, "BossModel", RootFolder + "/Boss");
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[ZombieVariantBuilder] Tripo texture fix applied to static zom5 FBX and Boss (bossmodel).");
+        }
+
+        /// <summary>Fixes ZombieVariant5 Walk mesh: Walking5.fbx expects Mixamo companion textures
+        /// (zomb6_basecolor.jpg), not the static Tripo NewUVMap BaseColor.png.
+        /// If ExtractTextures cannot produce zomb6_*, remaps Mixamo mesh UVs to the static Tripo NewUVMap
+        /// so the existing .fbm BaseColor/Normal can be used correctly.</summary>
+        [MenuItem("AlienDefense/Setup/Fix ZombieVariant5 Mixamo Textures")]
+        public static void FixZombieVariant5MixamoTextures()
+        {
+            const string variantFolder = RootFolder + "/5";
+            const string walkFbxPath = variantFolder + "/Walking5.fbx";
+            const string attackFbxPath = variantFolder + "/Attack5.fbx";
+            const string texturesFolder = variantFolder + "/Textures";
+            const string matName = "ZombieVariant5_Mat";
+            const string fbmFolder = variantFolder + "/zom5/tripo_convert_2d217258-1158-420c-953b-0a278db197cf.fbm";
+
+            var walkImporter = AssetImporter.GetAtPath(walkFbxPath) as ModelImporter;
+            if (walkImporter == null)
+            {
+                Debug.LogError("[ZombieVariantBuilder] Missing Walking5.fbx at " + walkFbxPath);
+                return;
+            }
+
+            EditorFolderUtility.EnsureFolder(texturesFolder);
+
+            // Extract embedded / referenced textures next to the Mixamo FBX.
+            walkImporter.ExtractTextures(texturesFolder);
+            AssetDatabase.Refresh();
+
+            // Only accept Mixamo companion textures — never the Tripo .fbm BaseColor (wrong UV layout).
+            string baseColorPath = FindTextureInFolderFlexible(texturesFolder,
+                new[] { "zomb6_basecolor", "basecolor", "BaseColor", "diffuse", "Diffuse", "albedo", "Albedo" });
+            string normalPath = FindTextureInFolderFlexible(texturesFolder,
+                new[] { "normal", "Normal", "Normal_Bake", "nrm" });
+
+            bool usedUvRemapFallback = false;
+            if (string.IsNullOrEmpty(baseColorPath))
+            {
+                // External Mixamo jpg was never shipped with the FBX — align Walking/Attack UVs to Tripo NewUVMap.
+                string uvReport;
+                if (!TryRemapVariant5MixamoUvsToTripo(walkFbxPath, attackFbxPath, variantFolder, out uvReport))
+                {
+                    string msg =
+                        "[ZombieVariantBuilder] Could not find Mixamo basecolor for Walking5 and UV remap failed. " +
+                        "Drop zomb6_basecolor.jpg (from the Mixamo download) into " + texturesFolder +
+                        " then re-run this menu.\n" + uvReport;
+                    Debug.LogError(msg);
+                    WriteVariant5TextureReport("missing_basecolor_and_uv_remap_failed\n" + uvReport, texturesFolder);
+                    return;
+                }
+
+                usedUvRemapFallback = true;
+                baseColorPath = FindTextureInFolderFlexible(fbmFolder, new[] { "BaseColor", "basecolor" });
+                normalPath = FindTextureInFolderFlexible(fbmFolder, new[] { "Normal_Bake", "Normal", "normal" });
+                WriteVariant5TextureReport("uv_remap_fallback\n" + uvReport, texturesFolder);
+                Debug.Log("[ZombieVariantBuilder] Mixamo zomb6 texture missing — applied Tripo NewUVMap onto Walking5/Attack5. " + uvReport);
+            }
+
+            if (string.IsNullOrEmpty(baseColorPath))
+            {
+                Debug.LogError("[ZombieVariantBuilder] No basecolor path resolved for ZombieVariant5.");
+                WriteVariant5TextureReport("missing_basecolor_after_fallback", texturesFolder);
+                return;
+            }
+
+            EnsureNormalMapImport(normalPath, isNormalMap: true);
+            EnsureNormalMapImport(baseColorPath, isNormalMap: false);
+
+            Texture baseColorTex = AssetDatabase.LoadAssetAtPath<Texture>(baseColorPath);
+            Texture normalTex = string.IsNullOrEmpty(normalPath)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<Texture>(normalPath);
+
+            if (baseColorTex == null)
+            {
+                Debug.LogError("[ZombieVariantBuilder] Failed to load basecolor at " + baseColorPath);
+                return;
+            }
+
+            string matFolder = variantFolder + "/Materials";
+            EditorFolderUtility.EnsureFolder(matFolder);
+            string matPath = matFolder + "/" + matName + ".mat";
+
+            Material embedded = AssetDatabase.LoadAllAssetsAtPath(walkFbxPath).OfType<Material>().FirstOrDefault();
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                mat = embedded != null ? new Material(embedded) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+            else if (embedded != null)
+            {
+                mat.shader = embedded.shader != null
+                    ? embedded.shader
+                    : Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            mat.SetTexture("_BaseMap", baseColorTex);
+            mat.SetTexture("_MainTex", baseColorTex);
+            if (normalTex != null)
+            {
+                mat.SetTexture("_BumpMap", normalTex);
+                mat.EnableKeyword("_NORMALMAP");
+            }
+            else
+            {
+                mat.SetTexture("_BumpMap", null);
+                mat.DisableKeyword("_NORMALMAP");
+            }
+
+            if (mat.HasProperty("_Smoothness"))
+            {
+                mat.SetFloat("_Smoothness", 0.35f);
+            }
+
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+
+            RemapFbxToMaterial(walkFbxPath, mat);
+            if (AssetImporter.GetAtPath(attackFbxPath) != null)
+            {
+                RemapFbxToMaterial(attackFbxPath, mat);
+            }
+
+            // Refresh standalone prefab: materials + remapped mesh assets (if UV fallback created them).
+            string prefabPath = variantFolder + "/ZombieVariant5.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
+            {
+                GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+                Mesh remappedWalk = AssetDatabase.LoadAssetAtPath<Mesh>(variantFolder + "/ZombieVariant5_RemappedMesh.asset");
+                foreach (var renderer in contents.GetComponentsInChildren<Renderer>(true))
+                {
+                    var mats = renderer.sharedMaterials;
+                    for (int i = 0; i < mats.Length; i++)
+                    {
+                        mats[i] = mat;
+                    }
+
+                    renderer.sharedMaterials = mats;
+
+                    if (usedUvRemapFallback && remappedWalk != null)
+                    {
+                        if (renderer is SkinnedMeshRenderer smr)
+                        {
+                            smr.sharedMesh = remappedWalk;
+                        }
+                        else if (renderer is MeshRenderer)
+                        {
+                            var filter = renderer.GetComponent<MeshFilter>();
+                            if (filter != null)
+                            {
+                                filter.sharedMesh = remappedWalk;
+                            }
+                        }
+                    }
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            WriteVariant5TextureReport(
+                "ok\nmode=" + (usedUvRemapFallback ? "uv_remap_to_tripo" : "mixamo_extract") +
+                "\nbaseColor=" + baseColorPath + "\nnormal=" + (normalPath ?? "none") + "\nmat=" + matPath,
+                texturesFolder);
+            Debug.Log("[ZombieVariantBuilder] ZombieVariant5 textures fixed. BaseColor=" + baseColorPath +
+                      " mode=" + (usedUvRemapFallback ? "uv_remap_to_tripo" : "mixamo_extract"));
+        }
+
+        /// <summary>Copies Tripo static NewUVMap onto Mixamo Walking5/Attack5 meshes so .fbm BaseColor matches.</summary>
+        private static bool TryRemapVariant5MixamoUvsToTripo(
+            string walkFbxPath, string attackFbxPath, string variantFolder, out string report)
+        {
+            report = "";
+            EnsureModelReadable(walkFbxPath, true);
+            EnsureModelReadable(Zom5TripoFbxPath, true);
+            if (AssetImporter.GetAtPath(attackFbxPath) != null)
+            {
+                EnsureModelReadable(attackFbxPath, true);
+            }
+
+            Mesh staticMesh = AssetDatabase.LoadAllAssetsAtPath(Zom5TripoFbxPath).OfType<Mesh>()
+                .OrderByDescending(m => m.vertexCount)
+                .FirstOrDefault();
+            Mesh walkMesh = AssetDatabase.LoadAllAssetsAtPath(walkFbxPath).OfType<Mesh>()
+                .OrderByDescending(m => m.vertexCount)
+                .FirstOrDefault();
+
+            if (staticMesh == null || walkMesh == null)
+            {
+                report = "staticMesh=" + (staticMesh != null) + " walkMesh=" + (walkMesh != null);
+                return false;
+            }
+
+            Vector2[] staticUv = staticMesh.uv;
+            if (staticUv == null || staticUv.Length != staticMesh.vertexCount)
+            {
+                report = "static mesh missing uv0 (count=" + (staticUv != null ? staticUv.Length : 0) +
+                         ", verts=" + staticMesh.vertexCount + ")";
+                return false;
+            }
+
+            string mode;
+            Vector2[] walkUv = BuildTransferredUvs(walkMesh, staticMesh, out mode);
+            if (walkUv == null)
+            {
+                report = "uv transfer failed walkVerts=" + walkMesh.vertexCount +
+                         " staticVerts=" + staticMesh.vertexCount;
+                return false;
+            }
+
+            string walkMeshPath = variantFolder + "/ZombieVariant5_RemappedMesh.asset";
+            SaveRemappedSkinnedMesh(walkMesh, walkUv, walkMeshPath);
+
+            string attackNote = "attack=skipped";
+            if (AssetImporter.GetAtPath(attackFbxPath) != null)
+            {
+                Mesh attackMesh = AssetDatabase.LoadAllAssetsAtPath(attackFbxPath).OfType<Mesh>()
+                    .OrderByDescending(m => m.vertexCount)
+                    .FirstOrDefault();
+                if (attackMesh != null)
+                {
+                    string attackMode;
+                    Vector2[] attackUv = BuildTransferredUvs(attackMesh, staticMesh, out attackMode);
+                    if (attackUv != null)
+                    {
+                        SaveRemappedSkinnedMesh(attackMesh, attackUv, variantFolder + "/ZombieVariant5_Attack_RemappedMesh.asset");
+                        attackNote = "attack=" + attackMode + " verts=" + attackMesh.vertexCount;
+                    }
+                    else
+                    {
+                        attackNote = "attack=transfer_failed verts=" + attackMesh.vertexCount;
+                    }
+                }
+            }
+
+            report = "mode=" + mode +
+                     " walkVerts=" + walkMesh.vertexCount +
+                     " staticVerts=" + staticMesh.vertexCount +
+                     " " + attackNote +
+                     " meshAsset=" + walkMeshPath;
+            return true;
+        }
+
+        private static void EnsureModelReadable(string fbxPath, bool readable)
+        {
+            var importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+            if (importer == null)
+            {
+                return;
+            }
+
+            if (importer.isReadable == readable)
+            {
+                return;
+            }
+
+            importer.isReadable = readable;
+            importer.SaveAndReimport();
+        }
+
+        private static Vector2[] BuildTransferredUvs(Mesh dst, Mesh src, out string mode)
+        {
+            mode = null;
+            if (dst.vertexCount == src.vertexCount)
+            {
+                mode = "exact_vertex_order";
+                return (Vector2[])src.uv.Clone();
+            }
+
+            // Spatial nearest-neighbour in normalized local bounds (Mixamo vs Tripo scale/orientation).
+            Vector3[] srcPos = NormalizePositions(src.vertices);
+            Vector3[] dstPos = NormalizePositions(dst.vertices);
+            Vector2[] srcUv = src.uv;
+            var result = new Vector2[dstPos.Length];
+
+            const int grid = 48;
+            var buckets = new List<int>[grid * grid * grid];
+            for (int j = 0; j < srcPos.Length; j++)
+            {
+                int key = GridKey(srcPos[j], grid);
+                if (buckets[key] == null)
+                {
+                    buckets[key] = new List<int>(4);
+                }
+
+                buckets[key].Add(j);
+            }
+
+            for (int i = 0; i < dstPos.Length; i++)
+            {
+                Vector3 p = dstPos[i];
+                int best = 0;
+                float bestDist = float.MaxValue;
+
+                int cx = Mathf.Clamp(Mathf.FloorToInt(p.x * (grid - 1e-4f)), 0, grid - 1);
+                int cy = Mathf.Clamp(Mathf.FloorToInt(p.y * (grid - 1e-4f)), 0, grid - 1);
+                int cz = Mathf.Clamp(Mathf.FloorToInt(p.z * (grid - 1e-4f)), 0, grid - 1);
+
+                for (int ox = -1; ox <= 1; ox++)
+                for (int oy = -1; oy <= 1; oy++)
+                for (int oz = -1; oz <= 1; oz++)
+                {
+                    int x = cx + ox;
+                    int y = cy + oy;
+                    int z = cz + oz;
+                    if (x < 0 || y < 0 || z < 0 || x >= grid || y >= grid || z >= grid)
+                    {
+                        continue;
+                    }
+
+                    List<int> bucket = buckets[x + y * grid + z * grid * grid];
+                    if (bucket == null)
+                    {
+                        continue;
+                    }
+
+                    for (int b = 0; b < bucket.Count; b++)
+                    {
+                        int j = bucket[b];
+                        float d = (srcPos[j] - p).sqrMagnitude;
+                        if (d < bestDist)
+                        {
+                            bestDist = d;
+                            best = j;
+                        }
+                    }
+                }
+
+                // Rare empty-neighbourhood fallback: scan all (should be uncommon).
+                if (bestDist == float.MaxValue)
+                {
+                    for (int j = 0; j < srcPos.Length; j++)
+                    {
+                        float d = (srcPos[j] - p).sqrMagnitude;
+                        if (d < bestDist)
+                        {
+                            bestDist = d;
+                            best = j;
+                        }
+                    }
+                }
+
+                result[i] = srcUv[best];
+            }
+
+            mode = "spatial_nn_grid";
+            return result;
+        }
+
+        private static int GridKey(Vector3 p, int grid)
+        {
+            int x = Mathf.Clamp(Mathf.FloorToInt(p.x * (grid - 1e-4f)), 0, grid - 1);
+            int y = Mathf.Clamp(Mathf.FloorToInt(p.y * (grid - 1e-4f)), 0, grid - 1);
+            int z = Mathf.Clamp(Mathf.FloorToInt(p.z * (grid - 1e-4f)), 0, grid - 1);
+            return x + y * grid + z * grid * grid;
+        }
+
+        private static Vector3[] NormalizePositions(Vector3[] raw)
+        {
+            if (raw == null || raw.Length == 0)
+            {
+                return raw;
+            }
+
+            Bounds b = new Bounds(raw[0], Vector3.zero);
+            for (int i = 1; i < raw.Length; i++)
+            {
+                b.Encapsulate(raw[i]);
+            }
+
+            Vector3 size = b.size;
+            float maxAxis = Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+            if (maxAxis < 1e-5f)
+            {
+                maxAxis = 1f;
+            }
+
+            var normalized = new Vector3[raw.Length];
+            for (int i = 0; i < raw.Length; i++)
+            {
+                Vector3 t = raw[i] - b.min;
+                normalized[i] = new Vector3(t.x / maxAxis, t.y / maxAxis, t.z / maxAxis);
+            }
+
+            return normalized;
+        }
+
+        private static void SaveRemappedSkinnedMesh(Mesh source, Vector2[] uv, string assetPath)
+        {
+            Mesh copy = UnityEngine.Object.Instantiate(source);
+            copy.name = Path.GetFileNameWithoutExtension(assetPath);
+            copy.uv = uv;
+            copy.UploadMeshData(false);
+
+            Mesh existing = AssetDatabase.LoadAssetAtPath<Mesh>(assetPath);
+            if (existing != null)
+            {
+                EditorUtility.CopySerialized(copy, existing);
+                UnityEngine.Object.DestroyImmediate(copy);
+                EditorUtility.SetDirty(existing);
+            }
+            else
+            {
+                AssetDatabase.CreateAsset(copy, assetPath);
+            }
+
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void RemapFbxToMaterial(string fbxPath, Material mat)
+        {
+            var modelImporter = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+            if (modelImporter == null)
+            {
+                return;
+            }
+
+            modelImporter.useFileScale = false;
+            Material embedded = AssetDatabase.LoadAllAssetsAtPath(fbxPath).OfType<Material>().FirstOrDefault();
+            if (embedded == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] No embedded material to remap on " + fbxPath);
+                modelImporter.SaveAndReimport();
+                return;
+            }
+
+            modelImporter.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), embedded.name), mat);
+            modelImporter.SaveAndReimport();
+        }
+
+        private static string FindTextureInFolderFlexible(string folder, string[] nameHints)
+        {
+            string absoluteFolder = Path.GetFullPath(folder);
+            if (!Directory.Exists(absoluteFolder))
+            {
+                return null;
+            }
+
+            string[] files = Directory.GetFiles(absoluteFolder, "*.*", SearchOption.AllDirectories)
+                .Where(f =>
+                {
+                    string ext = Path.GetExtension(f).ToLowerInvariant();
+                    return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga";
+                })
+                .ToArray();
+
+            foreach (string hint in nameHints)
+            {
+                string match = files.FirstOrDefault(f =>
+                    Path.GetFileNameWithoutExtension(f).IndexOf(hint, System.StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!string.IsNullOrEmpty(match))
+                {
+                    return ToAssetsPath(match);
+                }
+            }
+
+            return null;
+        }
+
+        private static string ToAssetsPath(string absoluteOrAssetsPath)
+        {
+            string match = absoluteOrAssetsPath.Replace('\\', '/');
+            const string assetsPrefix = "/Assets/";
+            int assetsIndex = match.IndexOf(assetsPrefix, System.StringComparison.OrdinalIgnoreCase);
+            if (assetsIndex >= 0)
+            {
+                return match.Substring(assetsIndex + 1);
+            }
+
+            if (match.StartsWith("Assets/", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return match;
+            }
+
+            return match;
+        }
+
+        private static void WriteVariant5TextureReport(string body, string texturesFolder)
+        {
+            string reportDir = "Assets/_Game/EditorReports";
+            if (!Directory.Exists(reportDir))
+            {
+                Directory.CreateDirectory(reportDir);
+            }
+
+            File.WriteAllText(
+                Path.Combine(reportDir, "FixZombieVariant5Textures.done"),
+                body + "\ntexturesFolder=" + texturesFolder + "\n");
+        }
+
+        private static void FixTripoFbmMaterial(string fbxPath, string displayName, string variantFolder)
+        {
+            var modelImporter = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+            if (modelImporter == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] Missing FBX: " + fbxPath);
+                return;
+            }
+
+            Material embedded = AssetDatabase.LoadAllAssetsAtPath(fbxPath).OfType<Material>().FirstOrDefault();
+            if (embedded == null)
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] No embedded material in " + fbxPath);
+                return;
+            }
+
+            string fbmFolder = Path.ChangeExtension(fbxPath, ".fbm");
+            if (!AssetDatabase.IsValidFolder(fbmFolder))
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] Missing .fbm folder: " + fbmFolder);
+                return;
+            }
+
+            string baseColorPath = FindTextureInFolder(fbmFolder, "_BaseColor.png");
+            string normalPath = FindTextureInFolder(fbmFolder, "_Normal_Bake.png")
+                                ?? FindTextureInFolder(fbmFolder, "_Normal.png");
+
+            if (string.IsNullOrEmpty(baseColorPath))
+            {
+                Debug.LogWarning("[ZombieVariantBuilder] No BaseColor texture in " + fbmFolder);
+                return;
+            }
+
+            EnsureNormalMapImport(baseColorPath, isNormalMap: false);
+            EnsureNormalMapImport(normalPath, isNormalMap: true);
+
+            Texture baseColorTex = AssetDatabase.LoadAssetAtPath<Texture>(baseColorPath);
+            Texture normalTex = string.IsNullOrEmpty(normalPath)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<Texture>(normalPath);
+
+            string matFolder = variantFolder + "/Materials";
+            EditorFolderUtility.EnsureFolder(matFolder);
+            string matPath = matFolder + "/" + displayName + "_Mat.mat";
+
+            Material extracted = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (extracted == null)
+            {
+                extracted = new Material(embedded);
+                AssetDatabase.CreateAsset(extracted, matPath);
+            }
+            else
+            {
+                extracted.shader = embedded.shader;
+            }
+
+            extracted.SetTexture("_BaseMap", baseColorTex);
+            if (normalTex != null)
+            {
+                extracted.SetTexture("_BumpMap", normalTex);
+                extracted.EnableKeyword("_NORMALMAP");
+            }
+
+            if (extracted.HasProperty("_Smoothness"))
+            {
+                extracted.SetFloat("_Smoothness", 0.35f);
+            }
+
+            EditorUtility.SetDirty(extracted);
+            AssetDatabase.SaveAssets();
+
+            modelImporter.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), embedded.name), extracted);
+            modelImporter.SaveAndReimport();
+
+            Debug.Log("[ZombieVariantBuilder] Fixed " + displayName + " material at " + matPath + ".");
+        }
+
+        private static string FindTextureInFolder(string folder, string suffix)
+        {
+            string absoluteFolder = Path.GetFullPath(folder);
+            if (!Directory.Exists(absoluteFolder))
+            {
+                return null;
+            }
+
+            string match = Directory.GetFiles(absoluteFolder, "*" + suffix, SearchOption.TopDirectoryOnly)
+                .FirstOrDefault();
+            if (string.IsNullOrEmpty(match))
+            {
+                return null;
+            }
+
+            match = match.Replace('\\', '/');
+            const string assetsPrefix = "/Assets/";
+            int assetsIndex = match.IndexOf(assetsPrefix, System.StringComparison.OrdinalIgnoreCase);
+            if (assetsIndex >= 0)
+            {
+                return match.Substring(assetsIndex + 1);
+            }
+
+            return match;
+        }
+
+        private static void EnsureNormalMapImport(string texturePath, bool isNormalMap)
+        {
+            if (string.IsNullOrEmpty(texturePath))
+            {
+                return;
+            }
+
+            var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            if (importer == null)
+            {
+                return;
+            }
+
+            var desired = isNormalMap ? TextureImporterType.NormalMap : TextureImporterType.Default;
+            if (importer.textureType == desired)
+            {
+                return;
+            }
+
+            importer.textureType = desired;
+            importer.SaveAndReimport();
         }
 
         private static AnimatorController BuildWalkOnlyController(string variantFolder, string displayName, AnimationClip walkClip)
@@ -351,22 +1075,16 @@ namespace AlienDefense.EditorTools
         // Wiring onto the existing Enemy_* prefabs
         // ------------------------------------------------------------------------------------------------
 
-        /// <summary>Which Enemy_* prefab gets which of the 4 variants (4 variants, 6 slots — Armored/Shield/Boss
-        /// reuse one each rather than staying broken). Picked after visually confirming all 4 in Prefab Mode:
-        /// Variant1 = suited office zombie (normal build), Variant2 = short round big-head zombie, Variant3 =
-        /// casual denim-jacket zombie (normal build), Variant4 = bulky heavyset zombie. Level_01's actual 10
-        /// waves (Wave_01..10.asset) only ever spawn Normal/Runner/Tank (see WaveDefinitionBuilder) — those
-        /// three get the 3 most visually distinct picks so they never look alike side by side in the same
-        /// wave; Armored/Shield/Boss (used by other wave content, not Level_01's base rotation) reuse those
-        /// same variants rather than needing a 5th/6th distinct art asset.</summary>
+        /// <summary>Which Enemy_* prefab gets which variant. Normal/Runner/Tank keep variants 1/3/4;
+        /// Shield/Armored/Boss use folder 5 / 7 / Boss so no two enemy types share the same mesh.</summary>
         public static readonly (string EnemyPrefab, string VariantDisplayName)[] EnemyAssignments =
         {
             ("Enemy_Normal", "ZombieVariant1"),
             ("Enemy_Runner", "ZombieVariant3"),
             ("Enemy_Tank", "ZombieVariant4"),
-            ("Enemy_Armored", "ZombieVariant2"),
-            ("Enemy_Shield", "ZombieVariant1"),
-            ("Enemy_Boss", "ZombieVariant4"),
+            ("Enemy_Armored", "ZombieVariant7"),
+            ("Enemy_Shield", "ZombieVariant5"),
+            ("Enemy_Boss", "BossVariant"),
         };
 
         [MenuItem("AlienDefense/Setup/8. Wire New Zombie Variants Onto Enemy Prefabs")]
@@ -374,8 +1092,8 @@ namespace AlienDefense.EditorTools
         {
             foreach (var assignment in EnemyAssignments)
             {
-                string variantNumberFolder = Variants.First(v => v.DisplayName == assignment.VariantDisplayName).Number.ToString();
-                string variantPrefabPath = RootFolder + "/" + variantNumberFolder + "/" + assignment.VariantDisplayName + ".prefab";
+                Variant variant = AllVariants.First(v => v.DisplayName == assignment.VariantDisplayName);
+                string variantPrefabPath = RootFolder + "/" + variant.Folder + "/" + assignment.VariantDisplayName + ".prefab";
                 GameObject variantPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(variantPrefabPath);
                 if (variantPrefab == null)
                 {
@@ -424,7 +1142,7 @@ namespace AlienDefense.EditorTools
 
         private static void BuildOneVariantAttackImportAndController(Variant variant)
         {
-            string variantFolder = RootFolder + "/" + variant.Number;
+            string variantFolder = RootFolder + "/" + variant.Folder;
             string attackFbxPath = variantFolder + "/" + variant.AttackFbxFileName;
 
             var modelImporter = AssetImporter.GetAtPath(attackFbxPath) as ModelImporter;
@@ -526,8 +1244,8 @@ namespace AlienDefense.EditorTools
         {
             foreach (var assignment in EnemyAssignments)
             {
-                Variant variant = Variants.First(v => v.DisplayName == assignment.VariantDisplayName);
-                string attackFbxPath = RootFolder + "/" + variant.Number + "/" + variant.AttackFbxFileName;
+                Variant variant = AllVariants.First(v => v.DisplayName == assignment.VariantDisplayName);
+                string attackFbxPath = RootFolder + "/" + variant.Folder + "/" + variant.AttackFbxFileName;
                 AnimationClip attackClip = AssetDatabase.LoadAllAssetsAtPath(attackFbxPath)
                     .OfType<AnimationClip>()
                     .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
@@ -543,6 +1261,146 @@ namespace AlienDefense.EditorTools
 
             AssetDatabase.SaveAssets();
             Debug.Log("[ZombieVariantBuilder] Step 9b done: wired EnemyBaseAttackVisual onto " + EnemyAssignments.Length + " enemy prefabs.");
+        }
+
+        private const string BuildExtendedRequestPath = "Assets/_Game/EditorReports/BuildExtendedVariants.request";
+
+        private static string ResolveProjectRelativePath(string assetsRelativePath)
+        {
+            // InitializeOnLoad may not have CWD = project root; resolve via Application.dataPath.
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            return Path.Combine(projectRoot ?? "", assetsRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        [InitializeOnLoadMethod]
+        private static void AutoRunBuildExtendedIfRequested()
+        {
+            string absoluteRequest = ResolveProjectRelativePath(BuildExtendedRequestPath);
+            if (!File.Exists(absoluteRequest) && !File.Exists(BuildExtendedRequestPath))
+            {
+                return;
+            }
+
+            EditorApplication.delayCall += () =>
+            {
+                string path = File.Exists(absoluteRequest) ? absoluteRequest : BuildExtendedRequestPath;
+                if (!File.Exists(path))
+                {
+                    return;
+                }
+
+                try
+                {
+                    File.Delete(path);
+                    string meta = path + ".meta";
+                    if (File.Exists(meta))
+                    {
+                        File.Delete(meta);
+                    }
+
+                    string assetsMeta = BuildExtendedRequestPath + ".meta";
+                    if (File.Exists(assetsMeta))
+                    {
+                        File.Delete(assetsMeta);
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                Debug.Log("[ZombieVariantBuilder] Auto-running Build Variants 5+7+Boss from request file.");
+                BuildExtendedVariantsPhaseA();
+                EditorApplication.delayCall += BuildExtendedVariantsPhaseB;
+            };
+        }
+
+        /// <summary>Builds Walk+Attack for folder 5 / 7 / Boss, then wires Shield / Armored / Boss enemies.
+        /// Phase A (imports+controllers) then Phase B (prefabs+wire) run on consecutive delayCalls.</summary>
+        [MenuItem("AlienDefense/Setup/10. Build Variants 5+7+Boss And Wire Enemies")]
+        public static void BuildExtendedVariantsAndWireEnemies()
+        {
+            BuildExtendedVariantsPhaseA();
+            EditorApplication.delayCall += BuildExtendedVariantsPhaseB;
+        }
+
+        [MenuItem("AlienDefense/Setup/10a. Build Variants 5+7+Boss - Step 1 (Imports+Controllers)")]
+        public static void BuildExtendedVariantsPhaseA()
+        {
+            foreach (var variant in ExtendedVariants)
+            {
+                BuildOneVariantImportsAndController(variant);
+                BuildOneVariantAttackImportAndController(variant);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[ZombieVariantBuilder] Step 10a done: imports+Walk/Attack controllers for folder 5, 7, Boss.");
+        }
+
+        [MenuItem("AlienDefense/Setup/10b. Build Variants 5+7+Boss - Step 2 (Prefabs+Wire)")]
+        public static void BuildExtendedVariantsPhaseB()
+        {
+            foreach (var variant in ExtendedVariants)
+            {
+                string variantFolder = RootFolder + "/" + variant.Folder;
+                string fbxPath = variantFolder + "/" + variant.FbxFileName;
+                string controllerPath = variantFolder + "/" + variant.DisplayName + "_Walk.controller";
+
+                var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+                if (controller == null)
+                {
+                    Debug.LogWarning("[ZombieVariantBuilder] Controller not found: " + controllerPath + " (run Step 10a first).");
+                    continue;
+                }
+
+                BuildStandalonePrefab(fbxPath, variantFolder, variant.DisplayName, controller);
+            }
+
+            // Only re-wire the three enemies that use extended variants (leave Normal/Runner/Tank alone).
+            string[] extendedEnemyNames = { "Enemy_Shield", "Enemy_Armored", "Enemy_Boss" };
+            foreach (var assignment in EnemyAssignments)
+            {
+                if (!extendedEnemyNames.Contains(assignment.EnemyPrefab))
+                {
+                    continue;
+                }
+
+                Variant variant = AllVariants.First(v => v.DisplayName == assignment.VariantDisplayName);
+                string variantPrefabPath = RootFolder + "/" + variant.Folder + "/" + assignment.VariantDisplayName + ".prefab";
+                GameObject variantPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(variantPrefabPath);
+                if (variantPrefab == null)
+                {
+                    Debug.LogWarning("[ZombieVariantBuilder] Variant prefab not found: " + variantPrefabPath);
+                    continue;
+                }
+
+                ApplyVariantVisualToEnemy(assignment.EnemyPrefab, variantPrefab);
+
+                string attackFbxPath = RootFolder + "/" + variant.Folder + "/" + variant.AttackFbxFileName;
+                AnimationClip attackClip = AssetDatabase.LoadAllAssetsAtPath(attackFbxPath)
+                    .OfType<AnimationClip>()
+                    .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
+                if (attackClip != null)
+                {
+                    WireBaseAttackVisualOntoEnemy(assignment.EnemyPrefab, attackClip.length);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            string reportDir = "Assets/_Game/EditorReports";
+            if (!Directory.Exists(reportDir))
+            {
+                Directory.CreateDirectory(reportDir);
+            }
+
+            File.WriteAllText(
+                Path.Combine(reportDir, "BuildExtendedVariants.done"),
+                "ok\nShield=ZombieVariant5\nArmored=ZombieVariant7\nBoss=BossVariant\n");
+
+            Debug.Log("[ZombieVariantBuilder] Step 10b done: prefabs built and Shield/Armored/Boss wired.");
         }
 
         private static void WireBaseAttackVisualOntoEnemy(string enemyPrefabName, float attackClipLength)
@@ -716,3 +1574,4 @@ namespace AlienDefense.EditorTools
         }
     }
 }
+

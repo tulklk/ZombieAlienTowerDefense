@@ -16,6 +16,7 @@ namespace AlienDefense.UI
         private BaseHealthService _baseHealth;
         private GameSpeedController _gameSpeed;
         private GameFlowController _gameFlow;
+        private bool _wasFull;
 
         public void Initialize(EconomyService economy, EnergyWalletService energyWallet, BaseHealthService baseHealth, GameSpeedController gameSpeed, GameFlowController gameFlow)
         {
@@ -26,6 +27,7 @@ namespace AlienDefense.UI
             _baseHealth = baseHealth;
             _gameSpeed = gameSpeed;
             _gameFlow = gameFlow;
+            _wasFull = false;
 
             if (_economy != null)
             {
@@ -57,6 +59,13 @@ namespace AlienDefense.UI
             RefreshAll();
         }
 
+        /// <summary>Called when the tractor beam is over Idle EnergyPickups while cargo is full.
+        /// Drives presence banner hold + forbidden icon (not a timed auto-dismiss toast).</summary>
+        public void NotifyCargoFullRefuse()
+        {
+            _view?.NotifyCargoFullPresence();
+        }
+
         private void RefreshAll()
         {
             if (_view == null)
@@ -72,6 +81,7 @@ namespace AlienDefense.UI
             if (_energyWallet != null)
             {
                 _view.SetEnergy(_energyWallet.CurrentEnergy, _energyWallet.MaxEnergy);
+                _wasFull = _energyWallet.IsFull;
             }
 
             if (_baseHealth != null)
@@ -92,10 +102,21 @@ namespace AlienDefense.UI
 
         private void HandleEnergyChanged(int amount)
         {
-            if (_energyWallet != null)
+            if (_energyWallet == null)
             {
-                _view?.SetEnergy(amount, _energyWallet.MaxEnergy);
+                return;
             }
+
+            _view?.SetEnergy(amount, _energyWallet.MaxEnergy);
+
+            bool isFull = _energyWallet.IsFull;
+            if (isFull && !_wasFull)
+            {
+                // First time hitting the cap — toast once without requiring another beam refuse.
+                _view?.NotifyCargoFullRefuse();
+            }
+
+            _wasFull = isFull;
         }
 
         private void HandleMaxEnergyChanged(int max)
@@ -103,6 +124,7 @@ namespace AlienDefense.UI
             if (_energyWallet != null)
             {
                 _view?.SetEnergy(_energyWallet.CurrentEnergy, max);
+                _wasFull = _energyWallet.IsFull;
             }
         }
 

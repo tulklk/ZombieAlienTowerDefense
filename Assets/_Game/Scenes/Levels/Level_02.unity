@@ -6053,6 +6053,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.UI.GameHUDView
   _resourceText: {fileID: 1412715473}
+  _energyText: {fileID: 0}
+  _energyForbiddenIcon: {fileID: 0}
+  _cargoFullBanner: {fileID: 0}
   _baseHealthText: {fileID: 1198318150}
   _baseHealthFillImage: {fileID: 376329425}
   _speedText: {fileID: 0}
@@ -6643,6 +6646,7 @@ MonoBehaviour:
   - {fileID: 658846618}
   - {fileID: 904888861}
   - {fileID: 434404742}
+  _laneHalfWidth: 0
 --- !u!1 &939480419
 GameObject:
   m_ObjectHideFlags: 0
@@ -7740,8 +7744,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.UI.WaveHUDView
   _waveText: {fileID: 750218160}
-  _enemyProgressText: {fileID: 1969309115}
+  _levelText: {fileID: 0}
+  _levelProgressText: {fileID: 0}
   _progressFillImage: {fileID: 1843401132}
+  _progressPreviewFillImage: {fileID: 0}
+  _previewFillDuration: 0.22
+  _mainFillDuration: 0.55
+  _mainFillDelay: 0.15
   _countdownPanel: {fileID: 0}
   _countdownText: {fileID: 0}
 --- !u!224 &1094146781
@@ -8989,6 +8998,7 @@ MonoBehaviour:
   - {fileID: 1042136197}
   - {fileID: 1339577947}
   - {fileID: 23544049}
+  _laneHalfWidth: 0
 --- !u!4 &1287276976
 Transform:
   m_ObjectHideFlags: 0
@@ -12611,6 +12621,7 @@ MonoBehaviour:
   - {fileID: 1516907258}
   - {fileID: 479051925}
   - {fileID: 1065011933}
+  _defaultPreviewTower: {fileID: 0}
 --- !u!1 &1754408067
 GameObject:
   m_ObjectHideFlags: 0
@@ -13873,6 +13884,15 @@ MonoBehaviour:
   - {fileID: 1065011933}
   _proximityRadius: 2
   _scanInterval: 0.1
+  _channelDuration: 3
+  _energyBallSprite: {fileID: 0}
+  _streamPourDuration: 1
+  _streamOrigin: {fileID: 0}
+  _streamOriginFallbackHeight: 1.8
+  _flyDuration: 0.4
+  _streamInterval: 0.025
+  _streamArcHeight: 0.6
+  _flyBallWorldSize: 0.45
 --- !u!1 &2075226974
 GameObject:
   m_ObjectHideFlags: 0
@@ -14193,7 +14213,14 @@ MonoBehaviour:
     type: 2}
   _player: {fileID: 223595472}
   _tractorBeamController: {fileID: 223595475}
+  _ufoFlightIntro: {fileID: 0}
   _tractorBeamVisual: {fileID: 223595474}
+  _skillCatalog: []
+  _missileProjectileDefinition: {fileID: 0}
+  _playerSkillEffectApplier: {fileID: 0}
+  _playerMissileController: {fileID: 0}
+  _skillChoicePresenter: {fileID: 0}
+  _waveHUDPresenter: {fileID: 0}
   _tractorBeamLoopSource: {fileID: 0}
   _tractorBeamLoopClip: {fileID: 0}
   _tractorBeamCaptureClip: {fileID: 0}
@@ -14203,6 +14230,9 @@ MonoBehaviour:
   _energyPickupRuntimeParent: {fileID: 706908736}
   _energyPickupPoolDefaultCapacity: 16
   _energyPickupPoolMaxSize: 64
+  _energyScatterSpawner: {fileID: 0}
+  _energyScatterPath: {fileID: 0}
+  _energyScatterBounds: {fileID: 0}
   _environmentPropAbsorptionEnabled: 1
   _projectileRuntimeParent: {fileID: 49250464}
   _cameraTransform: {fileID: 983210736}
@@ -14216,6 +14246,8 @@ MonoBehaviour:
   _buildBarPresenter: {fileID: 939480421}
   _buildNodeVisualCoordinator: {fileID: 1743289370}
   _playerBuildNodeProximity: {fileID: 2042531608}
+  _towerChoicePresenter: {fileID: 0}
+  _towerCatalog: []
   _towerDetailsPresenter: {fileID: 1905527122}
   _gameHUDPresenter: {fileID: 890637683}
   _gameStateUIController: {fileID: 1863820202}

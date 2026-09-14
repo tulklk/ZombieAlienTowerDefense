@@ -26,6 +26,8 @@ namespace AlienDefense.Enemies
         private IEnemySpawnCoordinator _spawnCoordinator;
         private float _minionTimer;
         private bool _isActive;
+        private bool _isPaused;
+        private bool _minionsEnabled = true;
 
         public BossState State { get; private set; } = BossState.PhaseOne;
 
@@ -57,12 +59,26 @@ namespace AlienDefense.Enemies
         {
             State = BossState.PhaseOne;
             _isActive = false;
+            _isPaused = false;
+            _minionsEnabled = true;
             _minionTimer = 0f;
+        }
+
+        /// <summary>Freezes phase checks and the minion timer (boss intro). Resuming continues where it left off.</summary>
+        public void SetBehaviorPaused(bool paused)
+        {
+            _isPaused = paused;
+        }
+
+        /// <summary>Per-encounter switch for the BossBehaviorDefinition minion bursts. Phase-two speed/armour still apply.</summary>
+        public void SetMinionsEnabled(bool enabled)
+        {
+            _minionsEnabled = enabled;
         }
 
         private void Update()
         {
-            if (!_isActive || _health == null || State == BossState.Defeated)
+            if (!_isActive || _isPaused || _health == null || State == BossState.Defeated)
             {
                 return;
             }
@@ -70,6 +86,11 @@ namespace AlienDefense.Enemies
             if (State == BossState.PhaseOne && HealthRatio() <= _behavior.PhaseTwoHealthThreshold)
             {
                 EnterPhaseTwo();
+            }
+
+            if (!_minionsEnabled)
+            {
+                return;
             }
 
             _minionTimer -= Time.deltaTime;

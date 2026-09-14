@@ -67,6 +67,9 @@ namespace AlienDefense.Enemies
 
         private bool _isResolved;
         private bool _isCaptured;
+        private bool _isCombatActive = true;
+        private Animator _animator;
+        private float _animatorSpeedBeforeFreeze = 1f;
         private int _generation;
 
         public EnemyDefinition Definition => _definition;
@@ -75,7 +78,11 @@ namespace AlienDefense.Enemies
         public EnemyMovement Movement => _movement;
         public int ScaledBaseDamage => _scaledBaseDamage;
 
-        public bool IsTargetable => !_isResolved && !_isCaptured && _health != null && _health.IsDamageable;
+        public bool IsTargetable => !_isResolved && !_isCaptured && _isCombatActive && _health != null && _health.IsDamageable;
+
+        /// <summary>False while this enemy is part of a boss-intro group that has been spawned for the camera but not
+        /// released yet: it stands still, cannot be targeted, damaged or tractor-captured.</summary>
+        public bool IsCombatActive => _isCombatActive;
         public int Generation => _generation;
         public Transform AimPoint => _targetPoint != null ? _targetPoint : transform;
         public IDamageable Damageable => _health;
@@ -84,7 +91,7 @@ namespace AlienDefense.Enemies
 
         /// <summary>True only while this enemy is eligible to start a fresh tractor beam capture.</summary>
         public bool IsCapturable =>
-            !_isResolved && !_isCaptured &&
+            !_isResolved && !_isCaptured && _isCombatActive &&
             _definition != null && _definition.CanBeTractorCaptured &&
             _health != null && _health.IsDamageable;
 
@@ -102,6 +109,35 @@ namespace AlienDefense.Enemies
 
             _health.Died += HandleDied;
             _movement.DestinationReached += HandleReachedBase;
+            _animator = GetComponentInChildren<Animator>();
+        }
+
+        /// <summary>Holds (false) or releases (true) this enemy for a boss intro: while held it keeps its place and
+        /// its pose (the walk cycle slowed to <paramref name="heldAnimatorSpeed"/> of normal so it reads as an idle
+        /// shuffle), and is excluded from every targeting, damage and capture path. Releasing restores all of it.</summary>
+        public void SetCombatActive(bool active, float heldAnimatorSpeed = 0.3f)
+        {
+            if (_isCombatActive == active || _isResolved)
+            {
+                return;
+            }
+
+            _isCombatActive = active;
+            _movement.SetPaused(!active);
+            _health.SetEncounterImmune(!active);
+
+            if (_animator != null)
+            {
+                if (!active)
+                {
+                    _animatorSpeedBeforeFreeze = _animator.speed;
+                    _animator.speed = _animatorSpeedBeforeFreeze * Mathf.Clamp01(heldAnimatorSpeed);
+                }
+                else
+                {
+                    _animator.speed = _animatorSpeedBeforeFreeze;
+                }
+            }
         }
 
         public void Initialize(
@@ -126,6 +162,7 @@ namespace AlienDefense.Enemies
             _baseHealth = baseHealth;
             _registry = registry;
             _releaseToPool = releaseToPool;
+            RestoreCombatActive();
             _isResolved = false;
             _isCaptured = false;
             _generation++;
@@ -192,6 +229,23 @@ namespace AlienDefense.Enemies
             _captureController?.ResetState();
             _isCaptured = false;
             _scaledBaseDamage = 1;
+            RestoreCombatActive();
+        }
+
+        private void RestoreCombatActive()
+        {
+            if (_isCombatActive)
+            {
+                return;
+            }
+
+            _isCombatActive = true;
+            _movement.SetPaused(false);
+            _health.SetEncounterImmune(false);
+            if (_animator != null)
+            {
+                _animator.speed = _animatorSpeedBeforeFreeze;
+            }
         }
 
         private void HandleDied()

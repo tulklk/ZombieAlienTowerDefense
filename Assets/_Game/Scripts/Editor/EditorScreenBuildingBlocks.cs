@@ -10,6 +10,17 @@ namespace AlienDefense.EditorTools
     /// registration. Purely Editor-time scene construction, no runtime behavior.</summary>
     internal static class EditorScreenBuildingBlocks
     {
+        private const string SquareBarSpritePath = "Assets/_Game/Art/Sprite/UI/px_white_square.png";
+
+        /// <summary>The plain square sprite for bar fills - the same one the HUD Level bar uses. Not the built-in
+        /// UISprite: that is a rounded rect, and a Filled image stretches its sprite whole (no 9-slicing), which
+        /// turns a thin bar into a pill. Falls back to UISprite if the asset is missing, so Filled still clips.</summary>
+        public static Sprite SquareBarSprite()
+        {
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SquareBarSpritePath);
+            return sprite != null ? sprite : AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+        }
+
         public static Image BuildFullScreenImage(Transform parent, string name, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));

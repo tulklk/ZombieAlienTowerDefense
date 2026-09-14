@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using AlienDefense.CameraSystem;
 using AlienDefense.Common;
+using AlienDefense.Economy;
 using AlienDefense.Enemies;
 using AlienDefense.Environment;
 using AlienDefense.Pickups;
+using AlienDefense.Settings;
 using UnityEngine;
 
 namespace AlienDefense.Player
@@ -15,8 +17,8 @@ namespace AlienDefense.Player
     /// CaptureSocket) and the scan interval. A full Enemy beam never blocks Energy or Prop admission and vice
     /// versa. Never moves anything itself (each target type owns its own Pull/Lift), never grants reward itself
     /// (Enemy capture grants none at all; Energy reward is granted by EnergyPickupFactory when a pickup finishes;
-    /// Prop absorption grants none), never touches EconomyService/EnergyWalletService/PlayerLevelProgressionService/
-    /// WaveController/pools directly.</summary>
+    /// Prop absorption grants none). Reads EnergyWalletService.IsFull only to refuse new Energy admissions when
+    /// cargo is at capacity — never calls Add/Spend itself.</summary>
     public sealed class UFOTractorBeamController : MonoBehaviour, IPullSpeedBoostSource
     {
         [SerializeField]
@@ -51,6 +53,9 @@ namespace AlienDefense.Player
         private EnemyRegistry _enemyRegistry;
         private EnergyPickupRegistry _energyRegistry;
         private TractorAbsorbablePropRegistry _propRegistry;
+        private EnergyWalletService _energyWallet;
+        private SettingsService _settingsService;
+        private float _cargoFullFeedbackCooldown;
 
         private readonly HashSet<CaptureHandle> _activeCaptures = new HashSet<CaptureHandle>();
         private readonly HashSet<EnergyHandle> _activeEnergyAbsorptions = new HashSet<EnergyHandle>();
@@ -109,6 +114,8 @@ namespace AlienDefense.Player
         public event Action<EnemyController> EnemyCaptureCompleted;
         public event Action<EnergyPickupController> EnergyAbsorptionStarted;
         public event Action<EnergyPickupController> EnergyPickupCollected;
+        /// <summary>Fired (throttled) when the beam is over an Idle EnergyPickup but cargo is full.</summary>
+        public event Action EnergyCargoFullRefused;
         public event Action<TractorAbsorbableProp> PropAbsorptionStarted;
         public event Action<TractorAbsorbableProp> PropAbsorbed;
         public event Action<bool> BeamEnabledChanged;
@@ -122,14 +129,22 @@ namespace AlienDefense.Player
             _resolvedMovementSource = _movementDirectionSource as IMovementDirectionSource;
         }
 
-        /// <summary>energyRegistry/propRegistry are optional so existing single-arg callers (tests that only
-        /// exercise Enemy capture) keep compiling unchanged; those two scan branches simply no-op while null.</summary>
-        public void Initialize(EnemyRegistry enemyRegistry, EnergyPickupRegistry energyRegistry = null, TractorAbsorbablePropRegistry propRegistry = null)
+        /// <summary>energyRegistry/propRegistry/energyWallet/settings are optional so existing callers (tests that
+        /// only exercise Enemy capture) keep compiling unchanged; Energy cargo-full refuse no-ops while wallet is null.</summary>
+        public void Initialize(
+            EnemyRegistry enemyRegistry,
+            EnergyPickupRegistry energyRegistry = null,
+            TractorAbsorbablePropRegistry propRegistry = null,
+            EnergyWalletService energyWallet = null,
+            SettingsService settingsService = null)
         {
             _enemyRegistry = enemyRegistry;
             _energyRegistry = energyRegistry;
             _propRegistry = propRegistry;
+            _energyWallet = energyWallet;
+            _settingsService = settingsService;
             _scanTimer = 0f;
+            _cargoFullFeedbackCooldown = 0f;
             UpdateBeamGeometry();
         }
 
@@ -183,6 +198,11 @@ namespace AlienDefense.Player
         /// deltaTime instead of relying on Time.deltaTime.</summary>
         public void Tick(float deltaTime)
         {
+            if (_cargoFullFeedbackCooldown > 0f)
+            {
+                _cargoFullFeedbackCooldown -= deltaTime;
+            }
+
             if (!_isEnabled || _definition == null || _beamGroundAnchor == null)
             {
                 return;
@@ -324,7 +344,13 @@ namespace AlienDefense.Player
 
         private void ScanForNewEnergyAbsorptions()
         {
-            if (_energyRegistry == null || !HasAvailableEnergySlot)
+            if (_energyRegistry == null)
+            {
+                return;
+            }
+
+            bool cargoFull = _energyWallet != null && _energyWallet.IsFull;
+            if (!cargoFull && !HasAvailableEnergySlot)
             {
                 return;
             }
@@ -334,11 +360,6 @@ namespace AlienDefense.Player
 
             for (int i = 0; i < _energyRegistry.Count; i++)
             {
-                if (!HasAvailableEnergySlot)
-                {
-                    break;
-                }
-
                 EnergyPickupController candidate = _energyRegistry.GetAt(i);
                 if (candidate == null || !candidate.IsAbsorbable)
                 {
@@ -353,7 +374,45 @@ namespace AlienDefense.Player
                     continue;
                 }
 
+                if (cargoFull)
+                {
+                    HandleCargoFullRefuse(candidate);
+                    continue;
+                }
+
+                if (!HasAvailableEnergySlot)
+                {
+                    break;
+                }
+
                 TryBeginEnergyAbsorption(candidate);
+            }
+        }
+
+        private void HandleCargoFullRefuse(EnergyPickupController pickup)
+        {
+            // Per-pickup shake — TractorImmuneShake self-throttles via IsBusy. Must run before any global cooldown
+            // so every Idle ball under the beam can rock when cargo is full.
+            TractorImmuneShake shake = pickup.GetComponent<TractorImmuneShake>();
+            if (shake != null && !shake.IsBusy)
+            {
+                shake.Nudge();
+            }
+
+            // Presence UI every refuse (banner hold); haptic stays throttled.
+            EnergyCargoFullRefused?.Invoke();
+
+            if (_cargoFullFeedbackCooldown > 0f)
+            {
+                return;
+            }
+
+            _cargoFullFeedbackCooldown = 0.9f;
+
+            bool hapticsEnabled = _settingsService == null || _settingsService.Current.HapticsEnabled;
+            if (hapticsEnabled)
+            {
+                Handheld.Vibrate();
             }
         }
 
@@ -374,6 +433,13 @@ namespace AlienDefense.Player
             if (!pickup.TryBeginAbsorption(request))
             {
                 return;
+            }
+
+            // A ball still rocking from an earlier cargo-full refuse must settle before the lift spins/shrinks it.
+            TractorImmuneShake shake = pickup.GetComponent<TractorImmuneShake>();
+            if (shake != null)
+            {
+                shake.StopShake();
             }
 
             _activeEnergyAbsorptions.Add(new EnergyHandle(pickup));

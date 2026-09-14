@@ -16,6 +16,12 @@ namespace AlienDefense.Economy
         public int CurrentEnergy { get; private set; }
         public int MaxEnergy { get; private set; }
 
+        /// <summary>True when CurrentEnergy has reached MaxEnergy — UFO must not admit new EnergyPickups.</summary>
+        public bool IsFull => CurrentEnergy >= MaxEnergy;
+
+        /// <summary>True when at least <paramref name="amount"/> more Energy can fit under the cap.</summary>
+        public bool HasRoomFor(int amount) => amount > 0 && CurrentEnergy + amount <= MaxEnergy;
+
         public event Action<int> EnergyChanged;
         public event Action<int> MaxEnergyChanged;
 

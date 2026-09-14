@@ -47,7 +47,13 @@ namespace AlienDefense.Data
         [SerializeField]
         private WaveDefinition[] _waves;
 
+        [SerializeField]
+        [Tooltip("Optional. Played once every wave above is cleared: a Boss + escort group with an intro " +
+            "cinematic. The level is only won when this encounter is cleared too. Leave empty for a normal level.")]
+        private BossEncounterDefinition _bossEncounter;
+
         public string LevelId => _levelId;
+        public BossEncounterDefinition BossEncounter => _bossEncounter;
         public int StartingResource => _startingResource;
         public int BaseMaxHealth => _baseMaxHealth;
         public float PreparationDuration => _preparationDuration;

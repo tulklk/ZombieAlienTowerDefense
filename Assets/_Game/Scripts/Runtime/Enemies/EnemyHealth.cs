@@ -10,13 +10,14 @@ namespace AlienDefense.Enemies
         public float CurrentHealth { get; private set; }
         public float MaximumHealth { get; private set; }
         public bool IsDead => CurrentHealth <= 0f;
-        public bool IsDamageable => !IsDead && !_isCaptureImmune;
+        public bool IsDamageable => !IsDead && !_isCaptureImmune && !_isEncounterImmune;
 
         public event Action<float, float> HealthChanged;
         public event Action Died;
 
         private bool _diedFired;
         private bool _isCaptureImmune;
+        private bool _isEncounterImmune;
         private EnemyDefense _defense;
         private EnemyShield _shield;
 
@@ -40,11 +41,19 @@ namespace AlienDefense.Enemies
             _isCaptureImmune = value;
         }
 
+        /// <summary>Driven by EnemyController.SetCombatActive while a boss-intro group is on screen but not yet
+        /// released - nothing (tower shot, splash, burn tick) may damage it until the fight actually starts.</summary>
+        public void SetEncounterImmune(bool value)
+        {
+            _isEncounterImmune = value;
+        }
+
         public void ResetState()
         {
             CurrentHealth = MaximumHealth;
             _diedFired = false;
             _isCaptureImmune = false;
+            _isEncounterImmune = false;
             HealthChanged?.Invoke(CurrentHealth, MaximumHealth);
         }
 

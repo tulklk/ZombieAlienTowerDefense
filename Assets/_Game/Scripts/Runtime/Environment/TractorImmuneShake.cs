@@ -38,13 +38,21 @@ namespace AlienDefense.Environment
         private float _shakeCycles = 2.5f;
 
         [SerializeField, Min(0f)]
+        [Tooltip("Side-to-side slide, in metres, added on top of the lean and decaying with it. Leave at 0 for " +
+            "buildings and trees. Round things that pivot at their centre - the energy balls - need it: rocking " +
+            "a sphere about its own centre looks exactly like standing still.")]
+        private float _swayDistance;
+
+        [SerializeField, Min(0f)]
         [Tooltip("Extra seconds after a wobble finishes before another may start. Without this the beam's scan " +
             "would retrigger the same building several times a second while the player parks on top of it.")]
         private float _cooldown = 0.8f;
 
         private Tweener _shakeTween;
         private Quaternion _baseRotation;
+        private Vector3 _basePosition;
         private Vector3 _rockAxis = Vector3.right;
+        private Vector3 _swayDirection = Vector3.forward;
         private float _cooldownRemaining;
         private float _phase;
 
@@ -59,6 +67,7 @@ namespace AlienDefense.Environment
             }
 
             _baseRotation = _visualRoot.localRotation;
+            _basePosition = _visualRoot.localPosition;
 
             // Fixed per instance rather than per shake, so a given building always rocks the same way instead of
             // picking a new direction each time the player flies back over it.
@@ -69,6 +78,9 @@ namespace AlienDefense.Environment
             }
 
             _rockAxis = new Vector3(horizontal.x, 0f, horizontal.y);
+
+            // Perpendicular to the rock axis, i.e. the direction the top leans - the slide follows the lean.
+            _swayDirection = new Vector3(-horizontal.y, 0f, horizontal.x);
         }
 
         private void Update()
@@ -94,7 +106,35 @@ namespace AlienDefense.Environment
             _shakeTween?.Kill();
             _shakeTween = DOTween.To(() => _phase, p => { _phase = p; ApplyWobble(p); }, 1f, _shakeDuration)
                 .SetEase(Ease.Linear) // the decay envelope below already shapes it; easing twice flattens the rock
-                .OnComplete(() => _visualRoot.localRotation = _baseRotation);
+                .OnComplete(RestorePose);
+        }
+
+        /// <summary>Cuts a wobble short and puts the visual back at rest - for when something else is about to
+        /// animate it (the beam starting to lift an energy ball) or it goes back into a pool.</summary>
+        public void StopShake()
+        {
+            if (_shakeTween == null)
+            {
+                return;
+            }
+
+            _shakeTween.Kill();
+            _shakeTween = null;
+            RestorePose();
+        }
+
+        private void RestorePose()
+        {
+            if (_visualRoot == null)
+            {
+                return;
+            }
+
+            _visualRoot.localRotation = _baseRotation;
+            if (_swayDistance > 0f)
+            {
+                _visualRoot.localPosition = _basePosition;
+            }
         }
 
         /// <summary>Decaying sine: full amplitude at t=0, exactly zero at t=1.</summary>
@@ -106,6 +146,19 @@ namespace AlienDefense.Environment
             // Pre-multiplied so the lean is measured around a horizontal axis in the parent's space rather than
             // the model's own - imported models bake wildly different local axes.
             _visualRoot.localRotation = Quaternion.AngleAxis(angle, _rockAxis) * _baseRotation;
+
+            if (_swayDistance > 0f)
+            {
+                float sway = _swayDistance * decay * Mathf.Sin(t * Mathf.PI * 2f * _shakeCycles);
+                _visualRoot.localPosition = _basePosition + _swayDirection * sway;
+            }
+        }
+
+        private void OnDisable()
+        {
+            // Pooled energy balls are deactivated mid-shake; without this they would come back off-centre.
+            StopShake();
+            _cooldownRemaining = 0f;
         }
 
         private void OnDestroy()

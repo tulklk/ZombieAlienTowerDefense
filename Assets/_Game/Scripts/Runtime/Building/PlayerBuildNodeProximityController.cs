@@ -8,12 +8,12 @@ namespace AlienDefense.Building
 {
     /// <summary>Continuously watches the Player's XZ distance to a fixed set of BuildNodes. Flying into a node's
     /// proximity radius and staying there for _channelDuration seconds (visualized as BuildNodeChannelUI's ring
-    /// filling clockwise - reset the instant the Player leaves or a different node becomes nearest, and poured
-    /// full of a continuous stream of Energy balls from the UFO into the tower base while it fills) triggers,
-    /// if the Energy wallet can afford this node's next action, either the TowerChoicePresenter popup (node
-    /// Available - the player still
-    /// picks which tower) or an immediate EnergyTowerTransactionService upgrade (node Occupied - already a
-    /// specific tower, no choice needed). Deliberately does NOT touch TowerSelectionService - proximity alone
+    /// filling clockwise - reset the instant the Player leaves or a different node becomes nearest) completes a
+    /// channel. Only then does a continuous stream of Energy balls pour from the UFO into the tower base - never
+    /// while the ring is still loading - carrying whatever Energy the player has (even one ball) toward this
+    /// node's next action. Once the node is paid in full it triggers either the TowerChoicePresenter popup (node
+    /// Available - the player still picks which tower) or an immediate EnergyTowerTransactionService upgrade
+    /// (node Occupied - already a specific tower, no choice needed); a partial payment stays on the node. Deliberately does NOT touch TowerSelectionService - proximity alone
     /// used to auto-select the nearest tower (showing its RangeIndicator, a green circle) but that visually
     /// clashed with this controller's own yellow channel ring, so tower selection here is tap-only again (see
     /// WorldSelectionController). Never spawns/charges anything itself - only forwards to
@@ -37,9 +37,23 @@ namespace AlienDefense.Building
 
         [Header("Energy Stream")]
         [SerializeField]
-        [Tooltip("Optional. The energy ball art poured from the UFO into the tower base while a node channels - " +
-            "purely decorative. Leave empty to skip the stream.")]
+        [Tooltip("Optional. The energy ball art poured from the UFO into the tower base once a node's channel ring " +
+            "is full - purely decorative. Leave empty to skip the stream (the build/upgrade then triggers as soon " +
+            "as the ring fills).")]
         private Sprite _energyBallSprite;
+
+        [SerializeField, Min(0.1f)]
+        [Tooltip("Seconds the stream keeps pouring after the channel ring has filled. The build popup / upgrade " +
+            "follows once the last ball lands, i.e. this plus Fly Duration after the ring completes.")]
+        private float _streamPourDuration = 1f;
+
+        [SerializeField, Min(0.01f)]
+        [Tooltip("Pour time per Energy deposited; clamped between Min Pour Duration and Stream Pour Duration, so a " +
+            "single ball still reads as a short stream and a big payment never drags on.")]
+        private float _pourSecondsPerEnergy = 0.06f;
+
+        [SerializeField, Min(0.05f)]
+        private float _minPourDuration = 0.35f;
 
         [SerializeField]
         [Tooltip("Where the stream leaves the UFO - assign the tractor beam's CaptureSocket, the same point absorbed " +
@@ -220,17 +234,20 @@ namespace AlienDefense.Building
                 return;
             }
 
+            // Loading only - the energy stream waits until the ring is full (see ResolveChannelComplete).
             _channelTimer += deltaTime;
             _channelingNode.ChannelUI?.SetChannelProgress(_channelTimer / _channelDuration);
-            TickEnergyStream(_channelingNode, deltaTime);
 
             if (_channelTimer < _channelDuration)
             {
                 return;
             }
 
+            // Handed over with the ring still full rather than via CancelChannel, which would empty it: it stays
+            // full while the energy pours in and only empties once the build/upgrade fires.
             BuildNode node = _channelingNode;
-            CancelChannel();
+            _channelingNode = null;
+            _channelTimer = 0f;
             StartCoroutine(ResolveChannelComplete(node));
         }
 
@@ -239,9 +256,9 @@ namespace AlienDefense.Building
             _channelingNode?.ChannelUI?.SetChannelProgress(0f);
             _channelingNode = null;
             _channelTimer = 0f;
-            _streamTimer = 0f; // the next channel's stream starts pouring on its very first frame
         }
 
+        /// <summary>Deposit + wallet covers this node's next action (the cheapest tower on an Available node).</summary>
         private bool CanAffordNode(BuildNode node)
         {
             if (node == null || _energyTransactions == null)
@@ -250,27 +267,55 @@ namespace AlienDefense.Building
             }
 
             return node.State == BuildNodeState.Available
-                ? _towerChoicePresenter != null && _towerChoicePresenter.HasAnyAffordableTower()
+                ? _towerChoicePresenter != null && _towerChoicePresenter.HasAnyAffordableTower(node)
                 : _energyTransactions.CanAffordUpgrade(node.CurrentTower);
         }
 
-        /// <summary>Runs the build/upgrade action once the channel completes - a coroutine (not an instant call) so
-        /// the tail of the energy stream finishes landing first and the tower reads as being built by the energy
-        /// that just poured into it.</summary>
-        private IEnumerator ResolveChannelComplete(BuildNode node)
+        /// <summary>Energy this node's next action costs: the catalog's cheapest tower while Available (which tower
+        /// isn't chosen until the popup), the tower's next level while Occupied, 0 if there is nothing to pay for.</summary>
+        private int GetNodeCost(BuildNode node)
         {
             if (node == null || _energyTransactions == null)
             {
-                yield break;
+                return 0;
             }
 
-            bool isBuild = node.State == BuildNodeState.Available;
-            if (!CanAffordNode(node))
+            if (node.State == BuildNodeState.Available)
             {
-                yield break; // channel simply fizzles - no stream was poured, no popup
+                return _towerChoicePresenter != null ? _towerChoicePresenter.CheapestBuildCost() : 0;
+            }
+
+            return node.State == BuildNodeState.Occupied ? _energyTransactions.GetUpgradeCost(node.CurrentTower) : 0;
+        }
+
+        /// <summary>Runs once a node's ring has filled, in order: pour whatever Energy the player is carrying - even
+        /// a single ball, up to what the node still needs - from the UFO into the tower base, crediting the node
+        /// one Energy at a time as the stream lands; then, only if the node is now paid in full, trigger the
+        /// build/upgrade. A partial payment stays on the node (see EnergyTowerTransactionService.TryDeposit) and
+        /// the next channel tops it up. The ring is held full throughout and emptied at the end.
+        ///
+        /// A full ring commits the pour: flying away mid-pour doesn't cancel it, and new channels stay suspended
+        /// (_isChannelBusy) until it has resolved.</summary>
+        private IEnumerator ResolveChannelComplete(BuildNode node)
+        {
+            int cost = GetNodeCost(node);
+            int remaining = cost > 0 ? Mathf.Max(0, cost - _energyTransactions.GetDeposit(node)) : 0;
+            int toPour = Mathf.Min(remaining, CurrentWalletEnergy());
+            bool alreadyPaid = cost > 0 && remaining == 0; // e.g. a build whose popup couldn't complete last time
+
+            if (node == null || _energyTransactions == null || cost <= 0 || (toPour <= 0 && !alreadyPaid))
+            {
+                node?.ChannelUI?.SetChannelProgress(0f);
+                yield break; // nothing carried - no stream is poured, no popup
             }
 
             _isChannelBusy = true;
+            node.ChannelUI?.SetChannelProgress(1f);
+
+            if (toPour > 0)
+            {
+                yield return PourIntoNode(node, toPour);
+            }
 
             // The stream's tweens run on scaled time and the build popup pauses GameSpeed, so opening it while
             // balls are still mid-flight would leave them frozen in the air behind it.
@@ -280,22 +325,68 @@ namespace AlienDefense.Building
                 yield return new WaitForSeconds(tail);
             }
 
-            if (isBuild)
+            node.ChannelUI?.SetChannelProgress(0f);
+
+            // Only a fully paid node acts; otherwise the deposit simply waits for the next visit.
+            bool paidInFull = GetNodeCost(node) > 0 && _energyTransactions.GetDeposit(node) >= GetNodeCost(node);
+            if (IsChannelable(node) && paidInFull && CanAffordNode(node))
             {
-                _towerChoicePresenter?.ShowForNode(node);
-            }
-            else
-            {
-                _energyTransactions.TryUpgrade(node.CurrentTower);
+                if (node.State == BuildNodeState.Available)
+                {
+                    _towerChoicePresenter?.ShowForNode(node);
+                }
+                else
+                {
+                    _energyTransactions.TryUpgrade(node.CurrentTower);
+                }
             }
 
             _isChannelBusy = false;
         }
 
-        /// <summary>While a node channels, pours a continuous stream of energy balls out of the UFO's belly and
-        /// down into the tower base, so the ring filling up visibly IS the energy being transferred. Only pours
-        /// while the node is actually affordable - streaming energy into a build that is going to fizzle would
-        /// promise something the channel can't deliver.
+        /// <summary>Streams balls for a duration scaled to <paramref name="amount"/> and credits the node one Energy
+        /// each time a slice of the stream lands (one fly duration after it left), so the badge counts up in step
+        /// with the balls arriving and the wallet counts down with them.</summary>
+        private IEnumerator PourIntoNode(BuildNode node, int amount)
+        {
+            float pourDuration = Mathf.Clamp(amount * _pourSecondsPerEnergy, _minPourDuration, _streamPourDuration);
+            float slice = pourDuration / amount;
+            int deposited = 0;
+            float elapsed = 0f;
+            _streamTimer = 0f; // the first ball leaves on this very frame
+
+            while (deposited < amount)
+            {
+                if (_energyBallSprite != null && elapsed < pourDuration)
+                {
+                    TickEnergyStream(node, Time.deltaTime);
+                }
+
+                int landed = _energyBallSprite != null
+                    ? Mathf.Min(amount, Mathf.FloorToInt((elapsed - _flyDuration) / slice) + 1)
+                    : amount;
+                for (; deposited < landed; deposited++)
+                {
+                    if (!_energyTransactions.TryDeposit(node, 1))
+                    {
+                        yield break; // wallet or game state changed under us - keep what was paid
+                    }
+                }
+
+                if (deposited >= amount)
+                {
+                    break;
+                }
+
+                yield return null;
+                elapsed += Time.deltaTime;
+            }
+        }
+
+        /// <summary>Called every frame of the pour that follows a completed channel: streams energy balls out of the
+        /// UFO's belly and down into the tower base, so the full ring visibly turns into energy transferred into the
+        /// tower. Only pours while the node is actually affordable - streaming energy into a build that is going to
+        /// fizzle would promise something the channel can't deliver.
         ///
         /// Cadence is kept with an accumulating timer (several balls per frame if the frame was long) rather than
         /// one ball per frame, so the stream's density is the same at 30fps as at 60fps. Capped per frame so a
@@ -310,12 +401,6 @@ namespace AlienDefense.Building
             _streamTimer -= deltaTime;
             if (_streamTimer > 0f)
             {
-                return;
-            }
-
-            if (!CanAffordNode(node))
-            {
-                _streamTimer = _streamInterval;
                 return;
             }
 
@@ -444,22 +529,11 @@ namespace AlienDefense.Building
                     continue;
                 }
 
-                int cost;
-                if (node.State == BuildNodeState.Available)
-                {
-                    cost = _towerChoicePresenter != null ? _towerChoicePresenter.CheapestBuildCost() : 0;
-                }
-                else if (node.State == BuildNodeState.Occupied)
-                {
-                    cost = _energyTransactions.GetUpgradeCost(node.CurrentTower);
-                }
-                else
-                {
-                    cost = 0;
-                }
-
-                int wallet = _energyTransactions != null ? CurrentWalletEnergy() : 0;
-                node.ChannelUI.SetCost(wallet, cost);
+                // "{deposited}/{cost}", plus the green arrow when what the player carries finishes the job.
+                int cost = node.State == BuildNodeState.Disabled ? 0 : GetNodeCost(node);
+                int deposited = cost > 0 ? _energyTransactions.GetDeposit(node) : 0;
+                bool canComplete = cost > 0 && deposited + CurrentWalletEnergy() >= cost;
+                node.ChannelUI.SetCost(deposited, cost, canComplete);
 
                 node.ChannelUI.SetRingVisible(IsChannelable(node));
             }

@@ -120,7 +120,7 @@ namespace AlienDefense.Tests.EditMode
             var baseHealthText = (TMP_Text)GetPrivateField(view, "_baseHealthText");
             var speedText = (TMP_Text)GetPrivateField(view, "_speedText");
             Assert.AreEqual("250", resourceText.text);
-            Assert.AreEqual("5/10", energyText.text);
+            Assert.AreEqual("5", energyText.text);
             Assert.AreEqual("20", baseHealthText.text);
             Assert.AreEqual("x1", speedText.text);
         }
@@ -150,7 +150,7 @@ namespace AlienDefense.Tests.EditMode
             energyWallet.Add(3);
 
             var energyText = (TMP_Text)GetPrivateField(view, "_energyText");
-            Assert.AreEqual("3/10", energyText.text);
+            Assert.AreEqual("3", energyText.text);
         }
 
         [Test]

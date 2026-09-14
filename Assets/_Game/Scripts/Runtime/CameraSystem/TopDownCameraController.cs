@@ -99,6 +99,36 @@ namespace AlienDefense.CameraSystem
             }
         }
 
+        /// <summary>Where this controller would settle the camera for the follow target's CURRENT position (same
+        /// offset and level-bounds clamp as LateUpdate, without look-ahead). Cinematics blend back to this rather
+        /// than to a cached world position, so the camera returns to wherever the player actually is now.</summary>
+        public Vector3 GetRestCameraPosition()
+        {
+            if (_followTarget == null)
+            {
+                return _cameraTransform != null ? _cameraTransform.position : Vector3.zero;
+            }
+
+            Vector3 focusPoint = _followTarget.position + _lookAtOffset;
+            if (_levelBounds != null)
+            {
+                focusPoint = _levelBounds.ClampXZ(focusPoint, _cameraBoundsPadding);
+            }
+
+            return focusPoint + _positionOffset;
+        }
+
+        /// <summary>Re-enables following from wherever the camera currently is, with the smoothing state cleared so
+        /// the first frames neither jump nor carry velocity from before a cinematic took the camera over.</summary>
+        public void ResumeFollow()
+        {
+            _positionVelocity = Vector3.zero;
+            _lookAheadVelocity = Vector3.zero;
+            _currentLookAhead = Vector3.zero;
+            _hasSnapped = true;
+            enabled = true;
+        }
+
         /// <summary>Hard-snaps the camera to the current follow target (used after intro teleports).</summary>
         public void SnapToTargetImmediate()
         {

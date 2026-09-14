@@ -284,7 +284,7 @@ namespace AlienDefense.EditorTools
             fillRect.offsetMin = new Vector2(2f, 2f);
             fillRect.offsetMax = new Vector2(-2f, -2f);
             var fillImage = fill.GetComponent<Image>();
-            fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            fillImage.sprite = EditorScreenBuildingBlocks.SquareBarSprite();
             fillImage.color = new Color(0.2f, 0.85f, 0.3f);
             fillImage.type = Image.Type.Filled;
             fillImage.fillMethod = Image.FillMethod.Horizontal;
@@ -322,7 +322,7 @@ namespace AlienDefense.EditorTools
             fillRect.offsetMin = Vector2.zero;
             fillRect.offsetMax = Vector2.zero;
             var fillImage = fill.GetComponent<Image>();
-            fillImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            fillImage.sprite = EditorScreenBuildingBlocks.SquareBarSprite();
             fillImage.color = new Color(0.4f, 0.75f, 1f, 0.9f);
             fillImage.type = Image.Type.Filled;
             fillImage.fillMethod = Image.FillMethod.Horizontal;

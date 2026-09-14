@@ -751,8 +751,9 @@ namespace AlienDefense.EditorTools
             TMP_Text resourceText = CreateAnchoredTMPText(panel.transform, "ResourceText", "0",
                 new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(220f, 44f), 28f, TextAlignmentOptions.MidlineLeft);
 
-            TMP_Text energyText = BuildEnergyBadge(panel.transform);
+            TMP_Text energyText = BuildEnergyBadge(panel.transform, out Image energyForbiddenIcon);
             (TMP_Text baseHealthText, Image baseHealthFillImage) = BuildBaseHealthDisplay(panel.transform);
+            CanvasGroup cargoFullBanner = BuildCargoFullBanner(panel.transform);
 
             (Button speedButton, TMP_Text speedText) = BuildHUDIconButton(panel.transform, "SpeedButton", "x1", new Vector2(-140f, -10f));
             (Button pauseButton, TMP_Text _) = BuildHUDIconButton(panel.transform, "PauseButton", "II", new Vector2(-20f, -10f));
@@ -761,6 +762,8 @@ namespace AlienDefense.EditorTools
             var serializedView = new SerializedObject(view);
             serializedView.FindProperty("_resourceText").objectReferenceValue = resourceText;
             serializedView.FindProperty("_energyText").objectReferenceValue = energyText;
+            serializedView.FindProperty("_energyForbiddenIcon").objectReferenceValue = energyForbiddenIcon;
+            serializedView.FindProperty("_cargoFullBanner").objectReferenceValue = cargoFullBanner;
             serializedView.FindProperty("_baseHealthText").objectReferenceValue = baseHealthText;
             serializedView.FindProperty("_baseHealthFillImage").objectReferenceValue = baseHealthFillImage;
             serializedView.FindProperty("_speedText").objectReferenceValue = speedText;
@@ -771,14 +774,13 @@ namespace AlienDefense.EditorTools
             return view;
         }
 
-        /// <summary>Top-left circular badge (below ResourceText) showing EnergyWalletService.CurrentEnergy - the
-        /// "energy ball" count. Uses the project's own pre-made khung.png (ring frame) + enegry-ball.png (icon)
-        /// art, matching the mobile-game reference screenshot's corner-badge look. No fill/max - Energy has no
-        /// cap (see EnergyWalletService), so this is a plain ring + icon + running count, not a gauge.</summary>
-        private static TMP_Text BuildEnergyBadge(Transform parent)
+        /// <summary>Top-left circular badge showing EnergyWalletService.CurrentEnergy. Capacity is conveyed by
+        /// the forbidenicon overlay when full (see GameHUDView.SetEnergyCargoFull), not a current/max fraction.</summary>
+        private static TMP_Text BuildEnergyBadge(Transform parent, out Image forbiddenIcon)
         {
             Sprite ringSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/khung.png");
             Sprite iconSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/enegry-ball.png");
+            Sprite forbiddenSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/forbidenicon.png");
 
             var ring = new GameObject("EnergyRing", typeof(RectTransform), typeof(Image));
             ring.transform.SetParent(parent, false);
@@ -800,11 +802,53 @@ namespace AlienDefense.EditorTools
             iconRect.sizeDelta = new Vector2(38f, 38f);
             icon.GetComponent<Image>().sprite = iconSprite;
 
-            // CreateAnchoredTMPText pins pivot == anchor (top-left here), so anchoredPosition.x is the box's LEFT
-            // edge, not its center - offset by half the box width so the text ends up centered under the ring
-            // above (ring center x=50), not shifted right of it.
+            var forbidden = new GameObject("EnergyForbiddenIcon", typeof(RectTransform), typeof(Image));
+            forbidden.transform.SetParent(ring.transform, false);
+            var forbiddenRect = forbidden.GetComponent<RectTransform>();
+            forbiddenRect.anchorMin = new Vector2(0.5f, 0.5f);
+            forbiddenRect.anchorMax = new Vector2(0.5f, 0.5f);
+            forbiddenRect.pivot = new Vector2(0.5f, 0.5f);
+            forbiddenRect.anchoredPosition = Vector2.zero;
+            forbiddenRect.sizeDelta = new Vector2(48f, 48f);
+            forbiddenIcon = forbidden.GetComponent<Image>();
+            forbiddenIcon.sprite = forbiddenSprite;
+            forbiddenIcon.raycastTarget = false;
+            forbidden.SetActive(false);
+
             return CreateAnchoredTMPText(parent, "EnergyText", "0",
                 new Vector2(0f, 1f), new Vector2(10f, -106f), new Vector2(80f, 24f), 22f, TextAlignmentOptions.Center);
+        }
+
+        private static CanvasGroup BuildCargoFullBanner(Transform parent)
+        {
+            Sprite bannerSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/cargofull.png");
+
+            var banner = new GameObject("CargoFullBanner", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            banner.transform.SetParent(parent, false);
+            var rect = banner.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -120f);
+            rect.sizeDelta = new Vector2(420f, 90f);
+
+            var image = banner.GetComponent<Image>();
+            image.sprite = bannerSprite;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+
+            var group = banner.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            banner.SetActive(false);
+            return group;
+        }
+
+        /// <summary>LEGACY overload kept so older reflection callers still compile — prefer the out-param version.</summary>
+        private static TMP_Text BuildEnergyBadge(Transform parent)
+        {
+            return BuildEnergyBadge(parent, out _);
         }
 
         internal static TMP_Text CreateAnchoredTMPText(Transform parent, string name, string initialText,

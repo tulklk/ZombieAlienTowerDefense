@@ -30,7 +30,24 @@ namespace AlienDefense.Waves
         private bool _isInitialized;
         private bool _allWavesCompletedFired;
 
+        private BossEncounterDefinition _bossEncounter;
+        private bool _holdBossEncounterForIntro;
+        private bool _bossEncounterRunning;
+        private readonly List<EnemyController> _bossEncounterGroup = new List<EnemyController>();
+        private EnemyController _bossEncounterBoss;
+
         public WaveState CurrentState { get; private set; } = WaveState.Idle;
+
+        /// <summary>Where the level's closing boss encounter is (None for levels without one).</summary>
+        public BossEncounterPhase EncounterPhase { get; private set; } = BossEncounterPhase.None;
+        public bool HasBossEncounter => _bossEncounter != null && _bossEncounter.IsValid;
+
+        /// <summary>Boss + escorts were spawned and laid out; if an intro holds them they are still frozen.
+        /// Args: the boss, then the whole group (boss first).</summary>
+        public event Action<EnemyController, IReadOnlyList<EnemyController>> BossEncounterSpawned;
+
+        /// <summary>The boss group was released and the fight is on.</summary>
+        public event Action BossEncounterActivated;
         public int CurrentWaveIndex { get; private set; } = -1;
         public int CurrentWaveNumber => CurrentWaveIndex + 1;
         public int TotalWaveCount => _waves?.Length ?? 0;
@@ -120,9 +137,57 @@ namespace AlienDefense.Waves
                 return false;
             }
 
+            if (HasBossEncounter && _bossEncounter.DebugSkipNormalWaves)
+            {
+                Debug.Log("[WaveController] Debug: skipping normal waves, starting the boss encounter.", this);
+                CurrentWaveIndex = TotalWaveCount - 1;
+                StartScheduler(BossEncounterRoutine(0.1f, raiseWaveStarted: true));
+                return true;
+            }
+
             CurrentWaveIndex = 0;
             BeginPreparation();
             return true;
+        }
+
+        /// <summary>Optional closing encounter. Must be called before Initialize (which may auto-start waves).</summary>
+        public void ConfigureBossEncounter(BossEncounterDefinition encounter)
+        {
+            _bossEncounter = encounter;
+            EncounterPhase = HasBossEncounter ? BossEncounterPhase.Pending : BossEncounterPhase.None;
+        }
+
+        /// <summary>When on, the boss group is spawned frozen and waits for ActivateBossEncounter (called by the
+        /// intro cinematic when it hands control back). When off, it is released the moment it spawns.</summary>
+        public void SetBossIntroHold(bool hold)
+        {
+            _holdBossEncounterForIntro = hold;
+        }
+
+        /// <summary>Releases the frozen boss group. Safe to call more than once.</summary>
+        public void ActivateBossEncounter()
+        {
+            if (EncounterPhase != BossEncounterPhase.Intro)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _bossEncounterGroup.Count; i++)
+            {
+                EnemyController enemy = _bossEncounterGroup[i];
+                if (enemy != null && !enemy.IsCombatActive)
+                {
+                    enemy.SetCombatActive(true);
+                }
+            }
+
+            if (_bossEncounterBoss != null && _bossEncounterBoss.BossController != null)
+            {
+                _bossEncounterBoss.BossController.SetBehaviorPaused(false);
+            }
+
+            EncounterPhase = BossEncounterPhase.Fight;
+            BossEncounterActivated?.Invoke();
         }
 
         /// <summary>Manually advances to the next wave's preparation. Only needed when AutoStartNextWaves is off.</summary>
@@ -175,6 +240,10 @@ namespace AlienDefense.Waves
             PreparationTimeRemaining = 0f;
             _tracker.Reset();
             _allWavesCompletedFired = false;
+            _bossEncounterRunning = false;
+            _bossEncounterGroup.Clear();
+            _bossEncounterBoss = null;
+            EncounterPhase = HasBossEncounter ? BossEncounterPhase.Pending : BossEncounterPhase.None;
         }
 
         private void OnDestroy()
@@ -468,10 +537,28 @@ namespace AlienDefense.Waves
             }
 
             CurrentState = WaveState.Completed;
+
+            if (_bossEncounterRunning)
+            {
+                // The boss group (and anything the boss summoned) is gone - that closes the level.
+                _bossEncounterRunning = false;
+                _bossEncounterGroup.Clear();
+                _bossEncounterBoss = null;
+                EncounterPhase = BossEncounterPhase.Cleared;
+                FireAllWavesCompleted();
+                return;
+            }
+
             WaveCompleted?.Invoke(CurrentWaveNumber);
 
             if (CurrentWaveIndex >= TotalWaveCount - 1)
             {
+                if (HasBossEncounter && EncounterPhase == BossEncounterPhase.Pending)
+                {
+                    StartScheduler(BossEncounterRoutine(_bossEncounter.DelayAfterNormalWaves, raiseWaveStarted: false));
+                    return;
+                }
+
                 if (!_allWavesCompletedFired)
                 {
                     _allWavesCompletedFired = true;
@@ -486,6 +573,111 @@ namespace AlienDefense.Waves
                 CurrentWaveIndex++;
                 BeginPreparation();
             }
+        }
+
+        private void FireAllWavesCompleted()
+        {
+            if (_allWavesCompletedFired)
+            {
+                return;
+            }
+
+            _allWavesCompletedFired = true;
+            AllWavesCompleted?.Invoke();
+        }
+
+        /// <summary>Spawns the boss + escorts in their formation in one frame, tracked as one extra "wave" whose
+        /// completion ends the level. Held frozen if an intro asked for it.</summary>
+        private IEnumerator BossEncounterRoutine(float delay, bool raiseWaveStarted)
+        {
+            EncounterPhase = BossEncounterPhase.Spawning;
+
+            yield return null;
+            if (delay > 0f)
+            {
+                yield return WaitSeconds(delay);
+            }
+
+            _waveRunId++;
+            int runId = _waveRunId;
+            _bossEncounterRunning = true;
+            _bossEncounterGroup.Clear();
+
+            int planned = 1 + _bossEncounter.TotalEscortCount();
+            _tracker.Initialize(planned);
+            CurrentState = WaveState.Spawning;
+            if (raiseWaveStarted)
+            {
+                WaveStarted?.Invoke(CurrentWaveNumber, TotalWaveCount);
+            }
+
+            RaiseProgressChanged();
+
+            bool hold = _holdBossEncounterForIntro;
+
+            // Escorts first, then the boss last: BossSpawned listeners (boss health bar, BossController wiring)
+            // then see a fully laid-out group.
+            int escortIndex = 0;
+            for (int e = 0; e < _bossEncounter.EscortEntryCount; e++)
+            {
+                EnemySpawnEntry entry = _bossEncounter.GetEscortEntry(e);
+                if (entry == null || !entry.IsValid)
+                {
+                    continue;
+                }
+
+                for (int n = 0; n < entry.Count; n++)
+                {
+                    EnemyController escort = SpawnTrackedEnemy(entry.EnemyDefinition, runId);
+                    BossEncounterDefinition.FormationSlot slot = _bossEncounter.GetEscortSlot(escortIndex++);
+                    if (escort == null)
+                    {
+                        continue;
+                    }
+
+                    escort.Movement.PlaceAlongPath(slot.DistanceAlongPath, slot.LateralOffset);
+                    if (hold)
+                    {
+                        escort.SetCombatActive(false);
+                    }
+
+                    _bossEncounterGroup.Add(escort);
+                }
+            }
+
+            EnemyController boss = SpawnTrackedEnemy(_bossEncounter.BossDefinition, runId);
+            if (boss != null)
+            {
+                BossEncounterDefinition.FormationSlot bossSlot = _bossEncounter.BossSlot;
+                boss.Movement.PlaceAlongPath(bossSlot.DistanceAlongPath, bossSlot.LateralOffset);
+                if (hold)
+                {
+                    boss.SetCombatActive(false);
+                }
+
+                if (boss.BossController != null)
+                {
+                    boss.BossController.SetMinionsEnabled(_bossEncounter.BossMinionsEnabled);
+                    boss.BossController.SetBehaviorPaused(hold);
+                }
+
+                _bossEncounterGroup.Insert(0, boss);
+            }
+
+            _bossEncounterBoss = boss;
+            _tracker.MarkSpawnSchedulingCompleted();
+            CurrentState = WaveState.WaitingForRemainingEnemies;
+            EncounterPhase = hold ? BossEncounterPhase.Intro : BossEncounterPhase.Fight;
+            RaiseProgressChanged();
+            _schedulingCoroutine = null;
+
+            BossEncounterSpawned?.Invoke(boss, _bossEncounterGroup);
+            if (!hold)
+            {
+                BossEncounterActivated?.Invoke();
+            }
+
+            TryCompleteWave(runId);
         }
 
         private void RaiseProgressChanged()
