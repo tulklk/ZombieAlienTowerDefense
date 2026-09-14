@@ -66,8 +66,9 @@ namespace AlienDefense.Level
         [SerializeField, Range(0.3f, 2f)]
         private float _cameraTravelDuration = 1f;
 
-        [SerializeField, Range(0.5f, 4f)]
-        private float _bossHoldDuration = 2f;
+        [SerializeField, Range(0.5f, 8f)]
+        [Tooltip("Seconds the camera stays on the boss (the banner shows for this long).")]
+        private float _bossHoldDuration = 5f;
 
         [SerializeField, Range(0.3f, 2f)]
         private float _cameraReturnDuration = 1f;

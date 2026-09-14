@@ -5,7 +5,7 @@ using UnityEngine;
 namespace AlienDefense.Waves
 {
     /// <summary>Config-only description of a level's closing boss encounter, played by WaveController once every
-    /// normal wave is cleared: one Boss plus an escort group, all spawned together in a formation at the start of
+    /// normal wave is cleared (or its optional countdown runs out): one Boss plus an escort group, all spawned together in a formation at the start of
     /// the enemy path and held frozen until something (normally BossIntroController) activates them.</summary>
     [CreateAssetMenu(fileName = "BossEncounterDefinition", menuName = "AlienDefense/Waves/Boss Encounter Definition")]
     public sealed class BossEncounterDefinition : ScriptableObject
@@ -46,6 +46,12 @@ namespace AlienDefense.Waves
         [Tooltip("Pause between the last normal enemy dying and the boss group appearing.")]
         private float _delayAfterNormalWaves = 0.75f;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("Seconds from the first wave starting until the boss arrives even if normal enemies are still " +
+            "alive (they fight on alongside the boss). Clearing the normal waves first still brings the boss early. " +
+            "0 = no countdown, the boss only comes once the normal waves are cleared.")]
+        private float _bossCountdown;
+
         [Header("Debug (Editor / Development builds only)")]
         [SerializeField]
         [Tooltip("Skips every normal wave and starts straight at the boss encounter.")]
@@ -56,6 +62,7 @@ namespace AlienDefense.Waves
         public bool BossMinionsEnabled => _bossMinionsEnabled;
         public int EscortEntryCount => _escorts?.Length ?? 0;
         public float DelayAfterNormalWaves => _delayAfterNormalWaves;
+        public float BossCountdown => _bossCountdown;
 
         public bool DebugSkipNormalWaves => _debugSkipNormalWaves && (Application.isEditor || Debug.isDebugBuild);
 

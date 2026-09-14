@@ -36,7 +36,22 @@ namespace AlienDefense.Waves
         private readonly List<EnemyController> _bossEncounterGroup = new List<EnemyController>();
         private EnemyController _bossEncounterBoss;
 
+        // Normal enemies still alive when the countdown summoned the boss keep counting toward the encounter.
+        private int _carriedRunId = -1;
+
+        private bool _bossCountdownTicking;
+        private bool _bossCountdownExpired;
+
         public WaveState CurrentState { get; private set; } = WaveState.Idle;
+
+        /// <summary>True when this level's boss arrives on a timer (see BossEncounterDefinition.BossCountdown).</summary>
+        public bool HasBossCountdown => HasBossEncounter && _bossEncounter.BossCountdown > 0f;
+
+        /// <summary>Seconds until the boss arrives; 0 once it is on its way.</summary>
+        public float BossCountdownRemaining { get; private set; }
+
+        /// <summary>Raised whenever BossCountdownRemaining changes (every frame while it runs).</summary>
+        public event Action<float> BossCountdownChanged;
 
         /// <summary>Where the level's closing boss encounter is (None for levels without one).</summary>
         public BossEncounterPhase EncounterPhase { get; private set; } = BossEncounterPhase.None;
@@ -155,6 +170,66 @@ namespace AlienDefense.Waves
         {
             _bossEncounter = encounter;
             EncounterPhase = HasBossEncounter ? BossEncounterPhase.Pending : BossEncounterPhase.None;
+            ResetBossCountdown();
+        }
+
+        private void ResetBossCountdown()
+        {
+            _bossCountdownTicking = false;
+            _bossCountdownExpired = false;
+            SetBossCountdown(HasBossCountdown ? _bossEncounter.BossCountdown : 0f);
+        }
+
+        private void SetBossCountdown(float seconds)
+        {
+            BossCountdownRemaining = Mathf.Max(0f, seconds);
+            BossCountdownChanged?.Invoke(BossCountdownRemaining);
+        }
+
+        /// <summary>Scaled time, so pausing the game pauses the countdown too.</summary>
+        private void Update()
+        {
+            if (!_bossCountdownTicking)
+            {
+                return;
+            }
+
+            SetBossCountdown(BossCountdownRemaining - Time.deltaTime);
+            if (BossCountdownRemaining > 0f)
+            {
+                return;
+            }
+
+            _bossCountdownTicking = false;
+            _bossCountdownExpired = true;
+            TryStartBossFromCountdown();
+        }
+
+        /// <summary>The countdown ran out: bring the boss in now, provided the last normal wave has finished
+        /// spawning (otherwise the rest of that wave would be dropped - the boss then follows as soon as it has).
+        /// If the waves were already cleared the normal completion path has started the encounter itself.</summary>
+        private void TryStartBossFromCountdown()
+        {
+            if (!_bossCountdownExpired || !HasBossEncounter || EncounterPhase != BossEncounterPhase.Pending)
+            {
+                return;
+            }
+
+            if (CurrentWaveIndex < TotalWaveCount - 1 || CurrentState != WaveState.WaitingForRemainingEnemies)
+            {
+                return;
+            }
+
+            StartScheduler(BossEncounterRoutine(0f, raiseWaveStarted: false));
+        }
+
+        private void StopBossCountdown()
+        {
+            _bossCountdownTicking = false;
+            if (BossCountdownRemaining > 0f)
+            {
+                SetBossCountdown(0f);
+            }
         }
 
         /// <summary>When on, the boss group is spawned frozen and waits for ActivateBossEncounter (called by the
@@ -243,7 +318,9 @@ namespace AlienDefense.Waves
             _bossEncounterRunning = false;
             _bossEncounterGroup.Clear();
             _bossEncounterBoss = null;
+            _carriedRunId = -1;
             EncounterPhase = HasBossEncounter ? BossEncounterPhase.Pending : BossEncounterPhase.None;
+            ResetBossCountdown();
         }
 
         private void OnDestroy()
@@ -312,6 +389,11 @@ namespace AlienDefense.Waves
 
             _tracker.Initialize(planned);
             CurrentState = WaveState.Spawning;
+            if (CurrentWaveIndex == 0 && HasBossCountdown && EncounterPhase == BossEncounterPhase.Pending)
+            {
+                _bossCountdownTicking = true; // counts from the first wave starting
+            }
+
             WaveStarted?.Invoke(CurrentWaveNumber, TotalWaveCount);
             RaiseProgressChanged();
             LogWaveDebug(wave);
@@ -366,6 +448,12 @@ namespace AlienDefense.Waves
 
             RaiseProgressChanged();
             TryCompleteWave(runId);
+
+            // The countdown may have run out while this wave was still spawning.
+            if (runId == _waveRunId)
+            {
+                TryStartBossFromCountdown();
+            }
         }
 
         private IEnumerator WaitForAliveCapacity(int runId)
@@ -420,14 +508,15 @@ namespace AlienDefense.Waves
             {
                 resolvedEnemy.Resolved -= HandleResolved;
 
-                if (runId != _waveRunId)
+                bool carriedIntoBossEncounter = _bossEncounterRunning && runId == _carriedRunId;
+                if (runId != _waveRunId && !carriedIntoBossEncounter)
                 {
                     return;
                 }
 
                 _tracker.RecordEnemyResolved();
                 RaiseProgressChanged();
-                TryCompleteWave(runId);
+                TryCompleteWave(_waveRunId);
             }
 
             enemy.Resolved += HandleResolved;
@@ -590,7 +679,29 @@ namespace AlienDefense.Waves
         /// completion ends the level. Held frozen if an intro asked for it.</summary>
         private IEnumerator BossEncounterRoutine(float delay, bool raiseWaveStarted)
         {
+            // Everything up to the first yield runs synchronously inside StartScheduler, so the switch to the
+            // encounter's run happens in the same frame the decision was made - no normal enemy can resolve
+            // against the old run in between and complete it (which would end the level before the boss).
             EncounterPhase = BossEncounterPhase.Spawning;
+            StopBossCountdown();
+
+            int carried = _tracker.IsSpawnSchedulingCompleted ? _tracker.ActiveEnemyCount : 0;
+            _carriedRunId = carried > 0 ? _waveRunId : -1;
+
+            _waveRunId++;
+            int runId = _waveRunId;
+            _bossEncounterRunning = true;
+            _bossEncounterGroup.Clear();
+
+            int planned = carried + 1 + _bossEncounter.TotalEscortCount();
+            _tracker.Initialize(planned);
+            for (int i = 0; i < carried; i++)
+            {
+                _tracker.RecordSpawnSuccess(); // still-alive normal enemies now count toward the encounter
+            }
+
+            CurrentState = WaveState.Spawning;
+            RaiseProgressChanged();
 
             yield return null;
             if (delay > 0f)
@@ -598,14 +709,10 @@ namespace AlienDefense.Waves
                 yield return WaitSeconds(delay);
             }
 
-            _waveRunId++;
-            int runId = _waveRunId;
-            _bossEncounterRunning = true;
-            _bossEncounterGroup.Clear();
-
-            int planned = 1 + _bossEncounter.TotalEscortCount();
-            _tracker.Initialize(planned);
-            CurrentState = WaveState.Spawning;
+            if (runId != _waveRunId)
+            {
+                yield break;
+            }
             if (raiseWaveStarted)
             {
                 WaveStarted?.Invoke(CurrentWaveNumber, TotalWaveCount);

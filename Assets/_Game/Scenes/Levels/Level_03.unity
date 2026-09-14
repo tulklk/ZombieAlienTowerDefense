@@ -13887,6 +13887,8 @@ MonoBehaviour:
   _channelDuration: 3
   _energyBallSprite: {fileID: 0}
   _streamPourDuration: 1
+  _pourSecondsPerEnergy: 0.06
+  _minPourDuration: 0.35
   _streamOrigin: {fileID: 0}
   _streamOriginFallbackHeight: 1.8
   _flyDuration: 0.4
@@ -14216,7 +14218,8 @@ MonoBehaviour:
   _ufoFlightIntro: {fileID: 0}
   _tractorBeamVisual: {fileID: 223595474}
   _skillCatalog: []
-  _missileProjectileDefinition: {fileID: 0}
+  _missileProjectileDefinition: {fileID: 11400000, guid: 912f7e2def7e8114fb017891d0285d03,
+    type: 2}
   _playerSkillEffectApplier: {fileID: 0}
   _playerMissileController: {fileID: 0}
   _skillChoicePresenter: {fileID: 0}
@@ -14240,6 +14243,7 @@ MonoBehaviour:
   _waveController: {fileID: 1120549745}
   _waveDebugControls: {fileID: 872289106}
   _bossHealthBarPresenter: {fileID: 0}
+  _bossIntroController: {fileID: 0}
   _towerRuntimeParent: {fileID: 110966879}
   _towerDebugSpawner: {fileID: 229938932}
   _worldSelectionController: {fileID: 611533046}

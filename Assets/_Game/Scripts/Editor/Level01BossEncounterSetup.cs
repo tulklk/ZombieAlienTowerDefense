@@ -128,6 +128,7 @@ namespace AlienDefense.EditorTools
             }
 
             so.FindProperty("_delayAfterNormalWaves").floatValue = 0.75f;
+            so.FindProperty("_bossCountdown").floatValue = 60f;
             so.FindProperty("_debugSkipNormalWaves").boolValue = false;
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(encounter);

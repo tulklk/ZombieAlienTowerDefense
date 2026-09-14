@@ -33,7 +33,7 @@ namespace AlienDefense.EditorTools
 
         private static readonly VfxSpec MuzzleSpec = new VfxSpec("vfx_muzzle", "Vfx_MuzzleFlash", new Color(1f, 0.85f, 0.3f), 0.15f, 0.3f, 6);
         private static readonly VfxSpec HitSpec = new VfxSpec("vfx_hit", "Vfx_ProjectileHit", new Color(1f, 0.6f, 0.2f), 0.25f, 0.35f, 10);
-        private static readonly VfxSpec DefeatedSpec = new VfxSpec("vfx_defeated", "Vfx_EnemyDefeated", new Color(0.8f, 0.25f, 0.85f), 0.4f, 0.5f, 16);
+        private static readonly VfxSpec DefeatedSpec = new VfxSpec("vfx_defeated", "Vfx_EnemyDefeated", new Color(1f, 0.55f, 0.15f), 0.4f, 0.5f, 16);
         private static readonly VfxSpec BuildSpec = new VfxSpec("vfx_build", "Vfx_TowerBuild", new Color(0.3f, 0.85f, 0.4f), 0.4f, 0.6f, 14);
         private static readonly VfxSpec UpgradeSpec = new VfxSpec("vfx_upgrade", "Vfx_TowerUpgrade", new Color(0.3f, 0.6f, 0.95f), 0.4f, 0.6f, 14);
         private static readonly VfxSpec SellSpec = new VfxSpec("vfx_sell", "Vfx_TowerSell", new Color(0.9f, 0.75f, 0.2f), 0.35f, 0.55f, 12);

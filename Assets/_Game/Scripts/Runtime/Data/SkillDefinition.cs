@@ -23,8 +23,12 @@ namespace AlienDefense.Data
         [Tooltip("Capacity skill only: EnergyWalletService's max Energy at this rank.")]
         public int CapacityMax;
 
-        [Tooltip("Missile skill only: damage multiplier for the auto-fired missile.")]
+        [Tooltip("Missile skill only: damage multiplier for the auto-fired missile. Unused while rockets kill outright " +
+            "(see PlayerMissileController).")]
         public float MissileDamageMultiplier;
+
+        [Tooltip("Missile skill only: rockets fired per volley (each at a different enemy). 0 = same as the rank.")]
+        public int MissileCount;
 
         [Tooltip("Missile skill only: splash-radius multiplier (only rank 5's 'tăng phạm vi' actually raises this above 1).")]
         public float MissileRangeMultiplier;

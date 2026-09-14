@@ -8,7 +8,8 @@ using UnityEngine;
 
 namespace AlienDefense.UI.Minimap
 {
-    /// <summary>Subscribes to a fixed WaveController (the existing wave-preparation countdown - see
+    /// <summary>Subscribes to a fixed WaveController (the boss countdown on levels that have one - see
+    /// WaveController.BossCountdownChanged - otherwise the wave-preparation countdown, see
     /// WaveController.PreparationTimeRemaining/PreparationTimeChanged) and reads a fixed EnemyPath3D once at
     /// startup, forwarding both to a MinimapController. No gameplay timer or waypoint list is created here -
     /// mirrors this project's existing WaveHUDPresenter/WaveHUDView split exactly.
@@ -74,6 +75,7 @@ namespace AlienDefense.UI.Minimap
 
             _waveController.PreparationTimeChanged += HandlePreparationTimeChanged;
             _waveController.WaveStarted += HandleWaveStarted;
+            _waveController.BossCountdownChanged += HandleBossCountdownChanged;
         }
 
         private void InitializeBuildNodeMarkers()
@@ -159,15 +161,36 @@ namespace AlienDefense.UI.Minimap
 
             _waveController.PreparationTimeChanged -= HandlePreparationTimeChanged;
             _waveController.WaveStarted -= HandleWaveStarted;
+            _waveController.BossCountdownChanged -= HandleBossCountdownChanged;
+        }
+
+        // On a level whose boss arrives on a timer the minimap timer is that boss countdown; otherwise it shows
+        // the wave-preparation countdown as before.
+        private void HandleBossCountdownChanged(float secondsRemaining)
+        {
+            if (_waveController.HasBossCountdown)
+            {
+                _controller.SetTime(secondsRemaining);
+            }
         }
 
         private void HandlePreparationTimeChanged(float secondsRemaining)
         {
+            if (_waveController.HasBossCountdown)
+            {
+                return;
+            }
+
             _controller.SetTime(secondsRemaining);
         }
 
         private void HandleWaveStarted(int waveNumber, int totalWaves)
         {
+            if (_waveController.HasBossCountdown)
+            {
+                return;
+            }
+
             // No preparation countdown while a wave is actively spawning/fighting - park the timer at 0 rather
             // than leaving it showing a stale "0:03" from the last tick of preparation.
             _controller.SetTime(0f);

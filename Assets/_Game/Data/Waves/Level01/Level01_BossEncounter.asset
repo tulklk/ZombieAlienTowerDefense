@@ -44,4 +44,5 @@ MonoBehaviour:
   - DistanceAlongPath: 1.6
     LateralOffset: 3
   _delayAfterNormalWaves: 0.75
+  _bossCountdown: 60
   _debugSkipNormalWaves: 0

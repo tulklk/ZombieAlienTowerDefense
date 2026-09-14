@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Vfx.VfxDefinition
   _id: vfx_defeated
   _prefab: {fileID: 933451406531355890, guid: dbb575836637aa249abeb9ebe37f3d05, type: 3}
-  _lifetime: 0.4
+  _lifetime: 0.7
   _poolPrewarmCount: 2
   _poolDefaultCapacity: 6
   _poolMaximumSize: 24

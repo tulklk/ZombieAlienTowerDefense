@@ -9,6 +9,11 @@ namespace AlienDefense.Vfx
         [SerializeField]
         private ParticleSystem[] _particleSystems = Array.Empty<ParticleSystem>();
 
+        [SerializeField]
+        [Tooltip("Ignore the spawn rotation and always play upright (e.g. an explosion whose shockwave ring should " +
+            "stay flat, whatever direction the projectile that triggered it was flying).")]
+        private bool _keepWorldUpright;
+
         private Action<PooledVfx> _releaseToPool;
         private float _lifetime;
         private float _elapsed;
@@ -20,6 +25,11 @@ namespace AlienDefense.Vfx
             _releaseToPool = releaseToPool;
             _elapsed = 0f;
             _isActive = true;
+
+            if (_keepWorldUpright)
+            {
+                transform.rotation = Quaternion.identity;
+            }
 
             for (int i = 0; i < _particleSystems.Length; i++)
             {

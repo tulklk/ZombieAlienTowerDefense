@@ -11,6 +11,12 @@ namespace AlienDefense.Combat
         [Tooltip("Optional.")]
         private TrailRenderer _trail;
 
+        [SerializeField]
+        [Tooltip("Optional. Particle effects riding on the projectile (e.g. a rocket's exhaust). Restarted from " +
+            "empty every time the pooled projectile is fired and cleared when it is returned, so world-space " +
+            "particles from its previous flight never reappear.")]
+        private ParticleSystem[] _attachedParticles = Array.Empty<ParticleSystem>();
+
         private CombatTargetHandle _target;
         private DamageInfo _damageInfo;
         private float _speed;
@@ -70,6 +76,28 @@ namespace AlienDefense.Combat
             if (_trail != null)
             {
                 _trail.Clear();
+            }
+
+            for (int i = 0; i < _attachedParticles.Length; i++)
+            {
+                if (_attachedParticles[i] != null)
+                {
+                    _attachedParticles[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+            }
+        }
+
+        // The factory positions the projectile before activating it, so this restarts the attached effects at
+        // the muzzle rather than wherever the instance was created or last flew.
+        private void OnEnable()
+        {
+            for (int i = 0; i < _attachedParticles.Length; i++)
+            {
+                if (_attachedParticles[i] != null)
+                {
+                    _attachedParticles[i].Clear(true);
+                    _attachedParticles[i].Play(true);
+                }
             }
         }
 

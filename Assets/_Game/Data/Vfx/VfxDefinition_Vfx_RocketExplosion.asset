@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc58613ea6542944d92d50efd3a1c0a5, type: 3}
+  m_Name: VfxDefinition_Vfx_RocketExplosion
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Vfx.VfxDefinition
+  _id: vfx_rocket_explosion
+  _prefab: {fileID: 6295475885521887029, guid: ab7175c6d8f7ebb4f8337e8a618232d1, type: 3}
+  _lifetime: 1.6
+  _poolPrewarmCount: 4
+  _poolDefaultCapacity: 8
+  _poolMaximumSize: 32
