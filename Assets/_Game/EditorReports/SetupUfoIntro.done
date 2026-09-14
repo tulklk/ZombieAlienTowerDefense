@@ -1,0 +1,7 @@
+﻿ok
+sky=(51.39, 4.67, 62.72)
+hasLandingMesh=True
+liftEase=9
+settleEase=3
+characterController=wired
+verified=static-scene

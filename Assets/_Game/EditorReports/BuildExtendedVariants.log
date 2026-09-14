@@ -1,0 +1,421 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.21f1 (c02631ffc030) revision 12592689'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Tus" at "2026-09-14T09:03:14.4271383Z"
+OS: 'Windows 11  (10.0.26200) CoreSingleLanguage' Language: 'en' Physical Memory: 32492 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-09-14T09:03:14Z
+
+COMMAND LINE ARGUMENTS:
+E:\Unity\Material\6000.3.21f1\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+E:\Unity\Project\TowerDefense\TowerDefense
+-executeMethod
+AlienDefense.EditorTools.ZombieVariantBuilder.BuildExtendedVariantsPhaseB
+-logFile
+E:\Unity\Project\TowerDefense\TowerDefense\Assets\_Game\EditorReports\BuildExtendedVariants.log
+-quit
+Successfully changed project path to: E:\Unity\Project\TowerDefense\TowerDefense
+E:/Unity/Project/TowerDefense/TowerDefense
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+Player connection [8780]  Target information:
+
+Player connection [8780]  * "[IP] 172.31.99.75 [Port] 55504 [Flags] 2 [Guid] 3707558864 [EditorId] 3707558864 [Version] 1048832 [Id] WindowsEditor(7,LAPTOP-VEL5EC45) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [8780] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [8780] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-38172" after 0.3 seconds.
+[Licensing::Module] Licensing is not yet initialized.
+[Licensing::Client] Error: HandshakeResponse reported an error:
+	ResponseCode: 505
+	ResponseStatus: Unsupported protocol version '1.18.1'.
+[Licensing::Module] Error: Failed to handshake to channel: "LicenseClient-Tus"
+[Licensing::IpcConnector] LicenseClient-Tus channel disconnected successfully.
+[Licensing::IpcConnector] Channel LicenseClient-Tus-6000.3.21 doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 34388)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Tus-6000.3.21" at "2026-09-14T09:03:19.5223646Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 34388, path: "E:/Unity/Material/6000.3.21f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.1+9fbee8e
+  Session Id:              8a6cda06fbb54307af2b4f5a673c7ddc
+  Correlation Id:          5b411f88611e018a21fe3ae213bfa02d
+  External correlation Id: 6258375896529882631
+  Machine Id:              8TkmXJ1lDM6kyMXBpLFkyOeZPUY=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-Tus-6000.3.21" (connect: 2.91s, validation: 0.21s, handshake: 0.01s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Tus-6000.3.21-notifications" at "2026-09-14T09:03:19.7459557Z"
+[Licensing::Module] Connected to LicensingClient (PId: 34388, launch time: 0.00, total connection time: 3.13s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 18968293043658-tulklk32-UnityProStuXXXX
+  Product: Unity Student
+  Type: Assigned
+  Expiration: 2027-07-10T16:59:39Z
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 5.36s
+[Licensing::Module] Licensing is initialized (took 4.79s).
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Artifact Garbage Collection - Removed 38 unused hashed content files
+[Licensing::Client] Successfully resolved entitlement details
+Refreshing native plugins compatible for Editor in 0.28 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.3.21f1 (c02631ffc030)
+[Subsystems] Discovering subsystems at path E:/Unity/Material/6000.3.21f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path E:/Unity/Project/TowerDefense/TowerDefense/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = 'E:/Unity/Material/6000.3.21f1/Editor/Data/Managed'
+Mono path[1] = 'E:/Unity/Material/6000.3.21f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'E:/Unity/Material/6000.3.21f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56172
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: E:/Unity/Material/6000.3.21f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: E:/Unity/Material/6000.3.21f1/Editor/Data/PlaybackEngines/MetroSupport/UnityEditor.UWP.Extensions.dll
+Register platform support module: E:/Unity/Material/6000.3.21f1/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+Registered in 0.005784 seconds.
+- Loaded All Assemblies, in  0.352 seconds
+Native extension for Android target not found
+Native extension for UWP target not found
+Native extension for WindowsStandalone target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.331 seconds
+Domain Reload Profiling: 684ms
+	BeginReloadAssembly (115ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (17ms)
+	RebuildCommonClasses (30ms)
+	RebuildNativeTypeToScriptingClass (10ms)
+	initialDomainReloadingComplete (41ms)
+	LoadAllAssembliesAndSetupDomain (156ms)
+		LoadAssemblies (98ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (153ms)
+			TypeCache.Refresh (150ms)
+				TypeCache.ScanAssembly (138ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (1ms)
+	FinalizeReload (332ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (296ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (83ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (60ms)
+			ProcessInitializeOnLoadAttributes (105ms)
+			ProcessInitializeOnLoadMethodAttributes (45ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 68 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.ai.assistant@2.17.0-pre.1 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ai.assistant@284c75a8d208)
+    com.unity.ai.inference@2.6.1 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ai.inference@9a123aee5df7)
+    com.unity.ai.navigation@2.0.14 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ai.navigation@134dd6a3b97b)
+    com.unity.burst@1.8.30 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.burst@2f3d916873ea)
+    com.unity.collab-proxy@2.12.4 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.collab-proxy@0b1559bcd34e)
+    com.unity.collections@2.6.8 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.collections@84e8eb3fc12e)
+    com.unity.device-simulator.devices@1.0.1 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.device-simulator.devices@2af643ceec84)
+    com.unity.ide.rider@3.0.40 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ide.rider@e4950c6d131b)
+    com.unity.ide.visualstudio@2.0.26 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ide.visualstudio@a99d56dec63f)
+    com.unity.inputsystem@1.20.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194)
+    com.unity.mathematics@1.3.3 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.mathematics@19a9377c4ffa)
+    com.unity.nuget.mono-cecil@1.11.6 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff)
+    com.unity.nuget.newtonsoft-json@3.2.2 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.nuget.newtonsoft-json@4dfd81071c64)
+    com.unity.searcher@4.9.4 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.searcher@d45a78918735)
+    com.unity.test-framework.performance@3.5.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.test-framework.performance@8b56083ec0f0)
+    com.unity.timeline@1.8.12 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.timeline@8cd8509afae5)
+    com.unity.visualscripting@1.9.12 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.visualscripting@4edfcc09512f)
+    com.unity.editorcoroutines@1.1.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.editorcoroutines@87a15ed012c2)
+    com.unity.performance.profile-analyzer@1.4.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.performance.profile-analyzer@2bb26871883c)
+    com.unity.testtools.codecoverage@1.3.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.testtools.codecoverage@19a841221620)
+    com.unity.dt.app-ui@2.1.1 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.dt.app-ui@8ac7e730dd5d)
+    com.unity.settings-manager@2.1.1 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.settings-manager@0b8638c5ce86)
+  Built-in packages:
+    com.unity.ext.nunit@2.0.5 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ext.nunit@d8c07649098d)
+    com.unity.feature.development@1.0.2 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.feature.development@767aadbc6eb7)
+    com.unity.multiplayer.center@1.0.1 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.multiplayer.center@f01f4ba8d00a)
+    com.unity.render-pipelines.core@17.3.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.render-pipelines.core@c67c01575725)
+    com.unity.render-pipelines.universal@17.3.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.render-pipelines.universal@8aa8d736cba6)
+    com.unity.render-pipelines.universal-config@17.0.3 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.render-pipelines.universal-config@8dc1aab4af1d)
+    com.unity.shadergraph@17.3.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.shadergraph@aa8306cf39d6)
+    com.unity.test-framework@1.6.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.test-framework@bd7f943e9647)
+    com.unity.ugui@2.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.ugui@e20f1880fa04)
+    com.unity.modules.accessibility@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.accessibility)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.adaptiveperformance)
+    com.unity.modules.ai@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.ai)
+    com.unity.modules.androidjni@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.androidjni)
+    com.unity.modules.animation@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.assetbundle@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.assetbundle)
+    com.unity.modules.audio@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.cloth@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.cloth)
+    com.unity.modules.director@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.director)
+    com.unity.modules.imageconversion@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.physics@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.physics2d)
+    com.unity.modules.screencapture@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.terrain@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.terrainphysics)
+    com.unity.modules.tilemap@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.tilemap)
+    com.unity.modules.ui@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.umbra@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.umbra)
+    com.unity.modules.unityanalytics@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.unityanalytics)
+    com.unity.modules.unitywebrequest@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.unitywebrequestaudio)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.unitywebrequesttexture)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.unitywebrequestwww)
+    com.unity.modules.vectorgraphics@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.vectorgraphics)
+    com.unity.modules.vehicles@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.vehicles)
+    com.unity.modules.video@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.vr@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.vr)
+    com.unity.modules.wind@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.wind)
+    com.unity.modules.xr@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.xr)
+    com.unity.modules.subsystems@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.subsystems)
+    com.unity.modules.hierarchycore@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.2d.sprite@1.0.0 (location: E:\Unity\Project\TowerDefense\TowerDefense\Library\PackageCache\com.unity.2d.sprite@d8bb22511404)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.04 seconds
+'Assets/_Game/EditorReports/BuildExtendedVariants.log' Amount of processed bytes '20548' does not match file size '1319'
+[ScriptCompilation] Requested script compilation because: Assetdatabase observed changes in script compilation related files
+Refreshing native plugins compatible for Editor in 1.68 ms, found 5 plugins.
+Starting: E:\Unity\Material\6000.3.21f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1300b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: E:/Unity/Project/TowerDefense/TowerDefense
+DisplayProgressbar: Compiling Scripts
+Starting: E:\Unity\Material\6000.3.21f1\Editor\Data\netcorerun\netcorerun.exe "E:\Unity\Material\6000.3.21f1\Editor\Data\Tools\BuildPipeline\ScriptCompilationBuildProgram.exe" "Library/Bee/1300b0aE.dag.json" "Library/Bee/1300b0aE-inputdata.json" "Library\Bee\buildprogram0.traceevents"
+WorkingDir: E:/Unity/Project/TowerDefense/TowerDefense
+ExitCode: 4 Duration: 1s500ms
+Rebuilding DAG because FileSignature timestamp changed: Library/Bee/1300b0aE-inputdata.json
+[1222/1614  0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[1223/1614  1s] Csc Library/Bee/artifacts/1300b0aE.dag/AlienDefense.Editor.dll (+2 others)
+*** Tundra requires additional run (1.46 seconds), 2 items updated, 1221 evaluated
+ExitCode: 0 Duration: 2s871ms
+Starting: E:\Unity\Material\6000.3.21f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1300b0aE.dag" --continue-on-failure --dagfilejson="Library\Bee\1300b0aE.dag.json" --profile="Library/Bee/backend2.traceevents" ScriptAssemblies
+WorkingDir: E:/Unity/Project/TowerDefense/TowerDefense
+ExitCode: 0 Duration: 11s
+Finished compiling graph: 1618 nodes, 34187 flattened edges (27373 ToBuild, 270 ToUse), maximum node priority 1850
+[ 729/1614  0s] WriteText Library/Bee/artifacts/1300b0aE.dag/AlienDefense.Editor.rsp
+[1222/1614  0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[1598/1614  1s] Csc Library/Bee/artifacts/1300b0aE.dag/AlienDefense.Editor.dll (+2 others)
+[1599/1614  0s] ILPostProcess Library/Bee/artifacts/1300b0aE.dag/post-processed/AlienDefense.Editor.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1300b0aE.dag/AlienDefense.Editor.dll, with 151 defines and 296 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[1600/1614  0s] CopyFiles Library/ScriptAssemblies/AlienDefense.Editor.pdb
+[1601/1614  0s] CopyFiles Library/ScriptAssemblies/AlienDefense.Editor.dll
+[1602/1614  4s] Csc Library/Bee/artifacts/1300b0aE.dag/Assembly-CSharp-firstpass.dll (+2 others)
+[1603/1614  0s] Csc Library/Bee/artifacts/1300b0aE.dag/Assembly-CSharp.dll (+2 others)
+[1604/1614  3s] ILPostProcess Library/Bee/artifacts/1300b0aE.dag/post-processed/Assembly-CSharp.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1300b0aE.dag/Assembly-CSharp.dll, with 153 defines and 351 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[1605/1614  3s] ILPostProcess Library/Bee/artifacts/1300b0aE.dag/post-processed/Assembly-CSharp-firstpass.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1300b0aE.dag/Assembly-CSharp-firstpass.dll, with 153 defines and 350 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[1606/1614  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[1607/1614  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+[1608/1614  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-firstpass.pdb
+[1609/1614  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-firstpass.dll
+[1610/1614  3s] Csc Library/Bee/artifacts/1300b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+[1611/1614  0s] ILPostProcess Library/Bee/artifacts/1300b0aE.dag/post-processed/Assembly-CSharp-Editor.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1300b0aE.dag/Assembly-CSharp-Editor.dll, with 151 defines and 380 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[1612/1614  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.pdb
+[1613/1614  0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.dll
+*** Tundra build success (11.35 seconds), 18 items updated, 1614 evaluated
+AssetDatabase: script compilation time: 18.484451s
+'Assets/_Game/EditorReports/BuildExtendedVariants.log' Amount of processed bytes '25485' does not match file size '20670'
+Begin MonoManager ReloadAssembly
+Total cache size 268039476
+Total cache size after purge 268039476, took 00:00:00.1505717
+- Loaded All Assemblies, in 27.590 seconds
+'Assets/_Game/EditorReports/BuildExtendedVariants.log' Amount of processed bytes '25777' does not match file size '25733'
+Refreshing native plugins compatible for Editor in 116.63 ms, found 5 plugins.
+Native extension for Android target not found
+Native extension for UWP target not found
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 2.24 ms, found 5 plugins.
+[PlayModeStartSceneEnforcer] Pinned Play Mode start scene to Bootstrap.unity.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+AlienDefense.EditorTools.PlayModeStartSceneEnforcer:Apply () (at Assets/_Game/Scripts/Editor/PlayModeStartSceneEnforcer.cs:41)
+AlienDefense.EditorTools.PlayModeStartSceneEnforcer:.cctor () (at Assets/_Game/Scripts/Editor/PlayModeStartSceneEnforcer.cs:23)
+System.Runtime.CompilerServices.RuntimeHelpers:RunClassConstructor (System.RuntimeTypeHandle)
+UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
+
+(Filename: Assets/_Game/Scripts/Editor/PlayModeStartSceneEnforcer.cs Line: 41)
+
+Refreshing native plugins compatible for Editor in 2.10 ms, found 5 plugins.
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  6.168 seconds
+Domain Reload Profiling: 33757ms
+	BeginReloadAssembly (7339ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (52ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (39ms)
+	RebuildCommonClasses (364ms)
+	RebuildNativeTypeToScriptingClass (10ms)
+	initialDomainReloadingComplete (331ms)
+	LoadAllAssembliesAndSetupDomain (19544ms)
+		LoadAssemblies (25327ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (1433ms)
+			TypeCache.Refresh (1331ms)
+				TypeCache.ScanAssembly (1310ms)
+			BuildScriptInfoCaches (85ms)
+			ResolveRequiredComponents (11ms)
+	FinalizeReload (6168ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (5934ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (35ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (200ms)
+			ProcessInitializeOnLoadAttributes (4828ms)
+			ProcessInitializeOnLoadMethodAttributes (865ms)
+			AfterProcessingInitializeOnLoad (2ms)
+			EditorAssembliesLoaded (1ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (20ms)
+'Assets/_Game/EditorReports/BuildExtendedVariants.log' Amount of processed bytes '29076' does not match file size '25900'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0681154 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:14.6647115Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0008129 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:14.7556829Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0007458 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:14.772291Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0006669 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:14.7877101Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0007313 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:14.8034229Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0007348 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:14.8199473Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0007665 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:15.0953291Z'
+Start importing Assets/_Game/EditorReports/BuildExtendedVariants.log using Guid(c13e3d6eeb8ef4046abfdfe3513383ba) (DefaultImporter) -> (artifact id: '00000000000000000000000000000000') in 0.0008743 seconds
+Import Error Code:(4)
+Message: Build asset version error: assets/_game/editorreports/buildextendedvariants.log in SourceAssetDB has modification time of '2026-09-14T09:04:14.3796522Z' while content on disk has modification time of '2026-09-14T09:04:15.1109073Z'
+An infinite import loop has been detected. The following Assets were imported multiple times, but no changes to them have been detected. Please check if any custom code is trying to import them:
+Packages/com.unity.render-pipelines.core/Editor/Lighting/ProbeVolume/RenderingLayerMask/TraceRenderingLayerMask.urtshader(modified date 2026-07-22T07:25:34Z)
+Assets/_Game/EditorReports/ForceRefresh.txt(modified date 2026-09-14T09:02:08.4970516Z)
+Packages/com.unity.render-pipelines.core/Editor/Lighting/ProbeVolume/VirtualOffset/TraceVirtualOffset.urtshader(modified date 2026-07-22T07:25:34Z)
+Assets/_Game/EditorReports/BuildExtendedVariants.log(modified date 2026-09-14T09:04:15.1109073Z)
+Packages/com.unity.render-pipelines.core/Tests/Editor/UnifiedRayTracing/TraceRaysAndFetchAttributes.urtshader(modified date 2026-07-22T07:25:54Z)
+Assets/_Game/EditorReports/BuildExtendedVariants.request(modified date 2026-09-14T09:03:09.0887902Z)
+Packages/com.unity.render-pipelines.core/Tests/Editor/UnifiedRayTracing/TraceRays.urtshader(modified date 2026-07-22T07:25:54Z)
+Packages/com.unity.render-pipelines.universal/Runtime/RendererFeatures/SurfaceCacheGI/SurfaceCacheCore/RestirCandidateTemporal.urtshader(modified date 2026-07-22T07:25:36Z)
+Packages/com.unity.render-pipelines.core/Editor/Lighting/ProbeVolume/DynamicGI/DynamicGISkyOcclusion.urtshader(modified date 2026-07-22T07:25:34Z)
+Packages/com.unity.render-pipelines.universal/Runtime/RendererFeatures/SurfaceCacheGI/SurfaceCacheCore/RisEstimation.urtshader(modified date 2026-07-22T07:25:36Z)
+Packages/com.unity.render-pipelines.core/Tests/Editor/UnifiedRayTracing/TraceTransparentRays.urtshader(modified date 2026-07-22T07:25:54Z)
+Packages/com.unity.render-pipelines.universal/Runtime/RendererFeatures/SurfaceCacheGI/SurfaceCacheCore/UniformEstimation.urtshader(modified date 2026-07-22T07:25:36Z)

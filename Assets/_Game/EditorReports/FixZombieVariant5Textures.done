@@ -1,0 +1,6 @@
+ok
+mode=mixamo_extract
+baseColor=Assets/_Game/Models/Zombie/Prefabs/5/Textures/zomb6_basecolor.jpg
+normal=none
+mat=Assets/_Game/Models/Zombie/Prefabs/5/Materials/ZombieVariant5_Mat.mat
+texturesFolder=Assets/_Game/Models/Zombie/Prefabs/5/Textures

@@ -1,0 +1,23 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.21f1 (c02631ffc030) revision 12592689'; Using compiler version '194234433'; Build Type 'Release'
+OS: 'Windows 11  (10.0.26200) CoreSingleLanguage' Language: 'en' Physical Memory: 32492 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Tus" at "2026-09-14T08:21:21.4195637Z"
+Process architecture: x64
+Date: 2026-09-14T08:21:21Z
+
+COMMAND LINE ARGUMENTS:
+E:\Unity\Material\6000.3.21f1\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+E:\Unity\Project\TowerDefense\TowerDefense
+-executeMethod
+AlienDefense.EditorTools.ZombieVariantBuilder.FixTripoTexturesZombie5AndBoss
+-logFile
+E:\Unity\Project\TowerDefense\TowerDefense\Assets\_Game\EditorReports\FixTripoTextures.log
+-quit
+Successfully changed project path to: E:\Unity\Project\TowerDefense\TowerDefense
+E:/Unity/Project/TowerDefense/TowerDefense
+Exiting without the bug reporter. Application will terminate with return code 1
