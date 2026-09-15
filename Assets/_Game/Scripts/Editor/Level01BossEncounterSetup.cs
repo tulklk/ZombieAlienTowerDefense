@@ -50,6 +50,7 @@ namespace AlienDefense.EditorTools
 
             if (EditorSceneManager.GetActiveScene().path == Level01ScenePath)
             {
+                NarrowEnemyLane();
                 SetupScene();
             }
             else
@@ -81,9 +82,10 @@ namespace AlienDefense.EditorTools
             SerializedProperty group = groups.GetArrayElementAtIndex(0);
             SerializedProperty entries = group.FindPropertyRelative("_entries");
             entries.arraySize = 1;
-            SetEntry(entries.GetArrayElementAtIndex(0), NormalDefinitionPath, 10);
+            // A dense column: 24 enemies ~0.55 s apart walk roughly a metre behind each other.
+            SetEntry(entries.GetArrayElementAtIndex(0), NormalDefinitionPath, 24);
             group.FindPropertyRelative("_delayBeforeGroup").floatValue = 0f;
-            group.FindPropertyRelative("_spawnInterval").floatValue = 1.3f;
+            group.FindPropertyRelative("_spawnInterval").floatValue = 0.55f;
             group.FindPropertyRelative("_interleaveEntries").boolValue = false;
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(wave);
@@ -112,13 +114,14 @@ namespace AlienDefense.EditorTools
             // Path runs from its first waypoint toward the base (larger distance = nearer the base, i.e. in front
             // of the boss). The boss leads; the escorts fan out behind it, so the intro camera (placed in front of
             // the boss) sees the boss with its army at its back and nobody blocking its body.
+            // Tight pack (~1.4 m between neighbours) so the escort reads as one group marching with the boss.
             var slots = new (float d, float x)[]
             {
-                (9.4f, -3.0f), (9.4f, 3.0f),         // shoulder pair (Normal)
-                (7.3f, -1.6f), (7.3f, 1.6f),         // inner second row (Normal)
-                (5.6f, -3.3f), (5.6f, 3.3f),         // outer second row (Normal)
-                (3.6f, -1.7f), (3.6f, 1.7f),         // rear pair (Normal)
-                (1.6f, -3.0f), (1.6f, 3.0f),         // runners at the back
+                (10.4f, -1.65f), (10.4f, 1.65f),     // shoulder pair (Normal)
+                (9.2f, -0.9f), (9.2f, 0.9f),         // inner second row (Normal)
+                (8.2f, -1.8f), (8.2f, 1.8f),         // outer second row (Normal)
+                (7.0f, -0.95f), (7.0f, 0.95f),       // rear pair (Normal)
+                (5.8f, -1.65f), (5.8f, 1.65f),       // runners at the back
             };
             SerializedProperty slotArray = so.FindProperty("_escortSlots");
             slotArray.arraySize = slots.Length;
@@ -143,8 +146,28 @@ namespace AlienDefense.EditorTools
             waves.arraySize = 1;
             waves.GetArrayElementAtIndex(0).objectReferenceValue = wave;
             so.FindProperty("_bossEncounter").objectReferenceValue = encounter;
+            // Room for the whole dense wave on the road at once, plus the boss group arriving on top of leftovers.
+            so.FindProperty("_maxAliveEnemies").intValue = 30;
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(level);
+        }
+
+        /// <summary>Level_01's road lane: enemies pick a random sideways lane within this half width, so a narrower
+        /// one keeps the column packed together instead of spread across the whole road.</summary>
+        private const float Level01LaneHalfWidth = 1.8f;
+
+        private static void NarrowEnemyLane()
+        {
+            var path = Object.FindFirstObjectByType<EnemyPath3D>(FindObjectsInactive.Include);
+            if (path == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(path);
+            so.FindProperty("_laneHalfWidth").floatValue = Level01LaneHalfWidth;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(path);
         }
 
         private static void SetEntry(SerializedProperty entry, string definitionPath, int count)

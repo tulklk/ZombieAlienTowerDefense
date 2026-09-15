@@ -90,7 +90,16 @@ namespace AlienDefense.Enemies
         {
             if (reason == EnemyResolveReason.Defeated && _vfxService != null)
             {
-                _vfxService.Play(enemy.Definition.DefeatedVfxDefinition, enemy.transform.position, Quaternion.identity);
+                // A killing blow may bring its own death effect (ice lance -> shatter), played at the body's centre.
+                VfxDefinition killVfx = enemy.Health.KillVfxOverride;
+                if (killVfx != null)
+                {
+                    _vfxService.Play(killVfx, enemy.AimPoint.position, Quaternion.identity);
+                }
+                else
+                {
+                    _vfxService.Play(enemy.Definition.DefeatedVfxDefinition, enemy.transform.position, Quaternion.identity);
+                }
             }
 
             if (_energyDrop != null && EnemyResolutionPolicy.ShouldDropEnergy(reason))

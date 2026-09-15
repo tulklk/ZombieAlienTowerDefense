@@ -31,6 +31,11 @@ namespace AlienDefense.Combat
         [SerializeField]
         private VfxDefinition _hitVfxDefinition;
 
+        [SerializeField]
+        [Tooltip("Optional. Replaces the enemy's own defeat effect when this projectile's hit is the killing blow " +
+            "(e.g. the Frost Tower's ice lance shattering the enemy it kills).")]
+        private VfxDefinition _killVfxDefinition;
+
         [Header("Pool")]
         [SerializeField, Min(0)]
         private int _poolPrewarmCount = 20;
@@ -48,6 +53,7 @@ namespace AlienDefense.Combat
         public float MaximumLifetime => _maximumLifetime;
         public float HitDistance => _hitDistance;
         public VfxDefinition HitVfxDefinition => _hitVfxDefinition;
+        public VfxDefinition KillVfxDefinition => _killVfxDefinition;
         public int PoolPrewarmCount => _poolPrewarmCount;
         public int PoolDefaultCapacity => _poolDefaultCapacity;
         public int PoolMaximumSize => _poolMaximumSize;

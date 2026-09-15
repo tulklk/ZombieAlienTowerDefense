@@ -356,7 +356,6 @@ namespace AlienDefense.EditorTools
             // GroundGlow and GroundRing were removed per feedback: only the cone (Outer/Inner) should mark the beam.
             GameObject beamTopGlow = BuildTopGlow(captureSocket, TractorBeamMaterialBuilder.CreateOrLoadGlow());
             ParticleSystem beamParticles = BuildBeamParticles(beamRoot, attractionRadius, hoverHeight);
-            ParticleSystem captureFlashParticles = BuildCaptureFlashParticles(captureFlashPoint);
 
             var beamVisualSerialized = new SerializedObject(beamVisual);
             beamVisualSerialized.FindProperty("_beamConeOuter").objectReferenceValue = beamConeOuter;
@@ -365,7 +364,8 @@ namespace AlienDefense.EditorTools
             beamVisualSerialized.FindProperty("_groundRing").objectReferenceValue = null;
             beamVisualSerialized.FindProperty("_beamTopGlow").objectReferenceValue = beamTopGlow;
             beamVisualSerialized.FindProperty("_beamParticles").objectReferenceValue = beamParticles;
-            beamVisualSerialized.FindProperty("_captureFlashParticles").objectReferenceValue = captureFlashParticles;
+            // The old white capture flash is gone; enemy captures play GoopSpray here instead (see EnemyAbsorbGoopSetup).
+            beamVisualSerialized.FindProperty("_enemyCaptureVfxAnchor").objectReferenceValue = captureFlashPoint;
             beamVisualSerialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -456,36 +456,6 @@ namespace AlienDefense.EditorTools
             ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particles.sizeOverLifetime;
             sizeOverLifetime.enabled = true;
             sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.3f));
-
-            var renderer = particleObject.GetComponent<ParticleSystemRenderer>();
-            renderer.sharedMaterial = TractorBeamMaterialBuilder.CreateOrLoadGlow();
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-
-            return particles;
-        }
-
-        private static ParticleSystem BuildCaptureFlashParticles(Transform parent)
-        {
-            var particleObject = new GameObject("CaptureFlashParticles");
-            particleObject.transform.SetParent(parent, false);
-
-            var particles = particleObject.AddComponent<ParticleSystem>();
-            ParticleSystem.MainModule main = particles.main;
-            main.loop = false;
-            main.playOnAwake = false;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.1f, 0.25f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.5f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.1f, 0.3f);
-            main.startColor = Color.white;
-            main.maxParticles = 60;
-
-            ParticleSystem.EmissionModule emission = particles.emission;
-            emission.rateOverTime = 0f;
-
-            ParticleSystem.ShapeModule shape = particles.shape;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.15f;
 
             var renderer = particleObject.GetComponent<ParticleSystemRenderer>();
             renderer.sharedMaterial = TractorBeamMaterialBuilder.CreateOrLoadGlow();

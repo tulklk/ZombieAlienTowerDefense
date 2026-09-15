@@ -27,8 +27,14 @@ namespace AlienDefense.Data
             "(see PlayerMissileController).")]
         public float MissileDamageMultiplier;
 
-        [Tooltip("Missile skill only: rockets fired per volley (each at a different enemy). 0 = same as the rank.")]
+        [Tooltip("Missile skill only: rockets fired per volley. 0 = same as the rank.")]
         public int MissileCount;
+
+        [Tooltip("Missile skill only: blast radius (metres) around each rocket's impact that damages nearby enemies. 0 = no splash.")]
+        public float MissileSplashRadius;
+
+        [Tooltip("Missile skill only: damage the blast deals to every other enemy inside MissileSplashRadius.")]
+        public float MissileSplashDamage;
 
         [Tooltip("Missile skill only: splash-radius multiplier (only rank 5's 'tăng phạm vi' actually raises this above 1).")]
         public float MissileRangeMultiplier;

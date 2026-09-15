@@ -9,10 +9,13 @@ using UnityEngine;
 namespace AlienDefense.Player
 {
     /// <summary>Auto-fires volleys of ProjectileFactory-spawned rockets while the player's Missile skill has been
-    /// picked at least once (rank > 0). Each rocket locks onto a different targetable enemy in range (nearest
-    /// first) and kills it outright; after a volley the launcher needs a fixed cooldown before the next one.
-    /// Ranking the skill up adds rockets to each volley (SkillRankData.MissileCount) - it never shortens the
-    /// cooldown. Bosses are not one-shot: a rocket takes a fixed share of a boss's maximum health instead.</summary>
+    /// picked at least once (rank > 0). A volley always fires the rank's full rocket count
+    /// (SkillRankData.MissileCount): rockets spread over the nearest enemies in range first, and when there are
+    /// fewer enemies than rockets the extra ones go after enemies already locked on (or re-pick a live one if
+    /// their target died before launch). Each rocket kills what it hits outright; from rank 2 the impact also
+    /// blasts every other enemy within MissileSplashRadius for MissileSplashDamage. After a volley the launcher
+    /// needs a fixed cooldown - ranks add rockets and splash, never fire rate. Bosses are not one-shot: a direct
+    /// hit takes a fixed share of a boss's maximum health instead.</summary>
     public sealed class PlayerMissileController : MonoBehaviour
     {
         [SerializeField]
@@ -44,12 +47,18 @@ namespace AlienDefense.Player
         private EnemyRegistry _enemyRegistry;
         private ProjectileFactory _projectileFactory;
         private ProjectileDefinition _projectileDefinition;
+        private AreaDamageResolver _areaDamage;
 
         private float _cooldownRemaining;
+        private readonly List<EnemyController> _nearest = new List<EnemyController>(5);
         private readonly List<EnemyController> _volleyTargets = new List<EnemyController>(5);
+        private readonly HashSet<EnemyController> _launchedAt = new HashSet<EnemyController>();
         private int _pendingLaunches;
         private int _launchIndex;
         private float _staggerTimer;
+        private float _volleyRange;
+        private float _volleySplashRadius;
+        private float _volleySplashDamage;
 
         /// <summary>True once the Missile skill has been picked (the launcher and its HUD button exist).</summary>
         public bool IsUnlocked => _skills != null && _skills.GetRank(SkillType.Missile) > 0;
@@ -65,15 +74,19 @@ namespace AlienDefense.Player
         /// <summary>Raised when a volley is committed. Arg: rockets in it.</summary>
         public event Action<int> VolleyFired;
 
-        public void Initialize(PlayerSkillService skills, EnemyRegistry enemyRegistry, ProjectileFactory projectileFactory, ProjectileDefinition projectileDefinition)
+        /// <param name="areaDamage">Optional. Without it rockets never splash.</param>
+        public void Initialize(PlayerSkillService skills, EnemyRegistry enemyRegistry, ProjectileFactory projectileFactory,
+            ProjectileDefinition projectileDefinition, AreaDamageResolver areaDamage = null)
         {
             _skills = skills;
             _enemyRegistry = enemyRegistry;
             _projectileFactory = projectileFactory;
             _projectileDefinition = projectileDefinition;
+            _areaDamage = areaDamage;
             _cooldownRemaining = 0f;
             _pendingLaunches = 0;
             _volleyTargets.Clear();
+            _launchedAt.Clear();
 
             if (_firePoint == null)
             {
@@ -114,20 +127,32 @@ namespace AlienDefense.Player
 
             SkillRankData rankData = definition.GetRank(rank);
             float range = _baseRange * Mathf.Max(1f, rankData.MissileRangeMultiplier);
-            int rockets = rankData.MissileCount > 0 ? rankData.MissileCount : rank;
+            int rockets = Mathf.Max(1, rankData.MissileCount > 0 ? rankData.MissileCount : rank);
 
-            CollectTargets(range, rockets);
-            if (_volleyTargets.Count == 0)
+            CollectNearest(range, rockets, null);
+            if (_nearest.Count == 0)
             {
                 return; // stays ready until something comes into range
             }
 
+            // Every rocket gets a target: the nearest enemies first, then round again over the same ones.
+            _volleyTargets.Clear();
+            for (int i = 0; i < rockets; i++)
+            {
+                _volleyTargets.Add(_nearest[i % _nearest.Count]);
+            }
+
+            _volleyRange = range;
+            _volleySplashRadius = _areaDamage != null ? Mathf.Max(0f, rankData.MissileSplashRadius) : 0f;
+            _volleySplashDamage = Mathf.Max(0f, rankData.MissileSplashDamage);
+            _launchedAt.Clear();
+
             // The cooldown starts with the volley, not after its last rocket leaves.
             _cooldownRemaining = _cooldownDuration;
-            _pendingLaunches = _volleyTargets.Count;
+            _pendingLaunches = rockets;
             _launchIndex = 0;
             _staggerTimer = 0f;
-            VolleyFired?.Invoke(_pendingLaunches);
+            VolleyFired?.Invoke(rockets);
             TickVolley();
         }
 
@@ -136,7 +161,7 @@ namespace AlienDefense.Player
             _staggerTimer -= Time.deltaTime;
             while (_pendingLaunches > 0 && _staggerTimer <= 0f)
             {
-                Launch(_volleyTargets[_launchIndex], _launchIndex, _volleyTargets.Count);
+                Launch(ResolveLaunchTarget(_volleyTargets[_launchIndex]), _launchIndex, _volleyTargets.Count);
                 _launchIndex++;
                 _pendingLaunches--;
                 _staggerTimer += _volleyStagger;
@@ -145,15 +170,44 @@ namespace AlienDefense.Player
             if (_pendingLaunches == 0)
             {
                 _volleyTargets.Clear();
+                _launchedAt.Clear();
             }
+        }
+
+        /// <summary>Spreads the volley: the planned target if no rocket has gone after it yet; else the nearest live
+        /// enemy nobody is chasing (new ones may have walked into range); else the planned target again if it is
+        /// alive, or any live enemy in range. Null only if the range is empty.</summary>
+        private EnemyController ResolveLaunchTarget(EnemyController planned)
+        {
+            bool plannedAlive = planned != null && planned.IsTargetable;
+            if (plannedAlive && !_launchedAt.Contains(planned))
+            {
+                return planned;
+            }
+
+            CollectNearest(_volleyRange, 1, _launchedAt);
+            if (_nearest.Count > 0)
+            {
+                return _nearest[0];
+            }
+
+            if (plannedAlive)
+            {
+                return planned;
+            }
+
+            CollectNearest(_volleyRange, 1, null);
+            return _nearest.Count > 0 ? _nearest[0] : null;
         }
 
         private void Launch(EnemyController target, int index, int count)
         {
-            if (target == null || !target.IsTargetable)
+            if (target == null)
             {
-                return; // died before its rocket left - that rocket is simply not fired
+                return; // nothing left in range for this rocket
             }
+
+            _launchedAt.Add(target);
 
             float maxHealth = target.Health != null ? target.Health.MaximumHealth : 0f;
             float damage = target.BossController != null
@@ -166,21 +220,27 @@ namespace AlienDefense.Player
             Quaternion rotation = toTarget.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(toTarget.normalized, Vector3.up) : _firePoint.rotation;
 
             var damageInfo = new DamageInfo(damage, gameObject, target.AimPoint.position);
-            var request = new ProjectileSpawnRequest(spawn, rotation, new CombatTargetHandle(target), damageInfo);
+            bool splash = _volleySplashRadius > 0f && _volleySplashDamage > 0f;
+            var request = new ProjectileSpawnRequest(
+                spawn, rotation, new CombatTargetHandle(target), damageInfo,
+                areaDamageResolver: splash ? _areaDamage : null,
+                splashRadius: splash ? _volleySplashRadius : 0f,
+                splashDamage: splash ? _volleySplashDamage : 0f);
             _projectileFactory.Spawn(_projectileDefinition, request);
         }
 
-        /// <summary>Nearest-first, one rocket per enemy.</summary>
-        private void CollectTargets(float range, int maxTargets)
+        /// <summary>Fills _nearest with up to maxTargets targetable enemies in range, nearest first, skipping any
+        /// in exclude.</summary>
+        private void CollectNearest(float range, int maxTargets, HashSet<EnemyController> exclude)
         {
-            _volleyTargets.Clear();
+            _nearest.Clear();
             float rangeSqr = range * range;
             Vector3 origin = _firePoint.position;
 
             for (int i = 0; i < _enemyRegistry.Count; i++)
             {
                 EnemyController candidate = _enemyRegistry.GetAt(i);
-                if (candidate == null || !candidate.IsTargetable)
+                if (candidate == null || !candidate.IsTargetable || (exclude != null && exclude.Contains(candidate)))
                 {
                     continue;
                 }
@@ -192,10 +252,10 @@ namespace AlienDefense.Player
                 }
 
                 // Insertion into a short sorted list (at most 5 rockets).
-                int insertAt = _volleyTargets.Count;
-                for (int j = 0; j < _volleyTargets.Count; j++)
+                int insertAt = _nearest.Count;
+                for (int j = 0; j < _nearest.Count; j++)
                 {
-                    if (sqrDist < (_volleyTargets[j].AimPoint.position - origin).sqrMagnitude)
+                    if (sqrDist < (_nearest[j].AimPoint.position - origin).sqrMagnitude)
                     {
                         insertAt = j;
                         break;
@@ -207,10 +267,10 @@ namespace AlienDefense.Player
                     continue;
                 }
 
-                _volleyTargets.Insert(insertAt, candidate);
-                if (_volleyTargets.Count > maxTargets)
+                _nearest.Insert(insertAt, candidate);
+                if (_nearest.Count > maxTargets)
                 {
-                    _volleyTargets.RemoveAt(_volleyTargets.Count - 1);
+                    _nearest.RemoveAt(_nearest.Count - 1);
                 }
             }
         }

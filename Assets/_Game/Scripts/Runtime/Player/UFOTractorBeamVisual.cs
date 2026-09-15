@@ -2,14 +2,15 @@ using AlienDefense.Enemies;
 using AlienDefense.Environment;
 using AlienDefense.Pickups;
 using AlienDefense.UI;
+using AlienDefense.Vfx;
 using DG.Tweening;
 using UnityEngine;
 
 namespace AlienDefense.Player
 {
     /// <summary>Pure visual reaction to UFOTractorBeamController's counts/events: cone (Outer only — Inner is
-    /// kept as a wired-but-always-hidden slot, see Initialize), ground glow/ring, top glow, particles, capture
-    /// flash. Never decides capture/absorption, never scans any registry, never touches gameplay state, never
+    /// kept as a wired-but-always-hidden slot, see Initialize), ground glow/ring, top glow, particles, and the
+    /// enemy-only capture VFX (GoopSpray). Never decides capture/absorption, never scans any registry, never touches gameplay state, never
     /// Instantiates/Destroys per target. Reacts identically to Enemy/Energy/Prop — see
     /// HandleTotalActiveAbsorptionCountChanged.</summary>
     public sealed class UFOTractorBeamVisual : MonoBehaviour
@@ -87,9 +88,14 @@ namespace AlienDefense.Player
             "the streaks/sparks. Constant light trickle, not scaled by capture intensity like the other two.")]
         private ParticleSystem _beamOrbParticles;
 
+        [Header("Enemy Capture (pooled one-shot, enemies only - energy/props get no burst)")]
         [SerializeField]
-        [Tooltip("Persistent system on the UFO; a capture just Emits a burst on it, never Instantiates.")]
-        private ParticleSystem _captureFlashParticles;
+        [Tooltip("Played through VfxService when an enemy is pulled all the way into the UFO (GoopSpray).")]
+        private VfxDefinition _enemyCaptureVfx;
+
+        [SerializeField]
+        [Tooltip("Where the enemy capture VFX plays - the capture point under the UFO. Falls back to this Transform.")]
+        private Transform _enemyCaptureVfxAnchor;
 
         [Header("Fade")]
         [SerializeField, Min(0.01f)]
@@ -122,9 +128,6 @@ namespace AlienDefense.Player
         [SerializeField, Min(0f)]
         private float _maxStreakEmissionRate = 32f;
 
-        [SerializeField, Min(0)]
-        private int _captureFlashBurstCount = 10;
-
         [Header("XP Popup")]
         [SerializeField]
         [Tooltip("Optional. Spawned (Instantiate, never pooled - these are rare, roughly once per Energy Pickup " +
@@ -139,6 +142,7 @@ namespace AlienDefense.Player
         private Transform _xpPopupSpawnAnchor;
 
         private UFOTractorBeamController _controller;
+        private VfxService _vfx;
         private Transform _cameraTransform;
         private Camera _camera;
         private MaterialPropertyBlock _outerBlock;
@@ -182,10 +186,15 @@ namespace AlienDefense.Player
         // the visible cone well before reaching the (much narrower) top - see UFOBeamParticleAttractor.
         private const float ConeTaperRatio = 0.15f;
 
-        public void Initialize(UFOTractorBeamController controller, Transform cameraTransform = null)
+        // Local X/Z each height-stretched child was authored at (see SetWorldHeight).
+        private readonly System.Collections.Generic.Dictionary<Transform, Vector2> _authoredLocalXZ =
+            new System.Collections.Generic.Dictionary<Transform, Vector2>();
+
+        public void Initialize(UFOTractorBeamController controller, Transform cameraTransform = null, VfxService vfx = null)
         {
             Unsubscribe();
             _controller = controller;
+            _vfx = vfx;
             _cameraTransform = cameraTransform;
             _camera = cameraTransform != null ? cameraTransform.GetComponent<Camera>() : null;
             if (_camera == null)
@@ -420,6 +429,13 @@ namespace AlienDefense.Player
                     groundY = Mathf.Max(groundY, height);
                     found = true;
                 }
+
+                // bridge decks stand above the terrain (the riverbed)
+                if (AlienDefense.Common.WalkableSurface.TryGetHeight(point, out float surfaceHeight))
+                {
+                    groundY = Mathf.Max(groundY, surfaceHeight);
+                    found = true;
+                }
             }
 
             return found;
@@ -491,7 +507,7 @@ namespace AlienDefense.Player
             _beamOrbAttractor?.SetMaxHeight(visualLength);
         }
 
-        private static void PlaceConeBase(MeshRenderer cone, float baseWorldY, float length)
+        private void PlaceConeBase(MeshRenderer cone, float baseWorldY, float length)
         {
             if (cone == null)
             {
@@ -502,16 +518,39 @@ namespace AlienDefense.Player
             ApplyConeScale(cone, length, keepRadius: true);
         }
 
-        private static void SetWorldHeight(Transform target, float worldY)
+        /// <summary>Slides target along its parent's up axis until it sits at worldY, keeping its authored local
+        /// X/Z. Writing the world position instead (keeping world X/Z) froze in a sideways offset whenever this
+        /// ran while the UFO was tilted - e.g. the lift-off tilt in UFOFlightIntro - leaving the cone and its
+        /// particles permanently off-centre under the saucer.</summary>
+        private void SetWorldHeight(Transform target, float worldY)
         {
             if (target == null)
             {
                 return;
             }
 
-            Vector3 position = target.position;
-            position.y = worldY;
-            target.position = position;
+            if (!_authoredLocalXZ.TryGetValue(target, out Vector2 authored))
+            {
+                authored = new Vector2(target.localPosition.x, target.localPosition.z);
+                _authoredLocalXZ[target] = authored;
+            }
+
+            Transform parent = target.parent;
+            if (parent == null)
+            {
+                Vector3 position = target.position;
+                position.y = worldY;
+                target.position = position;
+                return;
+            }
+
+            var local = new Vector3(authored.x, 0f, authored.y);
+            float worldYAtZero = parent.TransformPoint(local).y;
+            float worldYPerLocalUnit = parent.TransformVector(Vector3.up).y;
+            local.y = Mathf.Abs(worldYPerLocalUnit) > 0.0001f
+                ? (worldY - worldYAtZero) / worldYPerLocalUnit
+                : target.localPosition.y;
+            target.localPosition = local;
         }
 
         /// <summary>Beam length: distance from CaptureSocket to BeamGroundAnchor. Beam radius: gameplay
@@ -669,18 +708,23 @@ namespace AlienDefense.Player
 
         private void HandleEnemyCaptureCompleted(EnemyController enemy)
         {
-            _captureFlashParticles?.Emit(_captureFlashBurstCount);
+            if (_vfx == null || _enemyCaptureVfx == null)
+            {
+                return;
+            }
+
+            Transform anchor = _enemyCaptureVfxAnchor != null ? _enemyCaptureVfxAnchor : transform;
+            // Sprays straight down out of the UFO's belly, back through the beam.
+            _vfx.Play(_enemyCaptureVfx, anchor.position, Quaternion.LookRotation(Vector3.down, Vector3.forward));
         }
 
         private void HandleEnergyPickupCollected(EnergyPickupController pickup)
         {
-            _captureFlashParticles?.Emit(_captureFlashBurstCount);
             SpawnXpPopup(pickup.ExperienceValue);
         }
 
         private void HandlePropAbsorbed(TractorAbsorbableProp prop)
         {
-            _captureFlashParticles?.Emit(_captureFlashBurstCount);
             SpawnXpPopup(prop.ExperienceReward);
         }
 

@@ -21,7 +21,7 @@ MonoBehaviour:
   _sellPercentage: 0.5
   _unlockCost: 200
   _defaultTargetingMode: 1
-  _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
+  _projectileDefinition: {fileID: 11400000, guid: 6207c443c23b1b0429de6f591e38f3ca,
     type: 2}
   _attackBehavior: 1
   _statusEffectOnHit: {fileID: 11400000, guid: 65ccd661d71ef7346b565c6bde456de5, type: 2}

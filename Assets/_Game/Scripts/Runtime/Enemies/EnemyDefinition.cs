@@ -73,6 +73,11 @@ namespace AlienDefense.Enemies
         [Tooltip("Divides the beam's base pull speed. 1 = normal, >1 = resists (pulled slower), <1 = pulled faster.")]
         private float _tractorResistance = 1f;
 
+        [Header("Crowd Control")]
+        [SerializeField, Range(0f, 1f)]
+        [Tooltip("Scales how long a Stun holds this enemy (1 = full duration, 0.5 = half). Slows are unaffected.")]
+        private float _stunDurationMultiplier = 1f;
+
         [Header("VFX (optional)")]
         [SerializeField]
         private VfxDefinition _defeatedVfxDefinition;
@@ -105,6 +110,7 @@ namespace AlienDefense.Enemies
         public float HealthBarHeightOffset => _healthBarHeightOffset;
         public bool CanBeTractorCaptured => _canBeTractorCaptured;
         public float TractorResistance => _tractorResistance;
+        public float StunDurationMultiplier => _stunDurationMultiplier;
         public VfxDefinition DefeatedVfxDefinition => _defeatedVfxDefinition;
         public int PoolPrewarmCount => _poolPrewarmCount;
         public int PoolDefaultCapacity => _poolDefaultCapacity;

@@ -227,6 +227,8 @@ namespace AlienDefense.EditorTools
             SerializedProperty attached = so.FindProperty("_attachedParticles");
             attached.arraySize = 1;
             attached.GetArrayElementAtIndex(0).objectReferenceValue = exhaust.GetComponent<ParticleSystem>();
+            // A second rocket at an enemy the first one already killed still lands and blasts the area.
+            so.FindProperty("_detonateAtLastPositionWhenTargetLost").boolValue = true;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, ProjectilePrefabPath);

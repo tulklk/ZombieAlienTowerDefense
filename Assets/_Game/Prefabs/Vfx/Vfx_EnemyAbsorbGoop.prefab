@@ -1,0 +1,175 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &27528353522691272
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2603210835078713766}
+  - component: {fileID: 4816725301554255963}
+  m_Layer: 0
+  m_Name: Vfx_EnemyAbsorbGoop
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2603210835078713766
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27528353522691272}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5316576056057261122}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4816725301554255963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27528353522691272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b81892375a2c9345b76354b896188d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Vfx.PooledVfx
+  _particleSystems:
+  - {fileID: 5733506505466465659}
+  _keepWorldUpright: 0
+--- !u!1001 &4471427017260572376
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 2603210835078713766}
+    m_Modifications:
+    - target: {fileID: 89129833194669325, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: looping
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 89129833194669325, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: playOnAwake
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 89129833194669325, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: scalingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8186474179455800227, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: looping
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8186474179455800227, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: playOnAwake
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8186474179455800227, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: scalingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8208393357371167181, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_Name
+      value: GoopSpray
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -39.281002
+      objectReference: {fileID: 0}
+    - target: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 673750509d2b63d4b9820d83f8197789, type: 3}
+--- !u!4 &5316576056057261122 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8630575768629768858, guid: 673750509d2b63d4b9820d83f8197789,
+    type: 3}
+  m_PrefabInstance: {fileID: 4471427017260572376}
+  m_PrefabAsset: {fileID: 0}
+--- !u!198 &5733506505466465659 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 8186474179455800227, guid: 673750509d2b63d4b9820d83f8197789,
+    type: 3}
+  m_PrefabInstance: {fileID: 4471427017260572376}
+  m_PrefabAsset: {fileID: 0}

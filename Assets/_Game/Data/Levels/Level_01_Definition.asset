@@ -17,7 +17,7 @@ MonoBehaviour:
   _baseMaxHealth: 100
   _preparationDuration: 4
   _targetFrameRate: 60
-  _maxAliveEnemies: 15
+  _maxAliveEnemies: 30
   _healthPerWaveStep: 0.1
   _speedPerWaveStep: 0.015
   _damagePerWaveStep: 0.07

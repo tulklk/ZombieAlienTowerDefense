@@ -1,4 +1,5 @@
 using System;
+using AlienDefense.Common;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
@@ -197,12 +198,16 @@ namespace AlienDefense.Enemies
         private static float SampleGroundHeight(Vector3 position, float fallbackY)
         {
             Vector3 origin = new Vector3(position.x, position.y + GroundProbeUpOffset, position.z);
-            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, GroundProbeMaxDistance, GroundMask, QueryTriggerInteraction.Ignore))
+            bool hasHit = Physics.Raycast(origin, Vector3.down, out RaycastHit hit, GroundProbeMaxDistance, GroundMask, QueryTriggerInteraction.Ignore);
+
+            // On a bridge the deck's walk surface is the floor: the probe would otherwise catch railing posts at the
+            // lane edge or fall through plank gaps. Terrain still wins where the bank rises above the deck ramp.
+            if (WalkableSurface.TryGetHeight(position, out float surfaceY))
             {
-                return hit.point.y;
+                return hasHit && hit.collider is TerrainCollider && hit.point.y > surfaceY ? hit.point.y : surfaceY;
             }
 
-            return fallbackY;
+            return hasHit ? hit.point.y : fallbackY;
         }
 
         private void UpdatePathProgress(Vector3 currentPosition)

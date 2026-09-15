@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: 9222362753496430470}
   - component: {fileID: 6956112352624391390}
   - component: {fileID: 3834917537729783180}
+  - component: {fileID: 3380363339110960614}
   m_Layer: 10
   m_Name: Enemy_Normal
   m_TagString: Untagged
@@ -216,6 +217,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyStatusController
   _movement: {fileID: 7643044090150512057}
   _health: {fileID: 8445440916621400515}
+  _debugProcHits: 0
+  _debugProcRequiredHits: 0
+  _debugIsStunned: 0
 --- !u!114 &6956112352624391390
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -243,6 +247,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyBaseAttackVisual
   _animator: {fileID: 3063728585147039986}
   _attackHoldDuration: 2.6333334
+--- !u!54 &3380363339110960614
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2655138639240724628}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &4288083225680880036
 GameObject:
   m_ObjectHideFlags: 0
@@ -549,6 +580,21 @@ PrefabInstance:
     - target: {fileID: 1099302459632141314, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1110153609883755096, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
+        type: 3}
+      propertyPath: m_CullingMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2624144870075657859, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
+        type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: c4f1e81afa0eda04681b2f8493422566, type: 2}
+    - target: {fileID: 2624144870075657859, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
+        type: 3}
+      propertyPath: m_SkinnedMotionVectors
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

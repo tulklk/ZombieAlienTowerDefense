@@ -54,7 +54,9 @@ namespace AlienDefense.Combat
                 definition.HitVfxDefinition,
                 request.StatusEffectOnHit,
                 request.AreaDamageResolver,
-                request.SplashRadius);
+                request.SplashRadius,
+                request.SplashDamage,
+                definition.KillVfxDefinition);
             projectile.gameObject.SetActive(true);
 
             return projectile;

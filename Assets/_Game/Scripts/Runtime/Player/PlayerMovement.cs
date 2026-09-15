@@ -10,7 +10,8 @@ namespace AlienDefense.Player
     ///
     /// Deliberately follows the Terrain only, never the buildings standing on it: the UFO is meant to sail
     /// straight over/through them at a constant height rather than climbing onto their roofs. Structures it
-    /// cannot absorb announce themselves by shaking instead - see TractorImmuneShake.</summary>
+    /// cannot absorb announce themselves by shaking instead - see TractorImmuneShake. The one exception is a
+    /// WalkableSurface (a bridge deck), which replaces the riverbed beneath it as the floor.</summary>
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerMovement : MonoBehaviour
     {
@@ -96,6 +97,20 @@ namespace AlienDefense.Player
         }
 
         private bool TryGetGroundHeight(Vector3 worldPosition, out float groundHeight)
+        {
+            bool onTerrain = TryGetTerrainHeight(worldPosition, out groundHeight);
+
+            // A bridge deck over the river is the floor there, not the riverbed below it.
+            if (WalkableSurface.TryGetHeight(worldPosition, out float surfaceHeight) && (!onTerrain || surfaceHeight > groundHeight))
+            {
+                groundHeight = surfaceHeight;
+                return true;
+            }
+
+            return onTerrain;
+        }
+
+        private bool TryGetTerrainHeight(Vector3 worldPosition, out float groundHeight)
         {
             if (_terrains != null)
             {
@@ -215,6 +230,10 @@ namespace AlienDefense.Player
             {
                 intendedPosition = _levelBounds.ClampXZ(intendedPosition);
             }
+
+            // Areas the UFO may not fly over (river, waterfall): slide along their edge instead of entering. No
+            // extra margin - the zones are traced to the waterline, so the saucer's rim may just overhang the edge.
+            intendedPosition = PlayerNoFlyZone.Resolve(intendedPosition, 0f);
 
             float targetY = SampleHoverY(intendedPosition);
             float heightCorrection = targetY - currentPosition.y;

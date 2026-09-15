@@ -18,9 +18,9 @@ MonoBehaviour:
   - _entries:
     - _enemyDefinition: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63,
         type: 2}
-      _count: 10
+      _count: 24
     _delayBeforeGroup: 0
-    _spawnInterval: 1.3
+    _spawnInterval: 0.55
     _interleaveEntries: 0
     _enemyDefinition: {fileID: 0}
     _count: 0

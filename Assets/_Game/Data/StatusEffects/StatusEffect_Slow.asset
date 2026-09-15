@@ -22,3 +22,8 @@ MonoBehaviour:
   _stackingRule: 0
   _maxStacks: 1
   _tintColor: {r: 0.4, g: 0.75, b: 1, a: 1}
+  _attachedVfxPrefab: {fileID: 0}
+  _procEffect: {fileID: 11400000, guid: 611be5b6249655a47823b33228a11a43, type: 2}
+  _procMinHits: 3
+  _procMaxHits: 6
+  _procCooldown: 0.3

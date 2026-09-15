@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc58613ea6542944d92d50efd3a1c0a5, type: 3}
+  m_Name: VfxDefinition_Vfx_IceShatter
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Vfx.VfxDefinition
+  _id: vfx_ice_shatter
+  _prefab: {fileID: 6574118026590777087, guid: 8f4b14c8cfbde9b42bc1aa319dca9a7d, type: 3}
+  _lifetime: 1.4
+  _poolPrewarmCount: 6
+  _poolDefaultCapacity: 12
+  _poolMaximumSize: 48

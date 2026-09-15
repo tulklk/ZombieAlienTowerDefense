@@ -195,7 +195,9 @@ namespace AlienDefense.Pickups
                     float distance = _definition.ClusterRadius * Random.value;
                     var candidate = new Vector3(centre.x + direction.x * distance, 0f, centre.z + direction.y * distance);
 
-                    if (!TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY))
+                    // Never drop balls where the player is not allowed to fly (river, waterfall).
+                    if (!TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY)
+                        || AlienDefense.Player.PlayerNoFlyZone.IsInside(candidate, 0.5f))
                     {
                         continue;
                     }

@@ -23,26 +23,26 @@ MonoBehaviour:
   - _enemyDefinition: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
     _count: 2
   _escortSlots:
-  - DistanceAlongPath: 9.4
-    LateralOffset: -3
-  - DistanceAlongPath: 9.4
-    LateralOffset: 3
-  - DistanceAlongPath: 7.3
-    LateralOffset: -1.6
-  - DistanceAlongPath: 7.3
-    LateralOffset: 1.6
-  - DistanceAlongPath: 5.6
-    LateralOffset: -3.3
-  - DistanceAlongPath: 5.6
-    LateralOffset: 3.3
-  - DistanceAlongPath: 3.6
-    LateralOffset: -1.7
-  - DistanceAlongPath: 3.6
-    LateralOffset: 1.7
-  - DistanceAlongPath: 1.6
-    LateralOffset: -3
-  - DistanceAlongPath: 1.6
-    LateralOffset: 3
+  - DistanceAlongPath: 10.4
+    LateralOffset: -1.65
+  - DistanceAlongPath: 10.4
+    LateralOffset: 1.65
+  - DistanceAlongPath: 9.2
+    LateralOffset: -0.9
+  - DistanceAlongPath: 9.2
+    LateralOffset: 0.9
+  - DistanceAlongPath: 8.2
+    LateralOffset: -1.8
+  - DistanceAlongPath: 8.2
+    LateralOffset: 1.8
+  - DistanceAlongPath: 7
+    LateralOffset: -0.95
+  - DistanceAlongPath: 7
+    LateralOffset: 0.95
+  - DistanceAlongPath: 5.8
+    LateralOffset: -1.65
+  - DistanceAlongPath: 5.8
+    LateralOffset: 1.65
   _delayAfterNormalWaves: 0.75
   _bossCountdown: 60
   _debugSkipNormalWaves: 0

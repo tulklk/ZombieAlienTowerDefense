@@ -123,6 +123,7 @@ GameObject:
   - component: {fileID: 5967549311339609849}
   - component: {fileID: 1385237695526869379}
   - component: {fileID: 5292439333087449405}
+  - component: {fileID: 6483359514970076707}
   m_Layer: 10
   m_Name: Enemy_Runner
   m_TagString: Untagged
@@ -232,6 +233,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyStatusController
   _movement: {fileID: 7318374406697959113}
   _health: {fileID: 5537399947494804681}
+  _debugProcHits: 0
+  _debugProcRequiredHits: 0
+  _debugIsStunned: 0
 --- !u!114 &1385237695526869379
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -259,6 +263,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Enemies.EnemyBaseAttackVisual
   _animator: {fileID: 275640179597913123}
   _attackHoldDuration: 2.6333334
+--- !u!54 &6483359514970076707
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111538174223747942}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &2904563411641942872
 GameObject:
   m_ObjectHideFlags: 0
@@ -496,6 +527,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7980196954795883809}
     m_Modifications:
+    - target: {fileID: 969441208640869933, guid: 600ff257fe1baee47a85c9f58d7a4e30,
+        type: 3}
+      propertyPath: m_CullingMode
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5162774063661893710, guid: 600ff257fe1baee47a85c9f58d7a4e30,
         type: 3}
       propertyPath: m_Name
@@ -549,6 +585,16 @@ PrefabInstance:
     - target: {fileID: 5543380306680779508, guid: 600ff257fe1baee47a85c9f58d7a4e30,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8963235074274752926, guid: 600ff257fe1baee47a85c9f58d7a4e30,
+        type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: 8ceebb90bd528314abb1fc934bea05c7, type: 2}
+    - target: {fileID: 8963235074274752926, guid: 600ff257fe1baee47a85c9f58d7a4e30,
+        type: 3}
+      propertyPath: m_SkinnedMotionVectors
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

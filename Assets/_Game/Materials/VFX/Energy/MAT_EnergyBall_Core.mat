@@ -25,15 +25,15 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CoreIntensity: 1.3
-    - _EmissionStrength: 2
+    - _CoreIntensity: 0.85
+    - _EmissionStrength: 1.15
     - _NoiseScale: 3
     - _NoiseSpeed: 0.7
     - _NoiseStrength: 0.1
     - _PulseAmount: 0.12
     - _PulseSpeed: 2
     - _RimPower: 2
-    - _RimStrength: 1.4
+    - _RimStrength: 1.1
     m_Colors:
     - _BaseColor: {r: 0, g: 0.455, b: 0.851, a: 1}
     - _CoreColor: {r: 0.333, g: 1, b: 1, a: 1}

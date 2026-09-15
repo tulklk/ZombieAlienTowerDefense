@@ -81,6 +81,7 @@ MonoBehaviour:
   _trail: {fileID: 0}
   _attachedParticles:
   - {fileID: 2607966556826039720}
+  _detonateAtLastPositionWhenTargetLost: 1
 --- !u!1001 &4362750666688038776
 PrefabInstance:
   m_ObjectHideFlags: 0

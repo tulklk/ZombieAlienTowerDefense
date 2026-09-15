@@ -1,5 +1,6 @@
 using System;
 using AlienDefense.Combat;
+using AlienDefense.Vfx;
 using UnityEngine;
 
 namespace AlienDefense.Enemies
@@ -15,7 +16,11 @@ namespace AlienDefense.Enemies
         public event Action<float, float> HealthChanged;
         public event Action Died;
 
+        /// <summary>The killing blow's DamageInfo.KillVfx, if it carried one; set just before Died fires.</summary>
+        public VfxDefinition KillVfxOverride { get; private set; }
+
         private bool _diedFired;
+        private VfxDefinition _incomingKillVfx;
         private bool _isCaptureImmune;
         private bool _isEncounterImmune;
         private EnemyDefense _defense;
@@ -52,6 +57,7 @@ namespace AlienDefense.Enemies
         {
             CurrentHealth = MaximumHealth;
             _diedFired = false;
+            KillVfxOverride = null;
             _isCaptureImmune = false;
             _isEncounterImmune = false;
             HealthChanged?.Invoke(CurrentHealth, MaximumHealth);
@@ -75,6 +81,7 @@ namespace AlienDefense.Enemies
             if (CurrentHealth <= 0f && !_diedFired)
             {
                 _diedFired = true;
+                KillVfxOverride = _incomingKillVfx;
                 Died?.Invoke();
             }
 
@@ -95,7 +102,10 @@ namespace AlienDefense.Enemies
                 amount = _shield.Absorb(amount);
             }
 
-            return TryApplyDamage(amount);
+            _incomingKillVfx = damageInfo.KillVfx;
+            bool applied = TryApplyDamage(amount);
+            _incomingKillVfx = null;
+            return applied;
         }
     }
 }

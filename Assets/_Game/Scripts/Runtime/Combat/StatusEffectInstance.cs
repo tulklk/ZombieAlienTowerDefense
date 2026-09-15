@@ -3,15 +3,19 @@ namespace AlienDefense.Combat
     /// <summary>Runtime state of one active status effect on one enemy: remaining duration, stacks, tick timer.</summary>
     public sealed class StatusEffectInstance
     {
+        private readonly float _durationScale;
+
         public StatusEffectDefinition Definition { get; }
         public float RemainingDuration { get; private set; }
         public int StackCount { get; private set; }
         public float TickTimer { get; private set; }
 
-        public StatusEffectInstance(StatusEffectDefinition definition)
+        /// <param name="durationScale">Per-target duration multiplier (e.g. a Boss shrugging a Stun off in half the time).</param>
+        public StatusEffectInstance(StatusEffectDefinition definition, float durationScale = 1f)
         {
             Definition = definition;
-            RemainingDuration = definition.Duration;
+            _durationScale = durationScale;
+            RemainingDuration = definition.Duration * durationScale;
             StackCount = 1;
             TickTimer = definition.TickInterval;
         }
@@ -19,7 +23,7 @@ namespace AlienDefense.Combat
         /// <summary>Reapplies the same definition: refreshes duration and, for StackMagnitude, grows the stack.</summary>
         public void Reapply()
         {
-            RemainingDuration = Definition.Duration;
+            RemainingDuration = Definition.Duration * _durationScale;
 
             if (Definition.StackingRule == StatusStackingRule.StackMagnitude && StackCount < Definition.MaxStacks)
             {

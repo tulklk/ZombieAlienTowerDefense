@@ -563,7 +563,7 @@ namespace AlienDefense.Core
             }
 
             _tractorBeamController.Initialize(Enemies, _energyPickupRegistry, _environmentPropRegistry, EnergyWallet, _applicationServices?.SettingsService);
-            _tractorBeamVisual?.Initialize(_tractorBeamController, _cameraTransform);
+            _tractorBeamVisual?.Initialize(_tractorBeamController, _cameraTransform, Vfx);
             _tractorBeamController.PropAbsorbed += HandlePropAbsorbedForExperience;
             _tractorBeamController.EnergyCargoFullRefused += HandleEnergyCargoFullRefused;
 
@@ -578,7 +578,9 @@ namespace AlienDefense.Core
 
             if (_playerMissileController != null && PlayerSkills != null && Enemies != null && ProjectileSpawner != null)
             {
-                _playerMissileController.Initialize(PlayerSkills, Enemies, ProjectileSpawner, _missileProjectileDefinition);
+                // Its own resolver: the towers' AreaDamage may not exist yet at this point of startup.
+                _playerMissileController.Initialize(PlayerSkills, Enemies, ProjectileSpawner, _missileProjectileDefinition,
+                    new AreaDamageResolver(new EnemyRegistrySplashProvider(Enemies)));
             }
         }
 
@@ -762,9 +764,15 @@ namespace AlienDefense.Core
             }
         }
 
+        /// <summary>Fills every enemy pool, while the level loads, with as many instances as the level can have of that
+        /// type at once - the biggest wave's count, plus the boss group (which arrives while the last wave's leftovers
+        /// are still walking), capped by Max Alive and the pool size. Before, pools only held their definition's small
+        /// default (e.g. 10 Normals for a 24-Normal wave), so the rest were instantiated - Awake, canvases, skinned
+        /// mesh setup - in the middle of combat.</summary>
         private void PrewarmPoolsForWaves()
         {
-            var seenDefinitions = new HashSet<EnemyDefinition>();
+            var demand = new Dictionary<EnemyDefinition, int>();
+            var lastWaveCounts = new Dictionary<EnemyDefinition, int>();
             for (int w = 0; w < _resolvedLevelDefinition.WaveCount; w++)
             {
                 WaveDefinition wave = _resolvedLevelDefinition.GetWave(w);
@@ -773,6 +781,7 @@ namespace AlienDefense.Core
                     continue;
                 }
 
+                lastWaveCounts.Clear();
                 for (int g = 0; g < wave.SpawnGroupCount; g++)
                 {
                     EnemySpawnGroup group = wave.GetSpawnGroup(g);
@@ -781,31 +790,61 @@ namespace AlienDefense.Core
                         continue;
                     }
 
-                    group.CollectDefinitions(seenDefinitions);
+                    for (int e = 0; e < group.EntryCount; e++)
+                    {
+                        EnemySpawnEntry entry = group.GetEntry(e);
+                        if (entry != null && entry.IsValid)
+                        {
+                            lastWaveCounts[entry.EnemyDefinition] = Count(lastWaveCounts, entry.EnemyDefinition) + entry.Count;
+                        }
+                    }
+                }
+
+                foreach (KeyValuePair<EnemyDefinition, int> pair in lastWaveCounts)
+                {
+                    demand[pair.Key] = Mathf.Max(Count(demand, pair.Key), pair.Value);
                 }
             }
 
+            int escortTotal = 0;
             BossEncounterDefinition encounter = _resolvedLevelDefinition.BossEncounter;
             if (encounter != null && encounter.IsValid)
             {
-                seenDefinitions.Add(encounter.BossDefinition);
+                demand[encounter.BossDefinition] = Mathf.Max(Count(demand, encounter.BossDefinition), 1);
                 for (int e = 0; e < encounter.EscortEntryCount; e++)
                 {
                     EnemySpawnEntry entry = encounter.GetEscortEntry(e);
                     if (entry != null && entry.IsValid)
                     {
-                        seenDefinitions.Add(entry.EnemyDefinition);
+                        escortTotal += entry.Count;
+                        int withLeftovers = Count(lastWaveCounts, entry.EnemyDefinition) + entry.Count;
+                        demand[entry.EnemyDefinition] = Mathf.Max(Count(demand, entry.EnemyDefinition), withLeftovers);
                     }
                 }
             }
 
-            foreach (EnemyDefinition definition in seenDefinitions)
+            int maxAlive = _resolvedLevelDefinition.CreateWaveSpawnSettings().MaxAliveEnemies;
+            foreach (KeyValuePair<EnemyDefinition, int> pair in demand)
             {
-                if (definition != null)
+                EnemyPool pool = pair.Key != null ? _enemyPoolRegistry.GetOrCreatePool(pair.Key) : null;
+                if (pool == null)
                 {
-                    _enemyPoolRegistry.GetOrCreatePool(definition);
+                    continue;
                 }
+
+                int target = Mathf.Min(pair.Value, pair.Key.PoolMaximumSize);
+                if (maxAlive > 0)
+                {
+                    target = Mathf.Min(target, maxAlive + escortTotal);
+                }
+
+                pool.Prewarm(target); // tops up to at least this many; instances already created are reused
             }
+        }
+
+        private static int Count(Dictionary<EnemyDefinition, int> counts, EnemyDefinition definition)
+        {
+            return counts.TryGetValue(definition, out int value) ? value : 0;
         }
 
         private void InitializeAudioSystem()

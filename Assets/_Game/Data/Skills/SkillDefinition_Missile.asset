@@ -22,42 +22,52 @@ MonoBehaviour:
     CapacityMax: 0
     MissileDamageMultiplier: 1
     MissileCount: 1
+    MissileSplashRadius: 0
+    MissileSplashDamage: 0
     MissileRangeMultiplier: 1
     MagnetRadiusBonusPercent: 0
     MagnetPullSpeedBonusPercent: 0
-  - Description: "Bắn 2 t\xEAn lửa mỗi lượt"
+  - Description: "Bắn 2 t\xEAn lửa, nổ lan g\xE2y s\xE1t thương xung quanh"
     RadiusMultiplier: 0
     SpeedBonusPercent: 0
     CapacityMax: 0
     MissileDamageMultiplier: 1.25
     MissileCount: 2
+    MissileSplashRadius: 1.5
+    MissileSplashDamage: 40
     MissileRangeMultiplier: 1
     MagnetRadiusBonusPercent: 0
     MagnetPullSpeedBonusPercent: 0
-  - Description: "Bắn 3 t\xEAn lửa mỗi lượt"
+  - Description: "Bắn 3 t\xEAn lửa, nổ lan rộng hơn"
     RadiusMultiplier: 0
     SpeedBonusPercent: 0
     CapacityMax: 0
     MissileDamageMultiplier: 1.5
     MissileCount: 3
+    MissileSplashRadius: 2
+    MissileSplashDamage: 60
     MissileRangeMultiplier: 1
     MagnetRadiusBonusPercent: 0
     MagnetPullSpeedBonusPercent: 0
-  - Description: "Bắn 4 t\xEAn lửa mỗi lượt"
+  - Description: "Bắn 4 t\xEAn lửa, nổ lan mạnh hơn"
     RadiusMultiplier: 0
     SpeedBonusPercent: 0
     CapacityMax: 0
     MissileDamageMultiplier: 1.75
     MissileCount: 4
+    MissileSplashRadius: 2.5
+    MissileSplashDamage: 80
     MissileRangeMultiplier: 1
     MagnetRadiusBonusPercent: 0
     MagnetPullSpeedBonusPercent: 0
-  - Description: "Bắn 5 t\xEAn lửa, tăng phạm vi"
+  - Description: "Bắn 5 t\xEAn lửa, nổ lan cực mạnh, tăng phạm vi"
     RadiusMultiplier: 0
     SpeedBonusPercent: 0
     CapacityMax: 0
     MissileDamageMultiplier: 1.75
     MissileCount: 5
+    MissileSplashRadius: 3
+    MissileSplashDamage: 100
     MissileRangeMultiplier: 1.3
     MagnetRadiusBonusPercent: 0
     MagnetPullSpeedBonusPercent: 0

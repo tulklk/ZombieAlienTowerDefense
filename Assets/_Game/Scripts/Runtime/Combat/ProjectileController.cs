@@ -17,6 +17,11 @@ namespace AlienDefense.Combat
             "particles from its previous flight never reappear.")]
         private ParticleSystem[] _attachedParticles = Array.Empty<ParticleSystem>();
 
+        [SerializeField]
+        [Tooltip("On: if the target dies or disappears mid-flight, keep flying to where it last was and detonate " +
+            "there (splash still applies). Off: vanish, as bullets do.")]
+        private bool _detonateAtLastPositionWhenTargetLost;
+
         private CombatTargetHandle _target;
         private DamageInfo _damageInfo;
         private float _speed;
@@ -28,6 +33,9 @@ namespace AlienDefense.Combat
         private StatusEffectDefinition _statusEffectOnHit;
         private AreaDamageResolver _areaDamageResolver;
         private float _splashRadius;
+        private float _splashDamage;
+        private Vector3 _lastAimPosition;
+        private bool _hasLastAimPosition;
 
         private float _elapsedLifetime;
         private bool _hasHit;
@@ -44,10 +52,13 @@ namespace AlienDefense.Combat
             VfxDefinition hitVfx = null,
             StatusEffectDefinition statusEffectOnHit = null,
             AreaDamageResolver areaDamageResolver = null,
-            float splashRadius = 0f)
+            float splashRadius = 0f,
+            float splashDamage = 0f,
+            VfxDefinition killVfx = null)
         {
             _target = target;
-            _damageInfo = damageInfo;
+            // Rides on the damage itself, so whatever resolves the kill plays it in place of the usual defeat effect.
+            _damageInfo = killVfx != null ? damageInfo.WithKillVfx(killVfx) : damageInfo;
             _speed = Mathf.Max(0.01f, speed);
             _maximumLifetime = Mathf.Max(0.01f, maximumLifetime);
             _hitDistance = Mathf.Max(0.01f, hitDistance);
@@ -57,6 +68,8 @@ namespace AlienDefense.Combat
             _statusEffectOnHit = statusEffectOnHit;
             _areaDamageResolver = areaDamageResolver;
             _splashRadius = splashRadius;
+            _splashDamage = splashDamage;
+            _hasLastAimPosition = false;
 
             _elapsedLifetime = 0f;
             _hasHit = false;
@@ -72,6 +85,8 @@ namespace AlienDefense.Combat
             _statusEffectOnHit = null;
             _areaDamageResolver = null;
             _splashRadius = 0f;
+            _splashDamage = 0f;
+            _hasLastAimPosition = false;
 
             if (_trail != null)
             {
@@ -115,13 +130,23 @@ namespace AlienDefense.Combat
                 return;
             }
 
-            if (!_target.IsValid)
+            Vector3 aimPosition;
+            if (_target.IsValid)
+            {
+                aimPosition = _target.AimPoint.position;
+                _lastAimPosition = aimPosition;
+                _hasLastAimPosition = true;
+            }
+            else if (_detonateAtLastPositionWhenTargetLost && _hasLastAimPosition)
+            {
+                aimPosition = _lastAimPosition;
+            }
+            else
             {
                 Despawn();
                 return;
             }
 
-            Vector3 aimPosition = _target.AimPoint.position;
             Vector3 currentPosition = transform.position;
             Vector3 newPosition = Vector3.MoveTowards(currentPosition, aimPosition, _speed * Time.deltaTime);
             transform.position = newPosition;
@@ -147,7 +172,19 @@ namespace AlienDefense.Combat
 
             _hasHit = true;
 
-            if (_areaDamageResolver != null)
+            if (_areaDamageResolver != null && _splashDamage > 0f)
+            {
+                // Direct hit first, then the blast hurts whatever else is around (a killed target is no longer
+                // targetable, so the splash does not hit it twice).
+                if (_target.IsValid)
+                {
+                    _target.Damageable?.TryApplyDamage(_damageInfo);
+                }
+
+                var splashInfo = new DamageInfo(_splashDamage, _damageInfo.Source, transform.position, _damageInfo.DamageType, _damageInfo.KillVfx);
+                _areaDamageResolver.ResolveSplash(transform.position, _splashRadius, splashInfo);
+            }
+            else if (_areaDamageResolver != null)
             {
                 _areaDamageResolver.ResolveSplash(transform.position, _splashRadius, _damageInfo);
             }

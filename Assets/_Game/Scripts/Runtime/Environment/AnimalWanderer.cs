@@ -127,12 +127,27 @@ namespace AlienDefense.Environment
             }
         }
 
+        // Terrain.activeTerrains allocates a new array on every call - called per walking animal per frame it was the
+        // game's only steady per-frame GC allocation. Cached once and shared; re-queried only if a tile goes away.
+        private static Terrain[] s_terrains;
+
         private static float SampleGroundY(Vector3 worldPosition, float fallback)
         {
-            Terrain[] terrains = Terrain.activeTerrains;
+            if (s_terrains == null)
+            {
+                s_terrains = Terrain.activeTerrains;
+            }
+
+            Terrain[] terrains = s_terrains;
             for (int i = 0; i < terrains.Length; i++)
             {
                 Terrain terrain = terrains[i];
+                if (terrain == null)
+                {
+                    s_terrains = null; // scene changed: fetch the current tiles next time
+                    return fallback;
+                }
+
                 Vector3 origin = terrain.transform.position;
                 Vector3 size = terrain.terrainData.size;
                 if (worldPosition.x >= origin.x && worldPosition.x <= origin.x + size.x &&
