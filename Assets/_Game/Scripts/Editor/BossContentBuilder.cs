@@ -212,6 +212,9 @@ namespace AlienDefense.EditorTools
             fillImage.fillMethod = Image.FillMethod.Horizontal;
             fillImage.fillAmount = 1f;
 
+            BossHealthBarPrefabBuilder.AddWorldIcon(canvasObject.transform,
+                AssetDatabase.LoadAssetAtPath<Sprite>(BossHealthBarPrefabBuilder.IconSpritePath));
+
             var billboard = canvasObject.AddComponent<WorldSpaceBillboard>();
 
             var view = canvasObject.AddComponent<EnemyHealthBarView>();

@@ -39,7 +39,8 @@ namespace AlienDefense.Combat
                     continue;
                 }
 
-                var info = new DamageInfo(damageTemplate.Amount, damageTemplate.Source, position, damageTemplate.DamageType, damageTemplate.KillVfx);
+                var info = new DamageInfo(damageTemplate.Amount, damageTemplate.Source, position, damageTemplate.DamageType,
+                    damageTemplate.KillVfx, damageTemplate.PopupStyle);
                 if (target.Damageable != null && target.Damageable.TryApplyDamage(info))
                 {
                     hitCount++;

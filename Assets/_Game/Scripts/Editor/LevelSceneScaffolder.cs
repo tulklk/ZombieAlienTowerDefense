@@ -751,7 +751,7 @@ namespace AlienDefense.EditorTools
             TMP_Text resourceText = CreateAnchoredTMPText(panel.transform, "ResourceText", "0",
                 new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(220f, 44f), 28f, TextAlignmentOptions.MidlineLeft);
 
-            TMP_Text energyText = BuildEnergyBadge(panel.transform, out Image energyForbiddenIcon);
+            TMP_Text energyText = BuildEnergyBadge(panel.transform, out Image energyForbiddenIcon, out Image energyFillImage);
             (TMP_Text baseHealthText, Image baseHealthFillImage) = BuildBaseHealthDisplay(panel.transform);
             CanvasGroup cargoFullBanner = BuildCargoFullBanner(panel.transform);
 
@@ -763,6 +763,7 @@ namespace AlienDefense.EditorTools
             serializedView.FindProperty("_resourceText").objectReferenceValue = resourceText;
             serializedView.FindProperty("_energyText").objectReferenceValue = energyText;
             serializedView.FindProperty("_energyForbiddenIcon").objectReferenceValue = energyForbiddenIcon;
+            serializedView.FindProperty("_energyFillImage").objectReferenceValue = energyFillImage;
             serializedView.FindProperty("_cargoFullBanner").objectReferenceValue = cargoFullBanner;
             serializedView.FindProperty("_baseHealthText").objectReferenceValue = baseHealthText;
             serializedView.FindProperty("_baseHealthFillImage").objectReferenceValue = baseHealthFillImage;
@@ -776,7 +777,7 @@ namespace AlienDefense.EditorTools
 
         /// <summary>Top-left circular badge showing EnergyWalletService.CurrentEnergy. Capacity is conveyed by
         /// the forbidenicon overlay when full (see GameHUDView.SetEnergyCargoFull), not a current/max fraction.</summary>
-        private static TMP_Text BuildEnergyBadge(Transform parent, out Image forbiddenIcon)
+        private static TMP_Text BuildEnergyBadge(Transform parent, out Image forbiddenIcon, out Image fillImage)
         {
             Sprite ringSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/khung.png");
             Sprite iconSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlaySpriteDir + "/enegry-ball.png");
@@ -790,7 +791,29 @@ namespace AlienDefense.EditorTools
             ringRect.pivot = new Vector2(0.5f, 0.5f);
             ringRect.anchoredPosition = new Vector2(50f, -72f);
             ringRect.sizeDelta = new Vector2(60f, 60f);
-            ring.GetComponent<Image>().sprite = ringSprite;
+            Image ringImage = ring.GetComponent<Image>();
+            ringImage.sprite = ringSprite;
+            ringImage.color = new Color(0.29f, 0.44f, 0.53f, 1f); // dimmed: the frame is the empty track behind the arc
+
+            // Radial arc over the frame: GameHUDView fills it with CurrentEnergy / MaxEnergy. Created before the icon so
+            // it draws under it.
+            var fill = new GameObject("EnergyFill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(ring.transform, false);
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.pivot = new Vector2(0.5f, 0.5f);
+            fillRect.anchoredPosition = Vector2.zero;
+            fillRect.sizeDelta = Vector2.zero;
+            fillImage = fill.GetComponent<Image>();
+            fillImage.sprite = ringSprite;
+            fillImage.color = new Color(0.66f, 0.97f, 1f, 1f);
+            fillImage.raycastTarget = false;
+            fillImage.type = Image.Type.Filled;
+            fillImage.fillMethod = Image.FillMethod.Radial360;
+            fillImage.fillOrigin = (int)Image.Origin360.Top;
+            fillImage.fillClockwise = true;
+            fillImage.fillAmount = 0f;
 
             var icon = new GameObject("EnergyIcon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(ring.transform, false);
@@ -848,7 +871,7 @@ namespace AlienDefense.EditorTools
         /// <summary>LEGACY overload kept so older reflection callers still compile — prefer the out-param version.</summary>
         private static TMP_Text BuildEnergyBadge(Transform parent)
         {
-            return BuildEnergyBadge(parent, out _);
+            return BuildEnergyBadge(parent, out _, out _);
         }
 
         internal static TMP_Text CreateAnchoredTMPText(Transform parent, string name, string initialText,

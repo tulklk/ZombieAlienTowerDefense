@@ -1,4 +1,9 @@
+using AlienDefense.Base;
+using AlienDefense.Combat;
 using AlienDefense.Core;
+using AlienDefense.Economy;
+using AlienDefense.Progression;
+using AlienDefense.Settings;
 using UnityEngine;
 
 namespace AlienDefense.UI
@@ -23,11 +28,20 @@ namespace AlienDefense.UI
         private GameResultView _victoryResultView;
 
         [SerializeField]
+        [Tooltip("Optional. The full victory screen (rewards, damage leaders); GameResultView stays for levels that " +
+            "still use the plain result panel.")]
+        private VictoryPanelView _victoryPanelView;
+
+        [SerializeField]
         private GameObject _defeatPanel;
 
         [SerializeField]
         [Tooltip("Optional.")]
         private GameResultView _defeatResultView;
+
+        [SerializeField]
+        [Tooltip("Optional. Hidden while the pause panel is open, so the pause screen is not competing with the HUD.")]
+        private CanvasGroup[] _hiddenWhilePaused = new CanvasGroup[0];
 
         [SerializeField]
         [Tooltip("Optional. Disabled (not hidden) while the game is not PreparingWave/PlayingWave, so Build/TowerDetails buttons can't be clicked mid-pause.")]
@@ -42,6 +56,7 @@ namespace AlienDefense.UI
         private LevelRestartService _restartService;
         private ApplicationServices _applicationServices;
         private string _currentLevelId;
+        private BaseHealthService _baseHealth;
 
         public void Initialize(
             GameFlowController gameFlow,
@@ -71,6 +86,11 @@ namespace AlienDefense.UI
                 _pausePanelView.MainMenuClicked += HandleMainMenuClicked;
             }
 
+            if (_victoryPanelView != null)
+            {
+                _victoryPanelView.NextClicked += HandleNextLevelClicked;
+            }
+
             if (_victoryResultView != null)
             {
                 _victoryResultView.RestartClicked += HandleRestartClicked;
@@ -87,6 +107,27 @@ namespace AlienDefense.UI
             _backNavigation?.SetHandler(HandleBackPressed);
         }
 
+        /// <summary>Gives the pause panel the level services it shows: settings toggles, picked skills, and this
+        /// match's damage totals. Separate from Initialize so a bare panel (and the existing tests) still work.</summary>
+        public void BindPauseServices(SettingsService settings, PlayerSkillService skills, CombatStatsService stats, BaseHealthService baseHealth)
+        {
+            _baseHealth = baseHealth;
+            _pausePanelView?.Bind(settings, skills, stats);
+        }
+
+        /// <summary>Called by LevelCompositionRoot right after the win is banked (rewards granted, progress saved),
+        /// so the panel only ever displays a finished result.</summary>
+        public void ShowVictoryResult(LevelVictoryResult result)
+        {
+            if (_victoryPanelView == null || result == null)
+            {
+                return;
+            }
+
+            SetActiveIfAssigned(_victoryPanel, true);
+            _victoryPanelView.Show(result);
+        }
+
         private void HandleGameStateChanged(GameState previous, GameState current)
         {
             Refresh(current);
@@ -94,7 +135,26 @@ namespace AlienDefense.UI
 
         private void Refresh(GameState state)
         {
-            SetActiveIfAssigned(_pausePanel, state == GameState.Paused);
+            bool paused = state == GameState.Paused;
+            if (paused && _pausePanelView != null)
+            {
+                // The mockup's badge: only while the base has not been touched yet.
+                bool perfect = _baseHealth == null || _baseHealth.CurrentHealth >= _baseHealth.MaxHealth;
+                _pausePanelView.SetSubtitle(perfect ? "Perfect Clear" : string.Empty);
+            }
+
+            SetActiveIfAssigned(_pausePanel, paused);
+
+            foreach (CanvasGroup group in _hiddenWhilePaused)
+            {
+                if (group == null)
+                {
+                    continue;
+                }
+
+                group.alpha = paused ? 0f : 1f;
+                group.blocksRaycasts = !paused;
+            }
             SetActiveIfAssigned(_victoryPanel, state == GameState.Victory);
             SetActiveIfAssigned(_defeatPanel, state == GameState.Defeat);
 
@@ -191,6 +251,11 @@ namespace AlienDefense.UI
                 _pausePanelView.ResumeClicked -= HandleResumeClicked;
                 _pausePanelView.RestartClicked -= HandleRestartClicked;
                 _pausePanelView.MainMenuClicked -= HandleMainMenuClicked;
+            }
+
+            if (_victoryPanelView != null)
+            {
+                _victoryPanelView.NextClicked -= HandleNextLevelClicked;
             }
 
             if (_victoryResultView != null)

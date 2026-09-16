@@ -40,6 +40,7 @@ namespace AlienDefense.EditorTools
             ProjectileDefinition rocket = BuildProjectile(explosion);
             int scenes = AssignToLevels(rocket);
             bool hud = BuildCooldownHudInActiveScene();
+            RocketCartoonVfxSetup.Apply(); // the pack-built exhaust/explosion above are replaced by the cartoon versions
             AssetDatabase.SaveAssets();
             Debug.Log($"[RocketMissileSetup] Rocket missile ready ({ProjectileDefinitionPath}); assigned in {scenes} level scene(s); cooldown HUD {(hud ? "built" : "skipped (no minimap/launcher in the open scene)")}.");
         }

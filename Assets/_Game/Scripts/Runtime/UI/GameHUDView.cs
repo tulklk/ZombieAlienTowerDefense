@@ -25,6 +25,14 @@ namespace AlienDefense.UI
         private Image _energyForbiddenIcon;
 
         [SerializeField]
+        [Tooltip("Optional. Radial fill over the energy badge ring - how full the cargo is (CurrentEnergy / MaxEnergy).")]
+        private Image _energyFillImage;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("Seconds the ring takes to slide to a new level. 0 snaps.")]
+        private float _energyFillDuration = 0.25f;
+
+        [SerializeField]
         [Tooltip("Optional. Top toast using cargofull.png — stays while beam is over energy with full cargo.")]
         private CanvasGroup _cargoFullBanner;
 
@@ -48,6 +56,7 @@ namespace AlienDefense.UI
         public event Action PauseButtonClicked;
 
         private Tween _bannerTween;
+        private Tween _energyFillTween;
         private bool _cargoFullVisual;
         private bool _bannerVisible;
         private bool _bannerHiding;
@@ -77,6 +86,7 @@ namespace AlienDefense.UI
 
             HideCargoFullBannerImmediate();
             SetEnergyCargoFull(false);
+            SetEnergyFill(0f, instant: true);
         }
 
         private void Update()
@@ -100,8 +110,8 @@ namespace AlienDefense.UI
             }
         }
 
-        /// <summary>Shows only the current Energy amount (e.g. "100"). Capacity is conveyed by the forbidden
-        /// overlay when full, not by a "current/max" fraction on this label.</summary>
+        /// <summary>Shows the current Energy amount (e.g. "100") on the label; how close that is to capacity is
+        /// shown by the badge ring filling up, and by the forbidden overlay once it is full.</summary>
         public void SetEnergy(int current, int max)
         {
             if (_energyText != null)
@@ -109,8 +119,40 @@ namespace AlienDefense.UI
                 _energyText.text = current.ToString();
             }
 
+            SetEnergyFill(max > 0 ? current / (float)max : 0f);
+
             bool full = max > 0 && current >= max;
             SetEnergyCargoFull(full);
+        }
+
+        /// <summary>Slides the badge ring to CurrentEnergy / MaxEnergy. The ring is the readable part of the
+        /// badge at a glance - the number tells the exact count, the arc tells how close cargo is to full.</summary>
+        private void SetEnergyFill(float normalized, bool instant = false)
+        {
+            if (_energyFillImage == null)
+            {
+                return;
+            }
+
+            _energyFillTween?.Kill();
+            _energyFillTween = null;
+
+            float target = Mathf.Clamp01(normalized);
+            if (instant || _energyFillDuration <= 0f || !isActiveAndEnabled)
+            {
+                _energyFillImage.fillAmount = target;
+                return;
+            }
+
+            float from = _energyFillImage.fillAmount;
+            _energyFillTween = DOTween.To(() => from, value =>
+                {
+                    from = value;
+                    _energyFillImage.fillAmount = value;
+                }, target, _energyFillDuration)
+                .SetEase(Ease.OutQuad)
+                .SetUpdate(true) // keeps moving while the game is paused
+                .SetLink(gameObject);
         }
 
         /// <summary>Shows/hides the forbidden overlay while cargo is at capacity. The icon sits still - the
@@ -262,6 +304,7 @@ namespace AlienDefense.UI
             }
 
             _bannerTween?.Kill();
+            _energyFillTween?.Kill();
         }
     }
 }

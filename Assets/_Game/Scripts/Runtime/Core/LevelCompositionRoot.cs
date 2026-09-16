@@ -260,6 +260,9 @@ namespace AlienDefense.Core
         public PlayerLevelProgressionService PlayerLevelProgression { get; private set; }
         public EnergyCollectionService EnergyCollection { get; private set; }
         public PlayerSkillService PlayerSkills { get; private set; }
+
+        /// <summary>Per-match damage totals behind the pause panel's damage leaders.</summary>
+        public CombatStatsService CombatStats { get; private set; }
         public ProjectileFactory ProjectileSpawner { get; private set; }
         public TowerFactory TowerSpawner { get; private set; }
         public AreaDamageResolver AreaDamage { get; private set; }
@@ -373,6 +376,7 @@ namespace AlienDefense.Core
             PlayerLevelProgression = new PlayerLevelProgressionService();
             EnergyCollection = new EnergyCollectionService(EnergyWallet, PlayerLevelProgression);
             PlayerSkills = new PlayerSkillService(_skillCatalog);
+            CombatStats = new CombatStatsService();
 
             Application.targetFrameRate = levelDefinition.TargetFrameRate;
 
@@ -441,6 +445,7 @@ namespace AlienDefense.Core
             _tractorBeamAudio?.Unsubscribe();
             _tractorBeamVisual?.Unsubscribe();
             _applicationServices?.SettingsService?.DetachAudioService(_audioService);
+            CombatStats?.Dispose();
 
             Enemies?.Clear();
             _enemyPoolRegistry?.Clear();
@@ -876,6 +881,7 @@ namespace AlienDefense.Core
             if (_gameStateUIController != null)
             {
                 _gameStateUIController.Initialize(GameFlow, GameSpeed, RestartService, _applicationServices, _resolvedLevelId);
+                _gameStateUIController.BindPauseServices(_applicationServices?.SettingsService, PlayerSkills, CombatStats, BaseHealth);
             }
         }
 
@@ -943,27 +949,104 @@ namespace AlienDefense.Core
         /// own validated mutators, never touching save data directly here.</summary>
         private void GrantVictoryRewardsAndProgress()
         {
+            LevelCompletedResult completionResult = BuildLevelCompletedResult();
             PlayerProfileService profile = _applicationServices?.PlayerProfileService;
-            if (profile == null)
+            int coinReward = 0;
+            int gemReward = 0;
+
+            if (profile != null)
             {
-                return;
+                bool isFirstCompletion = !profile.GetLevelProgress(completionResult.LevelId).IsCompleted;
+
+                float vipCoinBonus = VipTierTable.GetMultiplierForTier(profile.VipTier);
+                coinReward = LevelRewardCalculator.CalculateCoinReward(completionResult.Stars, vipCoinBonus);
+                gemReward = LevelRewardCalculator.CalculateGemReward(completionResult.Stars, isFirstCompletion);
+
+                profile.SetLevelCompleted(completionResult);
+                profile.AddMetaCurrency(coinReward);
+                if (gemReward > 0)
+                {
+                    profile.AddGems(gemReward);
+                }
+
+                profile.MarkDailyQuestCompleted(System.DateTime.UtcNow);
+                UnlockNextLevel(profile);
             }
 
-            LevelCompletedResult completionResult = BuildLevelCompletedResult();
-            bool isFirstCompletion = !profile.GetLevelProgress(completionResult.LevelId).IsCompleted;
+            // The panel only shows what was granted right here - it can never hand a reward out a second time.
+            _gameStateUIController?.ShowVictoryResult(BuildVictoryResult(completionResult, coinReward, gemReward));
+        }
 
-            float vipCoinBonus = VipTierTable.GetMultiplierForTier(profile.VipTier);
-            int coinReward = LevelRewardCalculator.CalculateCoinReward(completionResult.Stars, vipCoinBonus);
-            int gemReward = LevelRewardCalculator.CalculateGemReward(completionResult.Stars, isFirstCompletion);
+        /// <summary>Beating a level opens the next one in the catalog (the campaign's only unlock rule today).</summary>
+        private void UnlockNextLevel(PlayerProfileService profile)
+        {
+            LevelCatalog catalog = _applicationServices?.LevelCatalog;
+            if (catalog != null && catalog.TryGetNext(_resolvedLevelId, out LevelCatalogEntry next) && next.LevelId != null)
+            {
+                profile.SetHighestUnlockedLevel(next.LevelId);
+            }
+        }
 
-            profile.SetLevelCompleted(completionResult);
-            profile.AddMetaCurrency(coinReward);
+        /// <summary>Everything the victory panel prints: the granted rewards, the star result and this match's
+        /// damage breakdown (CombatStatsService, which lives and dies with the level, so it never carries over).</summary>
+        private LevelVictoryResult BuildVictoryResult(LevelCompletedResult completionResult, int coinReward, int gemReward)
+        {
+            var rewards = new List<VictoryReward>(3);
+            if (coinReward > 0)
+            {
+                rewards.Add(new VictoryReward(VictoryRewardType.Coins, coinReward));
+            }
+
             if (gemReward > 0)
             {
-                profile.AddGems(gemReward);
+                rewards.Add(new VictoryReward(VictoryRewardType.Gems, gemReward));
             }
 
-            profile.MarkDailyQuestCompleted(System.DateTime.UtcNow);
+            int experience = PlayerLevelProgression != null ? PlayerLevelProgression.CurrentExperience : 0;
+            if (experience > 0)
+            {
+                rewards.Add(new VictoryReward(VictoryRewardType.Experience, experience));
+            }
+
+            IReadOnlyList<CombatStatsService.Contributor> sources = CombatStats != null
+                ? CombatStats.GetLeaders(0)
+                : System.Array.Empty<CombatStatsService.Contributor>();
+            var sourcesCopy = new List<CombatStatsService.Contributor>(sources);
+
+            bool hasNext = _applicationServices?.LevelCatalog != null
+                && _applicationServices.LevelCatalog.TryGetNext(_resolvedLevelId, out LevelCatalogEntry _);
+
+            return new LevelVictoryResult(
+                completionResult.LevelId,
+                BuildLevelDisplayName(),
+                completionResult.Stars,
+                BaseHealth != null && BaseHealth.CurrentHealth >= BaseHealth.MaxHealth,
+                BaseHealth != null ? BaseHealth.CurrentHealth : 0,
+                BaseHealth != null ? BaseHealth.MaxHealth : 0,
+                rewards,
+                sourcesCopy,
+                CombatStats != null ? CombatStats.TotalDamage : 0f,
+                hasNext);
+        }
+
+        /// <summary>"CAMPAIGN LEVEL 2" from the catalog position; falls back to the level id when a level is run
+        /// outside the campaign (the Editor-only development fallback, for instance).</summary>
+        private string BuildLevelDisplayName()
+        {
+            LevelCatalog catalog = _applicationServices?.LevelCatalog;
+            if (catalog != null)
+            {
+                for (int i = 0; i < catalog.Count; i++)
+                {
+                    LevelCatalogEntry entry = catalog.GetEntry(i);
+                    if (entry != null && entry.LevelId == _resolvedLevelId)
+                    {
+                        return "CAMPAIGN LEVEL " + (i + 1);
+                    }
+                }
+            }
+
+            return string.IsNullOrEmpty(_resolvedLevelId) ? "LEVEL" : _resolvedLevelId.Replace("_", " ").ToUpperInvariant();
         }
 
         /// <summary>Placeholder star formula for Phase 13's save foundation: 3 stars for undamaged base, 2 for

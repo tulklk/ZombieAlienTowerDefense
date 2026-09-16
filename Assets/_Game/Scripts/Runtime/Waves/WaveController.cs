@@ -543,7 +543,17 @@ namespace AlienDefense.Waves
             float hpMul = 1f + (baseHp - 1f) * hpFactor;
             float spdMul = Mathf.Min(_spawnSettings.MaxSpeedMultiplier, 1f + (baseSpd - 1f) * spdFactor);
             float dmgMul = 1f + (baseDmg - 1f) * dmgFactor;
+
+            // The level's own strength scale sits on top (the speed cap only limits per-wave growth).
+            hpMul *= LevelScale(_spawnSettings.LevelHealthMultiplier);
+            spdMul *= LevelScale(_spawnSettings.LevelSpeedMultiplier);
+            dmgMul *= LevelScale(_spawnSettings.LevelDamageMultiplier);
             return new EnemySpawnModifiers(hpMul, spdMul, dmgMul);
+        }
+
+        private static float LevelScale(float value)
+        {
+            return value > 0f ? value : 1f;
         }
 
         private void LogWaveDebug(WaveDefinition wave)

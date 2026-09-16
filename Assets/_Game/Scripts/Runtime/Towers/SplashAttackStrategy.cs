@@ -20,7 +20,7 @@ namespace AlienDefense.Towers
             _splashRadius = splashRadius;
         }
 
-        public bool TryAttack(EnemyController target, DamageInfo damage, Transform firePoint)
+        public bool TryAttack(EnemyController target, DamageInfo damage, Transform firePoint, bool isFollowUpShot = false)
         {
             if (target == null || !target.IsTargetable || firePoint == null || _projectileFactory == null)
             {

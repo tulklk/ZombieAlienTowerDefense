@@ -22,6 +22,9 @@ MonoBehaviour:
   _speedPerWaveStep: 0.015
   _damagePerWaveStep: 0.07
   _maxSpeedMultiplier: 1.22
+  _enemyHealthMultiplier: 0.35
+  _enemySpeedMultiplier: 0.8
+  _enemyDamageMultiplier: 0.5
   _debugWaveLogs: 0
   _waves:
   - {fileID: 11400000, guid: c89e129dcc9c60e45b93709e2f974cbb, type: 2}

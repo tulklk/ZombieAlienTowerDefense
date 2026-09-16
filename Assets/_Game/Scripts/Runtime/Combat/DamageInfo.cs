@@ -15,19 +15,28 @@ namespace AlienDefense.Combat
         /// defeat effect (e.g. an ice lance shattering the enemy it kills).</summary>
         public readonly VfxDefinition KillVfx;
 
+        /// <summary>Floating damage number shown over the victim for the damage that actually lands.</summary>
+        public readonly DamagePopupStyle PopupStyle;
+
         public DamageInfo(float amount, GameObject source, Vector3 hitPosition, DamageType damageType = DamageType.Physical,
-            VfxDefinition killVfx = null)
+            VfxDefinition killVfx = null, DamagePopupStyle popupStyle = DamagePopupStyle.None)
         {
             Amount = amount;
             Source = source;
             HitPosition = hitPosition;
             DamageType = damageType;
             KillVfx = killVfx;
+            PopupStyle = popupStyle;
         }
 
         public DamageInfo WithKillVfx(VfxDefinition killVfx)
         {
-            return new DamageInfo(Amount, Source, HitPosition, DamageType, killVfx);
+            return new DamageInfo(Amount, Source, HitPosition, DamageType, killVfx, PopupStyle);
+        }
+
+        public DamageInfo WithPopupStyle(DamagePopupStyle popupStyle)
+        {
+            return new DamageInfo(Amount, Source, HitPosition, DamageType, KillVfx, popupStyle);
         }
     }
 }

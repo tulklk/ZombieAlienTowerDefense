@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: VfxDefinition_Vfx_RocketExplosion
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Vfx.VfxDefinition
   _id: vfx_rocket_explosion
-  _prefab: {fileID: 6295475885521887029, guid: ab7175c6d8f7ebb4f8337e8a618232d1, type: 3}
-  _lifetime: 1.6
+  _prefab: {fileID: 2613450762263190381, guid: fac1aa23f4237774c839cbb5c6711985, type: 3}
+  _lifetime: 0.85
   _poolPrewarmCount: 4
   _poolDefaultCapacity: 8
   _poolMaximumSize: 32

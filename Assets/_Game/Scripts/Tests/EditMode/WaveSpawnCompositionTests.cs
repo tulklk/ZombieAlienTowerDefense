@@ -135,5 +135,29 @@ namespace AlienDefense.Tests.EditMode
             Object.DestroyImmediate(tank);
             Object.DestroyImmediate(go);
         }
+
+        [Test]
+        public void ComputeModifiers_AppliesLevelStrengthOnTopOfWaveGrowth()
+        {
+            var go = new GameObject("WaveControllerTest");
+            var controller = go.AddComponent<WaveController>();
+
+            var settings = WaveSpawnSettings.CreateDefault();
+            settings.HealthPerWaveStep = 0.10f;
+            settings.LevelHealthMultiplier = 0.5f;
+            settings.LevelSpeedMultiplier = 0.8f;
+            settings.LevelDamageMultiplier = 0f; // unset -> treated as 1
+            SetField(controller, "_spawnSettings", settings);
+
+            EnemySpawnModifiers first = controller.ComputeModifiers(1, null);
+            Assert.AreEqual(0.5f, first.HealthMultiplier, 0.0001f);
+            Assert.AreEqual(0.8f, first.SpeedMultiplier, 0.0001f);
+            Assert.AreEqual(1f, first.DamageMultiplier, 0.0001f);
+
+            // Wave 3: baseHp = 1.2, scaled by the level's 0.5.
+            Assert.AreEqual(0.6f, controller.ComputeModifiers(3, null).HealthMultiplier, 0.0001f);
+
+            Object.DestroyImmediate(go);
+        }
     }
 }

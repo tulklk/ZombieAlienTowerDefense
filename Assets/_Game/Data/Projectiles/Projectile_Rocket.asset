@@ -18,7 +18,10 @@ MonoBehaviour:
   _speed: 12
   _maximumLifetime: 4
   _hitDistance: 0.35
+  _arcHeight: 0
   _hitVfxDefinition: {fileID: 11400000, guid: 65bd19948b1743347b653ac0eddfd17a, type: 2}
+  _killVfxDefinition: {fileID: 0}
+  _damagePopupStyle: 1
   _poolPrewarmCount: 6
   _poolDefaultCapacity: 12
   _poolMaximumSize: 48

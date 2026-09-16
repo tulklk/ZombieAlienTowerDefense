@@ -69,6 +69,11 @@ crashlytics-build.properties
 *.sln.iml
 
 ## ================================
+## Local editor temp logs
+## ================================
+/Temp_*.log
+
+## ================================
 ## OS generated
 ## ================================
 .DS_Store

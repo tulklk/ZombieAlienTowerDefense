@@ -27,6 +27,11 @@ namespace AlienDefense.Combat
         [SerializeField, Min(0.01f)]
         private float _hitDistance = 0.25f;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("0 = flies straight at the target. Above 0 = lobbed: climbs to this height (metres) above the " +
+            "straight line at mid-flight, then drops onto the target, still tracking it.")]
+        private float _arcHeight;
+
         [Header("VFX (optional)")]
         [SerializeField]
         private VfxDefinition _hitVfxDefinition;
@@ -35,6 +40,10 @@ namespace AlienDefense.Combat
         [Tooltip("Optional. Replaces the enemy's own defeat effect when this projectile's hit is the killing blow " +
             "(e.g. the Frost Tower's ice lance shattering the enemy it kills).")]
         private VfxDefinition _killVfxDefinition;
+
+        [SerializeField]
+        [Tooltip("Floating damage number shown over each enemy this projectile (or its splash) actually damages.")]
+        private DamagePopupStyle _damagePopupStyle = DamagePopupStyle.None;
 
         [Header("Pool")]
         [SerializeField, Min(0)]
@@ -52,8 +61,10 @@ namespace AlienDefense.Combat
         public float Speed => _speed;
         public float MaximumLifetime => _maximumLifetime;
         public float HitDistance => _hitDistance;
+        public float ArcHeight => _arcHeight;
         public VfxDefinition HitVfxDefinition => _hitVfxDefinition;
         public VfxDefinition KillVfxDefinition => _killVfxDefinition;
+        public DamagePopupStyle DamagePopupStyle => _damagePopupStyle;
         public int PoolPrewarmCount => _poolPrewarmCount;
         public int PoolDefaultCapacity => _poolDefaultCapacity;
         public int PoolMaximumSize => _poolMaximumSize;

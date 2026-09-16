@@ -18,7 +18,7 @@ namespace AlienDefense.Towers
             _statusEffectOnHit = statusEffectOnHit;
         }
 
-        public bool TryAttack(EnemyController target, DamageInfo damage, Transform firePoint)
+        public bool TryAttack(EnemyController target, DamageInfo damage, Transform firePoint, bool isFollowUpShot = false)
         {
             if (target == null || !target.IsTargetable || firePoint == null || _projectileFactory == null)
             {
@@ -26,7 +26,7 @@ namespace AlienDefense.Towers
             }
 
             var targetHandle = new CombatTargetHandle(target);
-            var request = new ProjectileSpawnRequest(firePoint.position, firePoint.rotation, targetHandle, damage, statusEffectOnHit: _statusEffectOnHit);
+            var request = new ProjectileSpawnRequest(firePoint.position, firePoint.rotation, targetHandle, damage, statusEffectOnHit: isFollowUpShot ? null : _statusEffectOnHit);
             ProjectileController projectile = _projectileFactory.Spawn(_projectileDefinition, request);
 
             return projectile != null;

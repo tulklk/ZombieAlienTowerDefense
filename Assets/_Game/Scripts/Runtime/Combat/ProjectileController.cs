@@ -41,6 +41,10 @@ namespace AlienDefense.Combat
         private bool _hasHit;
         private bool _isInitialized;
 
+        private float _arcHeight;
+        private Vector3 _arcStart;
+        private float _arcProgress;
+
         public void Initialize(
             CombatTargetHandle target,
             DamageInfo damageInfo,
@@ -70,10 +74,21 @@ namespace AlienDefense.Combat
             _splashRadius = splashRadius;
             _splashDamage = splashDamage;
             _hasLastAimPosition = false;
+            _arcHeight = 0f;
 
             _elapsedLifetime = 0f;
             _hasHit = false;
             _isInitialized = true;
+        }
+
+        /// <summary>Optional, after Initialize and once the projectile is at its muzzle: above 0 the projectile is
+        /// lobbed - it rises to <paramref name="arcHeight"/> above the straight line at mid-flight and drops onto
+        /// the target, whose live position it keeps tracking.</summary>
+        public void SetArc(float arcHeight)
+        {
+            _arcHeight = Mathf.Max(0f, arcHeight);
+            _arcStart = transform.position;
+            _arcProgress = 0f;
         }
 
         /// <summary>Called by the owning pool when this instance is returned, including prewarm.</summary>
@@ -90,6 +105,7 @@ namespace AlienDefense.Combat
 
             if (_trail != null)
             {
+                _trail.emitting = false;
                 _trail.Clear();
             }
 
@@ -106,6 +122,13 @@ namespace AlienDefense.Combat
         // the muzzle rather than wherever the instance was created or last flew.
         private void OnEnable()
         {
+            // A pooled projectile must never draw a streak from where it last flew to the new muzzle.
+            if (_trail != null)
+            {
+                _trail.Clear();
+                _trail.emitting = true;
+            }
+
             for (int i = 0; i < _attachedParticles.Length; i++)
             {
                 if (_attachedParticles[i] != null)
@@ -147,6 +170,12 @@ namespace AlienDefense.Combat
                 return;
             }
 
+            if (_arcHeight > 0f)
+            {
+                MoveAlongArc(aimPosition);
+                return;
+            }
+
             Vector3 currentPosition = transform.position;
             Vector3 newPosition = Vector3.MoveTowards(currentPosition, aimPosition, _speed * Time.deltaTime);
             transform.position = newPosition;
@@ -158,6 +187,31 @@ namespace AlienDefense.Combat
             }
 
             if (Vector3.Distance(newPosition, aimPosition) <= _hitDistance)
+            {
+                ApplyHit();
+            }
+        }
+
+        /// <summary>Lobbed flight: progress runs along the line from the launch point to the target's current aim
+        /// point at the projectile's speed, with a parabola (0 at both ends, _arcHeight at the middle) added on top,
+        /// so it climbs out of the barrel, turns over and falls onto the target. It faces its direction of travel.</summary>
+        private void MoveAlongArc(Vector3 aimPosition)
+        {
+            float lineLength = Mathf.Max(0.5f, Vector3.Distance(_arcStart, aimPosition));
+            _arcProgress = Mathf.Min(1f, _arcProgress + _speed * Time.deltaTime / lineLength);
+
+            Vector3 previous = transform.position;
+            Vector3 next = Vector3.Lerp(_arcStart, aimPosition, _arcProgress)
+                + Vector3.up * (_arcHeight * 4f * _arcProgress * (1f - _arcProgress));
+            transform.position = next;
+
+            Vector3 travel = next - previous;
+            if (travel.sqrMagnitude > 0.000001f)
+            {
+                transform.rotation = Quaternion.LookRotation(travel.normalized, Vector3.up);
+            }
+
+            if (_arcProgress >= 1f)
             {
                 ApplyHit();
             }
@@ -181,7 +235,8 @@ namespace AlienDefense.Combat
                     _target.Damageable?.TryApplyDamage(_damageInfo);
                 }
 
-                var splashInfo = new DamageInfo(_splashDamage, _damageInfo.Source, transform.position, _damageInfo.DamageType, _damageInfo.KillVfx);
+                var splashInfo = new DamageInfo(_splashDamage, _damageInfo.Source, transform.position, _damageInfo.DamageType,
+                    _damageInfo.KillVfx, _damageInfo.PopupStyle);
                 _areaDamageResolver.ResolveSplash(transform.position, _splashRadius, splashInfo);
             }
             else if (_areaDamageResolver != null)

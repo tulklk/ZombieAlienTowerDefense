@@ -28,6 +28,23 @@ namespace AlienDefense.EditorTools
         private const string IceMaterialPath = "Assets/UnityTechnologies/ParticlePack/EffectExamples/Magic Effects/Materials/Ice.mat";
         private const string IceMistMaterialPath = "Assets/UnityTechnologies/ParticlePack/EffectExamples/Magic Effects/Materials/IceMist.mat";
         private const string IceCrystalMaterialPath = "Assets/_Game/Materials/VFX/Ice/MAT_IceCrystal.mat";
+        private const string LanceMaterialPath = "Assets/_Game/Materials/VFX/Ice/MAT_IceLance.mat";
+
+        // Flying lance look (IceLance_Low mesh: ~1.02 m along X, ~0.16 m thick).
+        private const float SpearMeshLength = 1.02f;
+        private const float SpearMeshWidth = 0.156f;
+        private const float SpearLength = 2.0f;
+        private const float SpearWidth = 0.36f;
+        private const float SpearYaw = -90f; // the mesh tip is at +X: this yaw points it along the projectile forward (+Z)
+        private const float TrailSeconds = 0.16f;
+        private const float TrailWidth = 0.27f;   // 75% of the lance width
+        private const float TailOffset = -0.45f;  // just inside the lance's tail (tip forward along +Z)
+
+        private const string TrailMaterialPath = "Assets/_Game/Materials/VFX/Ice/MAT_IceTrail.mat";
+        private const string ColdMistMaterialPath = "Assets/_Game/Materials/VFX/Ice/MAT_ColdMist.mat";
+        private const string SoftTrailTexturePath = "Assets/_Game/Art/Textures/VFX/T_SoftTrail.png";
+        private const string MistTexturePath = "Assets/UnityTechnologies/ParticlePack/EffectExamples/Magic Effects/Textures/DustPuffSmall.png";
+        private const string TinyShardModelPath = "Assets/UnityTechnologies/ParticlePack/EffectExamples/Magic Effects/Models/IceShard.FBX";
 
         [MenuItem("AlienDefense/Setup/Towers/Setup Frost Tower Ice Lance")]
         private static void Run()
@@ -75,8 +92,8 @@ namespace AlienDefense.EditorTools
             var controller = root.AddComponent<ProjectileController>();
             GameObject source = InstantiateSource();
 
-            // The lance itself: one mesh particle, simulated in the projectile's own space so it flies with it. Its
-            // mesh points down -X, so a 90 degree yaw lays the tip along +Z, the direction the projectile faces.
+            // The lance itself: one mesh particle, simulated in the projectile's own space so it flies with it; its
+            // orientation (tip at +X, yawed onto +Z) is set in ConfigureSpear.
             Transform lance = source.transform;
             lance.name = "Lance";
             lance.SetParent(root.transform, false);
@@ -103,14 +120,6 @@ namespace AlienDefense.EditorTools
             main.maxParticles = 1;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-            main.startRotation3D = true;
-            main.startRotationX = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f); // random roll about its length
-            main.startRotationY = Mathf.PI * 0.5f;
-            main.startRotationZ = 0f;
-            main.startSize3D = true;
-            main.startSizeX = 1.6f; // ~1.6 m lance, thick enough to read from the gameplay camera
-            main.startSizeY = 2.6f;
-            main.startSizeZ = 2.6f;
 
             var emission = lancePs.emission;
             emission.rateOverTime = 0f;
@@ -125,45 +134,17 @@ namespace AlienDefense.EditorTools
             collision.enabled = false;
             var color = lancePs.colorOverLifetime;
             color.enabled = false;
-            var trails = lancePs.trails;
-            if (trails.enabled)
-            {
-                trails.worldSpace = true; // a streak behind the flight, not a stub glued to the lance
-                trails.lifetime = 0.04f;  // fraction of the particle's 5 s life
-            }
 
-            // MistTrail: a free-standing world-space emitter that puffs mist per metre flown.
             Transform mistTrail = FindDeep(root.transform, "MistTrail");
             mistTrail.SetParent(root.transform, false);
             ResetLocal(mistTrail);
-            var trailPs = mistTrail.GetComponent<ParticleSystem>();
-            var tm = trailPs.main;
-            tm.loop = true;
-            tm.prewarm = false;
-            tm.playOnAwake = false;
-            tm.simulationSpace = ParticleSystemSimulationSpace.World;
-            tm.scalingMode = ParticleSystemScalingMode.Hierarchy;
-            tm.startLifetime = new ParticleSystem.MinMaxCurve(0.35f, 0.7f);
-            tm.startSpeed = new ParticleSystem.MinMaxCurve(0f, 0.6f);
-            tm.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1f);
-            tm.gravityModifier = 0f;
-            tm.startColor = new Color(0.85f, 0.95f, 1f, 0.55f);
-            tm.maxParticles = 200;
-            var te = trailPs.emission;
-            te.rateOverTime = 0f;
-            te.rateOverDistance = 7f;
-            te.SetBursts(new ParticleSystem.Burst[0]);
 
             DestroyDeep(root.transform, "Mist");
             DestroyDeep(root.transform, "TinyShards");
             DestroyDeep(root.transform, "IceBall");
 
-            var so = new SerializedObject(controller);
-            SerializedProperty attached = so.FindProperty("_attachedParticles");
-            attached.arraySize = 2;
-            attached.GetArrayElementAtIndex(0).objectReferenceValue = lancePs;
-            attached.GetArrayElementAtIndex(1).objectReferenceValue = trailPs;
-            so.ApplyModifiedPropertiesWithoutUndo();
+            // Look, size, trail, mist and the VisualRoot hierarchy.
+            ApplyProjectileVisual(root);
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, ProjectilePrefabPath);
             Object.DestroyImmediate(root);
@@ -184,6 +165,447 @@ namespace AlienDefense.EditorTools
             dso.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(definition);
             return definition;
+        }
+
+        [MenuItem("AlienDefense/Setup/Towers/Apply Ice Lance Projectile Visual")]
+        private static void ApplyProjectileVisualToPrefab()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(ProjectilePrefabPath);
+            try
+            {
+                ApplyProjectileVisual(root);
+                PrefabUtility.SaveAsPrefabAsset(root, ProjectilePrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+
+            Debug.Log("[FrostIceLanceSetup] Ice lance projectile visual applied to " + ProjectilePrefabPath);
+        }
+
+        /// <summary>What the flying lance looks like - visual only, the projectile's gameplay (speed, hit distance,
+        /// damage, slow) is untouched. The Particle Pack's Ice material is a Scene Color refraction that is invisible
+        /// over the ground from the gameplay camera, so the lance uses AlienDefense/IceLance instead. Behind it, in
+        /// falling order of visibility: a short soft cyan TrailRenderer, a faint cold-vapour mist and a few tiny ice
+        /// chips. The spear draws on top of all three (renderer priority) so they can never hide it.</summary>
+        private static void ApplyProjectileVisual(GameObject root)
+        {
+            var controller = root.GetComponent<ProjectileController>();
+
+            // ProjectileController turns the root to face the flight direction; the visuals live under their own root.
+            Transform visualRoot = root.transform.Find("VisualRoot");
+            if (visualRoot == null)
+            {
+                visualRoot = new GameObject("VisualRoot").transform;
+                visualRoot.SetParent(root.transform, false);
+            }
+
+            ResetLocal(visualRoot);
+
+            Transform spear = FindDeep(root.transform, "IceSpear") ?? FindDeep(root.transform, "Lance");
+            Transform mist = FindDeep(root.transform, "ColdMist") ?? FindDeep(root.transform, "IceMist") ?? FindDeep(root.transform, "MistTrail");
+            if (spear == null || mist == null)
+            {
+                Debug.LogError("[FrostIceLanceSetup] Projectile is missing its lance or mist system.");
+                return;
+            }
+
+            spear.name = "IceSpear";
+            spear.SetParent(visualRoot, false);
+            ResetLocal(spear);
+            spear.SetSiblingIndex(0);
+
+            // The spear's tail sits ~0.6 m behind the root (tip forward along +Z); trail, mist and chips start just
+            // inside it so they visibly leave the lance rather than float behind it.
+            Transform trail = FindOrCreateChild(visualRoot, "IceTrail", 1);
+            PlaceAtTail(trail, 0f);
+
+            mist.name = "ColdMist";
+            mist.SetParent(visualRoot, false);
+            mist.SetSiblingIndex(2);
+            PlaceAtTail(mist, 180f); // the cone emits backwards, against the flight
+
+            Transform tiny = FindOrCreateChild(visualRoot, "TinyIceParticles", 3);
+            PlaceAtTail(tiny, 180f);
+
+            ParticleSystem spearPs = ConfigureSpear(spear.GetComponent<ParticleSystem>());
+            TrailRenderer trailRenderer = ConfigureTrail(trail);
+            ParticleSystem mistPs = ConfigureColdMist(mist.GetComponent<ParticleSystem>());
+            ParticleSystem tinyPs = ConfigureTinyIce(tiny);
+
+            var so = new SerializedObject(controller);
+            so.FindProperty("_trail").objectReferenceValue = trailRenderer;
+            SerializedProperty attached = so.FindProperty("_attachedParticles");
+            attached.arraySize = 3;
+            attached.GetArrayElementAtIndex(0).objectReferenceValue = spearPs;
+            attached.GetArrayElementAtIndex(1).objectReferenceValue = mistPs;
+            attached.GetArrayElementAtIndex(2).objectReferenceValue = tinyPs;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static ParticleSystem ConfigureSpear(ParticleSystem spear)
+        {
+            // One mesh particle that lives for the whole flight, simulated in the projectile's space (no double
+            // movement: start speed 0, the controller moves the root). IceLance_Low is ~1.02 m long along X with a
+            // ~0.16 m round body, so the scale below makes a ~2 m x 0.36 m lance (5.5:1) - readable from the ~24 m gameplay camera.
+            var main = spear.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.startLifetime = 5f;
+            main.startSpeed = 0f;
+            main.maxParticles = 1;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.startColor = Color.white;
+            main.startRotation3D = true;
+            main.startRotationX = 0f;
+            main.startRotationY = SpearYaw * Mathf.Deg2Rad;
+            main.startRotationZ = 0f;
+            main.startSize3D = true;
+            main.startSizeX = SpearLength / SpearMeshLength;
+            main.startSizeY = SpearWidth / SpearMeshWidth;
+            main.startSizeZ = SpearWidth / SpearMeshWidth;
+
+            var emission = spear.emission;
+            emission.rateOverTime = 0f;
+            emission.rateOverDistance = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) });
+
+            var color = spear.colorOverLifetime;
+            color.enabled = false;
+            var sizeOverLifetime = spear.sizeOverLifetime;
+            sizeOverLifetime.enabled = true; // pops in over the first ~0.04 s, then holds
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f,
+                new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(0.008f, 1f), new Keyframe(1f, 1f)));
+
+            // The trail is the IceTrail TrailRenderer - one trail per projectile.
+            var trails = spear.trails;
+            trails.enabled = false;
+
+            var renderer = spear.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.alignment = ParticleSystemRenderSpace.Local;
+            renderer.sharedMaterial = EnsureLanceMaterial();
+            renderer.trailMaterial = null;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortingOrder = 3; // always drawn over its own trail, mist and chips
+            return spear;
+        }
+
+        private static TrailRenderer ConfigureTrail(Transform host)
+        {
+            var trail = host.GetComponent<TrailRenderer>();
+            if (trail == null)
+            {
+                trail = host.gameObject.AddComponent<TrailRenderer>();
+            }
+
+            // 0.16 s at 12 m/s is ~1.9 m, about one lance length; narrower than the lance and fading to nothing.
+            trail.time = TrailSeconds;
+            trail.minVertexDistance = 0.05f;
+            trail.widthMultiplier = TrailWidth;
+            trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f));
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(0.70f, 0.95f, 1f), 0f),
+                    new GradientColorKey(new Color(0.45f, 0.85f, 1f), 0.5f),
+                    new GradientColorKey(new Color(0.45f, 0.81f, 1f), 1f),
+                },
+                new[] { new GradientAlphaKey(0.45f, 0f), new GradientAlphaKey(0.22f, 0.5f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = gradient;
+            trail.textureMode = LineTextureMode.Stretch;
+            trail.alignment = LineAlignment.View;
+            trail.numCapVertices = 2;
+            trail.numCornerVertices = 0;
+            trail.emitting = true;
+            trail.autodestruct = false;
+            trail.generateLightingData = false;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.receiveShadows = false;
+            // Base colour a touch over 1 so the existing Bloom lifts it slightly - no light, no extra glow pass.
+            trail.sharedMaterial = EnsureParticleMaterial(TrailMaterialPath, EnsureSoftTrailTexture(), new Color(1.15f, 1.25f, 1.3f, 1f));
+            trail.sortingOrder = 2;
+            return trail;
+        }
+
+        private static ParticleSystem ConfigureColdMist(ParticleSystem mist)
+        {
+            // Faint cold vapour left hanging behind the lance (world space) and gone in a few tenths of a second.
+            var main = mist.main;
+            main.duration = 1f;
+            main.loop = true;
+            main.prewarm = false;
+            main.playOnAwake = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.38f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.25f);
+            // Larger than a close-up would use: from the ~24 m gameplay camera 0.1-0.2 m puffs are a pixel or two.
+            main.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.7f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.gravityModifier = 0f;
+            main.startColor = new Color(0.847f, 0.98f, 1f, 1f); // #D8FAFF; opacity comes from Color over Lifetime
+            main.maxParticles = 25;
+
+            // Time + distance so short, fast flights still leave an even line of puffs (~5 per metre at 12 m/s).
+            var emission = mist.emission;
+            emission.rateOverTime = 20f;
+            emission.rateOverDistance = 3.5f;
+            emission.SetBursts(new ParticleSystem.Burst[0]);
+
+            var shape = mist.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 10f;
+            shape.radius = 0.05f;
+            shape.radiusThickness = 1f;
+
+            var colorOverLifetime = mist.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            var mistGradient = new Gradient();
+            mistGradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(0.918f, 0.992f, 1f), 0f),    // #EAFDFF
+                    new GradientColorKey(new Color(0.741f, 0.933f, 1f), 0.45f), // #BDEEFF
+                    new GradientColorKey(new Color(0.447f, 0.812f, 1f), 1f),    // #72CFFF
+                },
+                new[] { new GradientAlphaKey(0.5f, 0f), new GradientAlphaKey(0.24f, 0.45f), new GradientAlphaKey(0f, 1f) }); // the puff texture is itself soft, so this reads as ~20%
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(mistGradient);
+
+            var sizeOverLifetime = mist.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f,
+                new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(1f, 1.2f)));
+
+            var noise = mist.noise;
+            noise.enabled = true;
+            noise.strength = 0.06f;
+            noise.frequency = 0.6f;
+            noise.scrollSpeed = 0.1f;
+            noise.octaveCount = 1;
+            noise.quality = ParticleSystemNoiseQuality.Low;
+
+            var velocity = mist.velocityOverLifetime;
+            velocity.enabled = false;
+            var subs = mist.subEmitters;
+            subs.enabled = false;
+            var collision = mist.collision;
+            collision.enabled = false;
+
+            var renderer = mist.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.alignment = ParticleSystemRenderSpace.View;
+            renderer.sharedMaterial = EnsureParticleMaterial(ColdMistMaterialPath,
+                AssetDatabase.LoadAssetAtPath<Texture2D>(MistTexturePath), Color.white);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortingOrder = 0;
+            return mist;
+        }
+
+        private static ParticleSystem ConfigureTinyIce(Transform host)
+        {
+            var tiny = host.GetComponent<ParticleSystem>();
+            if (tiny == null)
+            {
+                tiny = host.gameObject.AddComponent<ParticleSystem>();
+            }
+
+            // A few spinning ice chips shed off the tail - mesh chips (IceShardTiny, ~0.23 m) so they read as ice.
+            var main = tiny.main;
+            main.duration = 1f;
+            main.loop = true;
+            main.prewarm = false;
+            main.playOnAwake = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.35f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.3f);
+            main.startSize3D = false;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.55f, 0.85f); // ~0.13-0.2 m chips - smaller vanish at this camera
+            main.startRotation3D = true;
+            main.startRotationX = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startRotationY = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startRotationZ = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(Color.white, new Color(0.75f, 0.95f, 1f, 1f));
+            main.gravityModifier = 0.15f;
+            main.maxParticles = 8;
+
+            var emission = tiny.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 10f;
+            emission.rateOverDistance = 0f;
+            emission.SetBursts(new ParticleSystem.Burst[0]);
+
+            var shape = tiny.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 20f;
+            shape.radius = 0.06f;
+
+            var rotation = tiny.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.separateAxes = true;
+            rotation.x = new ParticleSystem.MinMaxCurve(-4f, 4f);
+            rotation.y = new ParticleSystem.MinMaxCurve(-4f, 4f);
+            rotation.z = new ParticleSystem.MinMaxCurve(-4f, 4f);
+
+            var sizeOverLifetime = tiny.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f,
+                new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f)));
+
+            var renderer = tiny.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.alignment = ParticleSystemRenderSpace.Local;
+            renderer.mesh = LoadMesh(TinyShardModelPath, "IceShardTiny");
+            renderer.sharedMaterial = EnsureLanceMaterial(); // the same readable ice as the spear
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortingOrder = 1;
+            return tiny;
+        }
+
+        private static void PlaceAtTail(Transform t, float yaw)
+        {
+            t.localPosition = new Vector3(0f, 0f, TailOffset);
+            t.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            t.localScale = Vector3.one;
+        }
+
+        private static Transform FindOrCreateChild(Transform parent, string name, int siblingIndex)
+        {
+            Transform child = parent.Find(name);
+            if (child == null)
+            {
+                child = new GameObject(name).transform;
+                child.SetParent(parent, false);
+            }
+
+            child.SetSiblingIndex(siblingIndex);
+            return child;
+        }
+
+        private static Mesh LoadMesh(string modelPath, string meshName)
+        {
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(modelPath))
+            {
+                if (asset is Mesh mesh && mesh.name == meshName)
+                {
+                    return mesh;
+                }
+            }
+
+            Debug.LogError("[FrostIceLanceSetup] Mesh " + meshName + " not found in " + modelPath);
+            return null;
+        }
+
+        /// <summary>URP Particles/Unlit, alpha-blended, soft particles off (no depth-texture read on mobile).</summary>
+        private static Material EnsureParticleMaterial(string path, Texture2D texture, Color baseColor)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool created = material == null;
+            if (created)
+            {
+                material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            }
+
+            material.SetTexture("_BaseMap", texture);
+            material.SetColor("_BaseColor", baseColor);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f); // alpha
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            material.SetFloat("_SoftParticlesEnabled", 0f);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_SOFTPARTICLES_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            if (created)
+            {
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(material);
+            }
+
+            return material;
+        }
+
+        /// <summary>16x64 white strip whose alpha falls off smoothly across its width, so the trail has soft edges.</summary>
+        private static Texture2D EnsureSoftTrailTexture()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(SoftTrailTexturePath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var texture = new Texture2D(16, 64, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 64; y++)
+            {
+                float across = Mathf.Abs(y / 63f * 2f - 1f);
+                float alpha = Mathf.SmoothStep(1f, 0f, across);
+                alpha = Mathf.Sqrt(alpha); // fuller body, soft edges
+                for (int x = 0; x < 16; x++)
+                {
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+
+            System.IO.File.WriteAllBytes(SoftTrailTexturePath, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(SoftTrailTexturePath);
+
+            // The project's texture preset imports PNGs as sprites; this one is a plain clamped texture.
+            var importer = (TextureImporter)AssetImporter.GetAtPath(SoftTrailTexturePath);
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(SoftTrailTexturePath);
+        }
+
+        private static Material EnsureLanceMaterial()
+        {
+            Shader shader = Shader.Find("AlienDefense/IceLance");
+            if (shader == null)
+            {
+                Debug.LogError("[FrostIceLanceSetup] Shader AlienDefense/IceLance not found.");
+                return null;
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(LanceMaterialPath);
+            if (material == null)
+            {
+                material = new Material(shader) { name = "MAT_IceLance" };
+                AssetDatabase.CreateAsset(material, LanceMaterialPath);
+            }
+
+            // Pale cyan body with a thin white core and blue-cyan edges; mostly opaque so the silhouette reads.
+            material.shader = shader;
+            material.SetColor("_CoreColor", new Color(0.961f, 1f, 1f, 1f));   // #F5FFFF
+            material.SetColor("_BodyColor", new Color(0.50f, 0.90f, 1f, 1f));  // between #B9F5FF and #63DFFF, saturated to survive ACES
+            material.SetColor("_EdgeColor", new Color(0.22f, 0.72f, 1f, 1f));  // deeper #63DFFF
+            material.SetFloat("_CoreWidth", 0.14f);
+            material.SetFloat("_EdgeStart", 0.45f);
+            material.SetFloat("_BodyAlpha", 0.82f);
+            material.SetFloat("_EdgeAlpha", 0.95f);
+            material.SetFloat("_FacetShading", 0.3f);
+            material.SetFloat("_GlintStrength", 0.5f);
+            material.SetFloat("_Emission", 0.15f); // light Bloom only - more washes the cyan out to white
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         /// <summary>Every normal Frost hit: a tiny cyan flash and a handful of small ice fragments spraying off the

@@ -26,8 +26,7 @@ MonoBehaviour:
   _attackBehavior: 1
   _statusEffectOnHit: {fileID: 11400000, guid: 65ccd661d71ef7346b565c6bde456de5, type: 2}
   _splashRadius: 0
-  _muzzleVfxDefinition: {fileID: 11400000, guid: 81f325e45ba233a4c8ab02e246488f70,
-    type: 2}
+  _muzzleVfxDefinition: {fileID: 0}
   _levels:
   - _upgradeCost: 0
     _energyCost: 10

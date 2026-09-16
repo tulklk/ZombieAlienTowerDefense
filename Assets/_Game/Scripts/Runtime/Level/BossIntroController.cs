@@ -19,7 +19,6 @@ namespace AlienDefense.Level
     /// Spawns nothing and owns no wave logic. Uses DOTween on scaled time, so pausing the game pauses the intro.</summary>
     public sealed class BossIntroController : MonoBehaviour
     {
-        private static readonly int AttackStateHash = Animator.StringToHash("Attack");
         private static readonly int WalkStateHash = Animator.StringToHash("Walk");
 
         [Header("Scene References")]
@@ -69,6 +68,11 @@ namespace AlienDefense.Level
         [SerializeField, Range(0.5f, 8f)]
         [Tooltip("Seconds the camera stays on the boss (the banner shows for this long).")]
         private float _bossHoldDuration = 5f;
+
+        [SerializeField, Range(0f, 1f)]
+        [Tooltip("Where in the Walk cycle (0..1) the boss is posed while it stands still for the intro. The boss has no idle " +
+                 "clip; the first Walk frame is its most neutral standing stance.")]
+        private float _bossStandPoseTime = 0f;
 
         [SerializeField, Range(0.3f, 2f)]
         private float _cameraReturnDuration = 1f;
@@ -153,6 +157,7 @@ namespace AlienDefense.Level
         {
             _boss = boss;
             _bossAnimator = boss.GetComponentInChildren<Animator>();
+            HoldBossStill();
             IsPlaying = true;
             IntroStarted?.Invoke();
 
@@ -176,8 +181,7 @@ namespace AlienDefense.Level
                 _cameraTravelDuration, Ease.InOutCubic));
             _sequence.InsertCallback(_lockLeadTime + 0.2f + _cameraTravelDuration * 0.55f, ShowBanner);
 
-            // Hold: the boss taunts.
-            _sequence.AppendCallback(PlayBossTaunt);
+            // Hold on the boss, standing still.
             _sequence.AppendInterval(_bossHoldDuration);
 
             // Camera -> the player, wherever the player is now.
@@ -376,18 +380,20 @@ namespace AlienDefense.Level
             }
         }
 
-        private void PlayBossTaunt()
+        /// <summary>Poses the boss in a standing stance and stops its animation for the whole intro - no attack, no
+        /// walk shuffle. EnemyController restores the animator speed it had before the hold when the group is released,
+        /// and FinishIntro blends back into Walk.</summary>
+        private void HoldBossStill()
         {
-            if (_bossAnimator == null)
+            // Only while WaveController holds the boss: releasing it is what restores the animator speed.
+            if (_bossAnimator == null || _boss.IsCombatActive || !_bossAnimator.HasState(0, WalkStateHash))
             {
                 return;
             }
 
-            _bossAnimator.speed = 1f; // EnemyController restores its own speed when the group is released
-            if (_bossAnimator.HasState(0, AttackStateHash))
-            {
-                _bossAnimator.CrossFadeInFixedTime(AttackStateHash, 0.15f, 0);
-            }
+            _bossAnimator.Play(WalkStateHash, 0, _bossStandPoseTime);
+            _bossAnimator.speed = 0f;
+            _bossAnimator.Update(0f);
         }
 
         private void RestoreGameplayCamera()

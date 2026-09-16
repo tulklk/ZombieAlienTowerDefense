@@ -303,6 +303,9 @@ namespace AlienDefense.EditorTools
 
         private static BossHealthBarPresenter EnsureBossHealthBar(Transform safeArea)
         {
+            BossHealthBarPrefabBuilder.CreateOrRebuild();
+
+            // Reuse the existing instance so references to it (pause CanvasGroup, composition root) survive.
             Transform existing = safeArea.Find("BossHealthBar");
             GameObject bar;
             if (existing != null)
@@ -314,16 +317,11 @@ namespace AlienDefense.EditorTools
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BossHealthBarPrefabPath);
                 bar = (GameObject)PrefabUtility.InstantiatePrefab(prefab, safeArea);
                 bar.name = "BossHealthBar";
+                bar.transform.SetSiblingIndex(1);
             }
 
             // Just under the top HUD (level bar / resource badges), above the minimap.
-            var rect = (RectTransform)bar.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            // Narrow enough to sit between the energy badge (left) and the UFO badge (right).
-            rect.anchoredPosition = new Vector2(0f, -330f);
-            rect.sizeDelta = new Vector2(560f, 90f);
-            bar.transform.SetSiblingIndex(1);
+            BossHealthBarPrefabBuilder.ApplySceneLayout((RectTransform)bar.transform);
             return bar.GetComponentInChildren<BossHealthBarPresenter>(true);
         }
 

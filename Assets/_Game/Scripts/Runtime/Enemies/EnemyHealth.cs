@@ -16,10 +16,20 @@ namespace AlienDefense.Enemies
         public event Action<float, float> HealthChanged;
         public event Action Died;
 
+        /// <summary>Raised after damage actually lands, with the attacker's GameObject and the amount taken off this
+        /// enemy (after defense/shield, clamped to the health that was left). Static because enemies are pooled: a
+        /// level-scoped listener (CombatStatsService) subscribes once instead of re-subscribing per spawn.</summary>
+        public static event Action<GameObject, float> DamageApplied;
+
+        /// <summary>Same moment as DamageApplied, with the victim and the full DamageInfo (e.g. its popup style) -
+        /// the amount is still the final damage taken, after defense/shield and clamped to remaining health.</summary>
+        public static event Action<EnemyHealth, DamageInfo, float> DamageLanded;
+
         /// <summary>The killing blow's DamageInfo.KillVfx, if it carried one; set just before Died fires.</summary>
         public VfxDefinition KillVfxOverride { get; private set; }
 
         private bool _diedFired;
+        private float _lastAppliedDamage;
         private VfxDefinition _incomingKillVfx;
         private bool _isCaptureImmune;
         private bool _isEncounterImmune;
@@ -75,7 +85,9 @@ namespace AlienDefense.Enemies
                 return false;
             }
 
+            float before = CurrentHealth;
             CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+            _lastAppliedDamage = before - CurrentHealth;
             HealthChanged?.Invoke(CurrentHealth, MaximumHealth);
 
             if (CurrentHealth <= 0f && !_diedFired)
@@ -105,6 +117,13 @@ namespace AlienDefense.Enemies
             _incomingKillVfx = damageInfo.KillVfx;
             bool applied = TryApplyDamage(amount);
             _incomingKillVfx = null;
+
+            if (applied && _lastAppliedDamage > 0f)
+            {
+                DamageApplied?.Invoke(damageInfo.Source, _lastAppliedDamage);
+                DamageLanded?.Invoke(this, damageInfo, _lastAppliedDamage);
+            }
+
             return applied;
         }
     }

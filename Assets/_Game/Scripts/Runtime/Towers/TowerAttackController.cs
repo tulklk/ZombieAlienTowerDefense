@@ -1,3 +1,4 @@
+using System;
 using AlienDefense.Combat;
 using AlienDefense.Enemies;
 using AlienDefense.Vfx;
@@ -10,6 +11,12 @@ namespace AlienDefense.Towers
     {
         [SerializeField]
         private Transform _firePoint;
+
+        [SerializeField]
+        [Tooltip("Optional. Extra muzzles (e.g. the second barrel of a twin gun) that fire together with the fire " +
+            "point. The attack's damage is shared evenly across all muzzles so damage per second is unchanged, and " +
+            "on-hit effects (slow, stun build-up) ride only on the fire point's shot.")]
+        private Transform[] _extraFirePoints = Array.Empty<Transform>();
 
         private IAttackStrategy _attackStrategy;
         private GameObject _sourceObject;
@@ -58,12 +65,38 @@ namespace AlienDefense.Towers
                 return;
             }
 
-            var damageInfo = new DamageInfo(_damage, _sourceObject, target.AimPoint.position);
-            if (_attackStrategy.TryAttack(target, damageInfo, _firePoint))
+            int muzzleCount = 1 + CountExtraFirePoints();
+            var damageInfo = new DamageInfo(_damage / muzzleCount, _sourceObject, target.AimPoint.position);
+            if (!_attackStrategy.TryAttack(target, damageInfo, _firePoint))
             {
-                _cooldownTimer = 1f / _attacksPerSecond;
-                _vfxService?.Play(_muzzleVfx, _firePoint.position, _firePoint.rotation);
+                return;
             }
+
+            _cooldownTimer = 1f / _attacksPerSecond;
+            _vfxService?.Play(_muzzleVfx, _firePoint.position, _firePoint.rotation);
+
+            for (int i = 0; i < _extraFirePoints.Length; i++)
+            {
+                Transform muzzle = _extraFirePoints[i];
+                if (muzzle != null && _attackStrategy.TryAttack(target, damageInfo, muzzle, isFollowUpShot: true))
+                {
+                    _vfxService?.Play(_muzzleVfx, muzzle.position, muzzle.rotation);
+                }
+            }
+        }
+
+        private int CountExtraFirePoints()
+        {
+            int count = 0;
+            for (int i = 0; i < _extraFirePoints.Length; i++)
+            {
+                if (_extraFirePoints[i] != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

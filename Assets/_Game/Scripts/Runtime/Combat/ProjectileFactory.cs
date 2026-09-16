@@ -45,7 +45,9 @@ namespace AlienDefense.Combat
             projectile.transform.SetPositionAndRotation(request.SpawnPosition, request.SpawnRotation);
             projectile.Initialize(
                 request.Target,
-                request.Damage,
+                definition.DamagePopupStyle != DamagePopupStyle.None
+                    ? request.Damage.WithPopupStyle(definition.DamagePopupStyle)
+                    : request.Damage,
                 definition.Speed,
                 definition.MaximumLifetime,
                 definition.HitDistance,
@@ -57,6 +59,7 @@ namespace AlienDefense.Combat
                 request.SplashRadius,
                 request.SplashDamage,
                 definition.KillVfxDefinition);
+            projectile.SetArc(definition.ArcHeight);
             projectile.gameObject.SetActive(true);
 
             return projectile;

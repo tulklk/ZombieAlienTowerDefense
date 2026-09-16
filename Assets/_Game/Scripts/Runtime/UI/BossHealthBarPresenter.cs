@@ -32,12 +32,13 @@ namespace AlienDefense.UI
             boss.Health.HealthChanged += HandleHealthChanged;
             boss.Resolved += HandleBossResolved;
 
-            _view?.Show(boss.Definition != null ? boss.Definition.DisplayName : "Boss");
+            _view?.Show();
+            HandleHealthChanged(boss.Health.CurrentHealth, boss.Health.MaximumHealth);
         }
 
         private void HandleHealthChanged(float current, float max)
         {
-            _view?.SetFill(max > 0f ? current / max : 0f);
+            _view?.SetHealth(current, max);
         }
 
         private void HandleBossResolved(EnemyController resolvedEnemy, EnemyResolveReason reason)

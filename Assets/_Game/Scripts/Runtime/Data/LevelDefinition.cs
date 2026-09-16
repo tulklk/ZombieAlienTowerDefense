@@ -41,6 +41,19 @@ namespace AlienDefense.Data
         [Tooltip("Hard cap on speed multiplier (keeps Fast enemies from becoming absurd).")]
         private float _maxSpeedMultiplier = 1.22f;
 
+        [Header("Enemy Strength (this level only)")]
+        [SerializeField, Range(0.1f, 3f)]
+        [Tooltip("Scales every enemy's health in this level, boss and escorts included. 1 = as defined.")]
+        private float _enemyHealthMultiplier = 1f;
+
+        [SerializeField, Range(0.5f, 2f)]
+        [Tooltip("Scales every enemy's move speed in this level. 1 = as defined.")]
+        private float _enemySpeedMultiplier = 1f;
+
+        [SerializeField, Range(0.1f, 3f)]
+        [Tooltip("Scales the damage enemies deal to the base in this level (never below 1 per hit). 1 = as defined.")]
+        private float _enemyDamageMultiplier = 1f;
+
         [SerializeField]
         private bool _debugWaveLogs;
 
@@ -63,6 +76,9 @@ namespace AlienDefense.Data
         public float SpeedPerWaveStep => _speedPerWaveStep;
         public float DamagePerWaveStep => _damagePerWaveStep;
         public float MaxSpeedMultiplier => _maxSpeedMultiplier;
+        public float EnemyHealthMultiplier => _enemyHealthMultiplier;
+        public float EnemySpeedMultiplier => _enemySpeedMultiplier;
+        public float EnemyDamageMultiplier => _enemyDamageMultiplier;
         public bool DebugWaveLogs => _debugWaveLogs;
         public int WaveCount => _waves?.Length ?? 0;
 
@@ -76,6 +92,9 @@ namespace AlienDefense.Data
                 DamagePerWaveStep = _damagePerWaveStep,
                 MaxSpeedMultiplier = _maxSpeedMultiplier,
                 DebugWaveLogs = _debugWaveLogs,
+                LevelHealthMultiplier = _enemyHealthMultiplier,
+                LevelSpeedMultiplier = _enemySpeedMultiplier,
+                LevelDamageMultiplier = _enemyDamageMultiplier,
             };
         }
 

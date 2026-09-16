@@ -5058,6 +5058,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Towers.TowerAttackController
   _firePoint: {fileID: 4696614343483692265}
+  _extraFirePoints:
+  - {fileID: 3755428851750555064}
 --- !u!114 &7218897189234880422
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5121,6 +5123,37 @@ MonoBehaviour:
   _useParticles: 1
   _effectEnabled: 1
   _previewProgress: 1
+--- !u!1 &6405710732471252969
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3755428851750555064}
+  m_Layer: 0
+  m_Name: FirePoint_R
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3755428851750555064
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6405710732471252969}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.335, y: -0.07, z: 4.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3464962703983821953}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7507149368016816843
 GameObject:
   m_ObjectHideFlags: 0
@@ -5146,7 +5179,7 @@ Transform:
   m_GameObject: {fileID: 7507149368016816843}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.07, z: 2.2}
+  m_LocalPosition: {x: -1.335, y: -0.07, z: 4.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5237,6 +5270,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 4696614343483692265}
+    - targetCorrespondingSourceObject: {fileID: 7809130406084102537, guid: 6ab4a941639d4c241aaf47a18141b78e,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3755428851750555064}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6ab4a941639d4c241aaf47a18141b78e, type: 3}
 --- !u!4 &3464962703983821953 stripped
