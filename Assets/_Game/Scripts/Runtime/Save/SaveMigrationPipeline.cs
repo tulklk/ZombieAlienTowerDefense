@@ -61,13 +61,26 @@ namespace AlienDefense.Save
                     data.SaveVersion = 1;
                     return data;
 
-                // case 1: return MigrateV1ToV2(data);
+                case 1:
+                    return MigrateV1ToV2(data);
 
                 default:
                     Debug.LogError($"[SaveMigrationPipeline] No migration step defined from version {data.SaveVersion}.");
                     data.SaveVersion = SaveConstants.CurrentSaveVersion;
                     return data;
             }
+        }
+
+        private static PlayerProfileSaveData MigrateV1ToV2(PlayerProfileSaveData data)
+        {
+            if (data.Statistics == null)
+            {
+                data.Statistics = new PlayerStatisticsSaveData();
+            }
+
+            ProfileIdentityUtility.EnsureDisplayIdentity(data);
+            data.SaveVersion = 2;
+            return data;
         }
     }
 }

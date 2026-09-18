@@ -225,6 +225,9 @@ namespace AlienDefense.Combat
             }
 
             _hasHit = true;
+            // Capture the visual hit point before damage can kill/despawn the target. Gameplay splash keeps its
+            // existing center, while the independent impact effect lands cleanly on the enemy body/aim point.
+            Vector3 visualHitPosition = _target.IsValid ? _target.AimPoint.position : transform.position;
 
             if (_areaDamageResolver != null && _splashDamage > 0f)
             {
@@ -253,7 +256,7 @@ namespace AlienDefense.Combat
                 _target.StatusController?.ApplyStatus(_statusEffectOnHit, _damageInfo.Source);
             }
 
-            _vfxService?.Play(_hitVfx, transform.position, transform.rotation);
+            _vfxService?.Play(_hitVfx, visualHitPosition, transform.rotation);
 
             Despawn();
         }

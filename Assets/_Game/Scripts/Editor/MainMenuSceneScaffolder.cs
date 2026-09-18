@@ -98,6 +98,21 @@ namespace AlienDefense.EditorTools
                 dailyRewardPanel, vipPanel,
                 playPanel, shopPanel, upgradePanel, defensePanel, basePanel);
 
+            ProfilePanelBuilder.BuildProfileOverlay(
+                safeArea,
+                compositionRootObject,
+                shellRegions.MenuContentRoot.gameObject,
+                shellRegions.TopHud.gameObject);
+
+            var mainMenuPresenter = compositionRootObject.GetComponent<MainMenuPresenter>();
+            var profilePresenter = compositionRootObject.GetComponent<AlienDefense.UI.Profile.ProfilePresenter>();
+            if (mainMenuPresenter != null && profilePresenter != null)
+            {
+                var serializedMain = new SerializedObject(mainMenuPresenter);
+                serializedMain.FindProperty("_profilePresenter").objectReferenceValue = profilePresenter;
+                serializedMain.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             SceneServicesHostScaffolder.EnsureInActiveScene(includeSaveDebugControls: true);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -273,6 +288,8 @@ namespace AlienDefense.EditorTools
 
             // Avatar, top-left corner of the widget, with the red "!" badge overlapping its top-right corner.
             Image avatar = BuildTopLeftImage(widget.transform, "AvatarImage", Vector2.zero, new Vector2(avatarSize, avatarSize), new Color(0.3f, 0.5f, 0.6f, 1f), roundedRectSprite);
+            avatar.raycastTarget = true;
+            Button avatarButton = avatar.gameObject.AddComponent<Button>();
             NotificationBadgeView avatarBadge = BuildNotificationBadge(avatar.transform, new Vector2(1f, 1f), new Vector2(4f, 4f));
 
             // Level number + XP bar + an extra (settings/customize) button, one row level with the avatar's
@@ -305,6 +322,8 @@ namespace AlienDefense.EditorTools
             var view = widget.AddComponent<PlayerProfileWidgetView>();
             var serialized = new SerializedObject(view);
             serialized.FindProperty("_avatarImage").objectReferenceValue = avatar;
+            serialized.FindProperty("_avatarButton").objectReferenceValue = avatarButton;
+            serialized.FindProperty("_extraButton").objectReferenceValue = extraButtonObject.GetComponent<Button>();
             serialized.FindProperty("_playerLevelText").objectReferenceValue = levelText;
             serialized.FindProperty("_xpFillImage").objectReferenceValue = xpFill;
             serialized.FindProperty("_secondaryProgressText").objectReferenceValue = secondaryText;

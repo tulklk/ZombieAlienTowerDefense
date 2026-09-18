@@ -52,10 +52,32 @@ namespace AlienDefense.Save
                 data.DailyQuest = new DailyQuestSaveData();
             }
 
+            if (data.Statistics == null)
+            {
+                data.Statistics = new PlayerStatisticsSaveData();
+            }
+
+            ProfileIdentityUtility.EnsureDisplayIdentity(data);
+
             RepairLevelProgress(data);
             RepairUnlockedTowers(data);
             RepairTowerUpgrades(data);
             RepairSettings(data.Settings);
+
+            if (data.Statistics.TotalTowerDamage < 0)
+            {
+                data.Statistics.TotalTowerDamage = 0;
+            }
+
+            if (data.Statistics.ZombiesKilled < 0)
+            {
+                data.Statistics.ZombiesKilled = 0;
+            }
+
+            if (data.Statistics.BossesKilled < 0)
+            {
+                data.Statistics.BossesKilled = 0;
+            }
 
             if (data.MetaCurrency < 0)
             {

@@ -68,6 +68,7 @@ namespace AlienDefense.EditorTools
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.color = Color.white;
+            ApplyDefaultUiFont(text);
             return text;
         }
 
@@ -117,7 +118,27 @@ namespace AlienDefense.EditorTools
             text.fontSize = 26f;
             text.alignment = TextAlignmentOptions.MidlineLeft;
             text.color = Color.white;
+            ApplyDefaultUiFont(text);
             return text;
+        }
+
+        private const string FredokaBoldSdfPath = "Assets/_Game/Font/Fredoka-Bold SDF.asset";
+
+        /// <summary>MainMenu / Profile UI font. Without this, TextMeshProUGUI renders nothing.</summary>
+        public static void ApplyDefaultUiFont(TMP_Text text)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FredokaBoldSdfPath);
+            if (font != null)
+            {
+                text.font = font;
+            }
+
+            text.isOrthographic = true;
         }
 
         public static Image BuildBarFill(Transform parent, string name, Vector2 anchoredPosition, Vector2 size, Color fillColor)

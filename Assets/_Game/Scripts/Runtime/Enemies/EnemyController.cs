@@ -98,6 +98,10 @@ namespace AlienDefense.Enemies
         /// <summary>Fired once per spawn instance when this enemy resolves, before it returns to the pool.</summary>
         public event Action<EnemyController, EnemyResolveReason> Resolved;
 
+        /// <summary>Fires for every resolved enemy (including pooled). Career stats and other app-scope listeners
+        /// subscribe here instead of attaching to each instance.</summary>
+        public static event Action<EnemyController, EnemyResolveReason> AnyResolved;
+
         private void Awake()
         {
             if (_health == null || _movement == null)
@@ -342,6 +346,7 @@ namespace AlienDefense.Enemies
 
             _registry?.Unregister(this);
             Resolved?.Invoke(this, reason);
+            AnyResolved?.Invoke(this, reason);
 
             if (reason == EnemyResolveReason.Defeated && _deathVisual != null)
             {

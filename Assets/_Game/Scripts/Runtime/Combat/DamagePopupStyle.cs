@@ -6,5 +6,6 @@ namespace AlienDefense.Combat
     {
         None = 0,
         Fire = 1,
+        Kinetic = 2,
     }
 }

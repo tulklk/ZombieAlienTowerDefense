@@ -19,6 +19,9 @@ namespace AlienDefense.Save
         public int MetaCurrency;
         public int Gems;
         public int VipTier;
+        public string DisplayName;
+        public int AvatarId;
+        public PlayerStatisticsSaveData Statistics = new PlayerStatisticsSaveData();
         public DailyRewardSaveData DailyReward = new DailyRewardSaveData();
         public DailyQuestSaveData DailyQuest = new DailyQuestSaveData();
         public SettingsSaveData Settings = new SettingsSaveData();

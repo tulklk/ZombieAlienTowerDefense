@@ -245,6 +245,22 @@ namespace AlienDefense.UI
                 }
             }
 
+            // Rapid ballistic hits use a neutral number; the fire icon belongs to fire attacks.
+            // A default keeps existing scenes compatible without changing their authored fire style.
+            if (type == DamagePopupStyle.Kinetic)
+            {
+                style = new Style
+                {
+                    Type = type,
+                    TopColor = Color.white,
+                    BottomColor = new Color(0.9f, 0.93f, 0.96f, 1f),
+                    OutlineColor = new Color(0.1f, 0.12f, 0.15f, 1f),
+                    OutlineWidth = 0.22f,
+                    FontSize = 30f,
+                };
+                return true;
+            }
+
             style = default;
             return false;
         }

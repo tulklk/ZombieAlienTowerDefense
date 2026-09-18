@@ -15,35 +15,35 @@ MonoBehaviour:
   _id: tower_mortar
   _displayName: Mortar Tower
   _icon: {fileID: 0}
-  _description: Big blasts with AOE damage
+  _description: Rapid dual-barrel fire with light splash
   _prefab: {fileID: 8868492464935254508, guid: 8e6d315edb151ce4ebffa9909b83d773, type: 3}
   _buildCost: 180
   _sellPercentage: 0.5
   _unlockCost: 200
   _defaultTargetingMode: 2
-  _projectileDefinition: {fileID: 11400000, guid: 241deed9dc36314469733802a0f7a300,
+  _projectileDefinition: {fileID: 11400000, guid: e94e1b2de1692ae49a40094adcc9f274,
     type: 2}
   _attackBehavior: 2
   _statusEffectOnHit: {fileID: 0}
   _splashRadius: 2.5
-  _muzzleVfxDefinition: {fileID: 11400000, guid: 81f325e45ba233a4c8ab02e246488f70,
+  _muzzleVfxDefinition: {fileID: 11400000, guid: 4dadf09c8aa3b4642b20065627381dfe,
     type: 2}
   _levels:
   - _upgradeCost: 0
     _energyCost: 10
-    _damage: 35
+    _damage: 4
     _range: 9.2
-    _attacksPerSecond: 0.35
+    _attacksPerSecond: 5
     _turretRotationSpeed: 300
   - _upgradeCost: 260
     _energyCost: 15
-    _damage: 55
+    _damage: 6
     _range: 9.8
-    _attacksPerSecond: 0.4
+    _attacksPerSecond: 5.5
     _turretRotationSpeed: 300
   - _upgradeCost: 420
     _energyCost: 45
-    _damage: 80
+    _damage: 9
     _range: 10.4
-    _attacksPerSecond: 0.45
+    _attacksPerSecond: 6
     _turretRotationSpeed: 300

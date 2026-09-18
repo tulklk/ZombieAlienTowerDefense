@@ -22,6 +22,11 @@ namespace AlienDefense.Save
                 UnlockedTowerIds = defaults != null ? new List<string>(defaults.DefaultUnlockedTowerIds) : new List<string>(),
                 TowerUpgrades = new List<PermanentTowerUpgradeSaveData>(),
                 MetaCurrency = 0,
+                Gems = 0,
+                VipTier = 0,
+                DisplayName = null,
+                AvatarId = 0,
+                Statistics = new PlayerStatisticsSaveData(),
                 Settings = defaults != null ? defaults.CreateDefaultSettings() : new SettingsSaveData(),
                 Tutorial = new TutorialProgressSaveData()
             };

@@ -38,6 +38,7 @@ namespace AlienDefense.Save
 
             Debug.LogWarning("[SaveService] No valid save or backup found; creating a new default profile.");
             PlayerProfileSaveData fresh = PlayerProfileDefaultsFactory.CreateDefault(defaults, firstLevelId);
+            ProfileIdentityUtility.EnsureDisplayIdentity(fresh);
             RequestSave(fresh);
             return fresh;
         }

@@ -1,17 +1,24 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AlienDefense.UI.MainMenu
 {
-    /// <summary>Avatar + player level/XP bar, top-left of TopHUD. PlayerProfileSaveData has no persistent player
-    /// level/XP field yet (only per-level campaign progress + MetaCurrency) — SetUnavailable puts this widget in
-    /// a dimmed placeholder state rather than inventing a meta-level system, matching ResourceWidgetView's rule.
-    /// Kept ready for a real PlayerLevelProgressionService-backed profile field later (SetLevel/SetExperience).</summary>
+    /// <summary>Avatar + player level/XP bar, top-left of TopHUD. Avatar is clickable and opens the Profile overlay
+    /// (wired by MainMenuPresenter). Level/power come from PlayerProfileService.DisplayLevel + PlayerPowerCalculator;
+    /// XP fill stays at 0 until a real XP economy exists. SetUnavailable remains for callers that lack services.</summary>
     public sealed class PlayerProfileWidgetView : MonoBehaviour
     {
         [SerializeField]
         private Image _avatarImage;
+
+        [SerializeField]
+        private Button _avatarButton;
+
+        [SerializeField]
+        [Tooltip("Optional. Extra gear/customize button next to the XP bar — also opens Profile.")]
+        private Button _extraButton;
 
         [SerializeField]
         private TMP_Text _playerLevelText;
@@ -28,6 +35,35 @@ namespace AlienDefense.UI.MainMenu
 
         [SerializeField]
         private CanvasGroup _canvasGroup;
+
+        public event Action AvatarClicked;
+
+        private void Awake()
+        {
+            EnsureAvatarButton();
+            if (_avatarButton != null)
+            {
+                _avatarButton.onClick.AddListener(HandleAvatarClicked);
+            }
+
+            if (_extraButton != null)
+            {
+                _extraButton.onClick.AddListener(HandleAvatarClicked);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_avatarButton != null)
+            {
+                _avatarButton.onClick.RemoveListener(HandleAvatarClicked);
+            }
+
+            if (_extraButton != null)
+            {
+                _extraButton.onClick.RemoveListener(HandleAvatarClicked);
+            }
+        }
 
         public void SetLevel(int level, float xpProgress01, string secondaryText)
         {
@@ -54,7 +90,7 @@ namespace AlienDefense.UI.MainMenu
             _notificationBadge?.Hide();
         }
 
-        /// <summary>No persistent player-level system exists yet — dims the widget instead of showing a fake level 1.</summary>
+        /// <summary>Dims the widget when no profile services are available.</summary>
         public void SetUnavailable()
         {
             if (_playerLevelText != null)
@@ -78,6 +114,30 @@ namespace AlienDefense.UI.MainMenu
             }
 
             _notificationBadge?.Hide();
+        }
+
+        private void EnsureAvatarButton()
+        {
+            if (_avatarButton != null)
+            {
+                return;
+            }
+
+            if (_avatarImage != null)
+            {
+                _avatarButton = _avatarImage.GetComponent<Button>();
+                if (_avatarButton == null)
+                {
+                    _avatarButton = _avatarImage.gameObject.AddComponent<Button>();
+                }
+
+                _avatarImage.raycastTarget = true;
+            }
+        }
+
+        private void HandleAvatarClicked()
+        {
+            AvatarClicked?.Invoke();
         }
     }
 }

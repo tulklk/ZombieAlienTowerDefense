@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc58613ea6542944d92d50efd3a1c0a5, type: 3}
+  m_Name: VfxDefinition_Vfx_MortarImpact
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Vfx.VfxDefinition
+  _id: vfx_mortar_impact
+  _prefab: {fileID: 1492377462498711670, guid: 367e1d28e5c049e4cb7dd00477549e8b, type: 3}
+  _lifetime: 0.35
+  _poolPrewarmCount: 4
+  _poolDefaultCapacity: 8
+  _poolMaximumSize: 32

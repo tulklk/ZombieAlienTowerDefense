@@ -23,6 +23,23 @@ namespace AlienDefense.Save
         }
 
         public string ProfileId => _data.ProfileId;
+        public string DisplayName
+        {
+            get
+            {
+                ProfileIdentityUtility.EnsureDisplayIdentity(_data);
+                return _data.DisplayName;
+            }
+        }
+
+        public int AvatarId => Mathf.Max(0, _data.AvatarId);
+        public long TotalTowerDamage => _data.Statistics != null ? _data.Statistics.TotalTowerDamage : 0L;
+        public int ZombiesKilled => _data.Statistics != null ? _data.Statistics.ZombiesKilled : 0;
+        public int BossesKilled => _data.Statistics != null ? _data.Statistics.BossesKilled : 0;
+
+        /// <summary>Display-only meta level derived from campaign completions (not an XP economy).</summary>
+        public int DisplayLevel => Mathf.Max(1, GetCompletedLevelCount() + 1);
+
         public string HighestUnlockedLevelId => _data.HighestUnlockedLevelId;
         public int MetaCurrency => _data.MetaCurrency;
         public int Gems => _data.Gems;
@@ -279,6 +296,68 @@ namespace AlienDefense.Save
         }
 
         public int GetUnlockedTowerCount() => _data.UnlockedTowerIds.Count;
+
+        public bool TrySetDisplayName(string rawName, out string error)
+        {
+            if (!ProfileIdentityUtility.TryNormalizeDisplayName(rawName, out string normalized, out error))
+            {
+                return false;
+            }
+
+            if (string.Equals(_data.DisplayName, normalized, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            _data.DisplayName = normalized;
+            RequestImmediateSave();
+            return true;
+        }
+
+        public void SetAvatarId(int avatarId)
+        {
+            int clamped = Mathf.Max(0, avatarId);
+            if (_data.AvatarId == clamped)
+            {
+                return;
+            }
+
+            _data.AvatarId = clamped;
+            RequestImmediateSave();
+        }
+
+        /// <summary>Adds actual applied damage (not theoretical hit values). Debounced to disk.</summary>
+        public void AddTowerDamage(long actualDamage)
+        {
+            if (actualDamage <= 0)
+            {
+                return;
+            }
+
+            EnsureStatistics();
+            _data.Statistics.TotalTowerDamage += actualDamage;
+            RequestDebouncedSave();
+        }
+
+        public void RegisterZombieKill(bool isBoss = false)
+        {
+            EnsureStatistics();
+            _data.Statistics.ZombiesKilled++;
+            if (isBoss)
+            {
+                _data.Statistics.BossesKilled++;
+            }
+
+            RequestDebouncedSave();
+        }
+
+        private void EnsureStatistics()
+        {
+            if (_data.Statistics == null)
+            {
+                _data.Statistics = new PlayerStatisticsSaveData();
+            }
+        }
 
         public void SetTowerUpgradeLevel(string towerId, int level)
         {

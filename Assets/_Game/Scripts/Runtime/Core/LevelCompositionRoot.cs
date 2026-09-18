@@ -13,6 +13,7 @@ using AlienDefense.Level;
 using AlienDefense.Pickups;
 using AlienDefense.Player;
 using AlienDefense.Progression;
+using AlienDefense.Meta;
 using AlienDefense.Save;
 using AlienDefense.Towers;
 using AlienDefense.UI;
@@ -263,6 +264,7 @@ namespace AlienDefense.Core
 
         /// <summary>Per-match damage totals behind the pause panel's damage leaders.</summary>
         public CombatStatsService CombatStats { get; private set; }
+        private CareerStatisticsTracker _careerStatistics;
         public ProjectileFactory ProjectileSpawner { get; private set; }
         public TowerFactory TowerSpawner { get; private set; }
         public AreaDamageResolver AreaDamage { get; private set; }
@@ -377,6 +379,7 @@ namespace AlienDefense.Core
             EnergyCollection = new EnergyCollectionService(EnergyWallet, PlayerLevelProgression);
             PlayerSkills = new PlayerSkillService(_skillCatalog);
             CombatStats = new CombatStatsService();
+            _careerStatistics = new CareerStatisticsTracker(_applicationServices?.PlayerProfileService);
 
             Application.targetFrameRate = levelDefinition.TargetFrameRate;
 
@@ -446,6 +449,8 @@ namespace AlienDefense.Core
             _tractorBeamVisual?.Unsubscribe();
             _applicationServices?.SettingsService?.DetachAudioService(_audioService);
             CombatStats?.Dispose();
+            _careerStatistics?.Dispose();
+            _careerStatistics = null;
 
             Enemies?.Clear();
             _enemyPoolRegistry?.Clear();

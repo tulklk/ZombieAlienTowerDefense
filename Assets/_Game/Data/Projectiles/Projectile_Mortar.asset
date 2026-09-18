@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc9f520c77224884386b8c880f4b755a, type: 3}
+  m_Name: Projectile_Mortar
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Combat.ProjectileDefinition
+  _id: projectile_mortar
+  _displayName: Mortar Shell
+  _prefab: {fileID: 577128263475474250, guid: 39e4bc7da8d0f454ab3fe91491939dd8, type: 3}
+  _speed: 10
+  _maximumLifetime: 5
+  _hitDistance: 0.25
+  _arcHeight: 0
+  _hitVfxDefinition: {fileID: 11400000, guid: 51ba8f3d0f9670940b04610f357994a2, type: 2}
+  _killVfxDefinition: {fileID: 0}
+  _damagePopupStyle: 2
+  _poolPrewarmCount: 24
+  _poolDefaultCapacity: 48
+  _poolMaximumSize: 160

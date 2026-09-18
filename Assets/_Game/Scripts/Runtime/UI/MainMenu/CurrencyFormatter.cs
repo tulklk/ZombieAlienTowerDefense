@@ -11,6 +11,11 @@ namespace AlienDefense.UI.MainMenu
 
         public static string Format(int amount)
         {
+            return Format((long)(amount < 0 ? 0 : amount));
+        }
+
+        public static string Format(long amount)
+        {
             long clamped = amount < 0 ? 0 : amount;
 
             if (clamped < ThousandThreshold)

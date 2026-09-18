@@ -47,5 +47,26 @@ namespace AlienDefense.Tests.EditMode
             Assert.AreEqual(SaveMigrationPipeline.MigrationOutcome.Unrecoverable, outcome);
             Assert.IsNull(result);
         }
+
+        [Test]
+        public void Migrate_V1ToV2_FillsIdentityAndStatistics()
+        {
+            var data = new PlayerProfileSaveData
+            {
+                SaveVersion = 1,
+                ProfileId = "abcdef1234567890",
+                DisplayName = null,
+                Statistics = null,
+            };
+
+            (SaveMigrationPipeline.MigrationOutcome outcome, PlayerProfileSaveData result) = SaveMigrationPipeline.Migrate(data);
+
+            Assert.AreEqual(SaveMigrationPipeline.MigrationOutcome.Migrated, outcome);
+            Assert.AreEqual(2, result.SaveVersion);
+            Assert.IsNotNull(result.Statistics);
+            Assert.AreEqual(0L, result.Statistics.TotalTowerDamage);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(result.DisplayName));
+            Assert.IsTrue(result.DisplayName.StartsWith("UFO_Pilot_"));
+        }
     }
 }

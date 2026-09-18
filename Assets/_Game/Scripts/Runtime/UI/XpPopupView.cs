@@ -30,6 +30,10 @@ namespace AlienDefense.UI
         [SerializeField]
         private CanvasGroup _canvasGroup;
 
+        [SerializeField]
+        [Tooltip("Optional. Number + XP badge, scaled up on spawn.")]
+        private RectTransform _content;
+
         [SerializeField, Min(0.1f)]
         [Tooltip("Seconds from spawn to fully faded/destroyed.")]
         private float _duration = 0.9f;
@@ -43,6 +47,7 @@ namespace AlienDefense.UI
         private Vector3 _worldPosition;
         private Camera _camera;
         private Tweener _progressTween;
+        private Tweener _popTween;
 
         /// <summary>camera may be null (e.g. Camera.main not resolved yet) - the popup then just sits at
         /// whatever screen position WorldToScreenPoint last produced (or the RectTransform's own placement) and
@@ -55,7 +60,15 @@ namespace AlienDefense.UI
 
             if (_label != null)
             {
-                _label.text = $"+{amount} XP";
+                // "XP" is the badge next to the number, not part of the label.
+                _label.text = $"+{amount}";
+            }
+
+            if (_content != null)
+            {
+                _content.localScale = Vector3.one * 0.6f;
+                _popTween?.Kill();
+                _popTween = _content.DOScale(1f, 0.18f).SetEase(Ease.OutBack).SetLink(gameObject);
             }
 
             if (_canvasGroup != null)
@@ -101,6 +114,7 @@ namespace AlienDefense.UI
         private void OnDestroy()
         {
             _progressTween?.Kill();
+            _popTween?.Kill();
         }
     }
 }
