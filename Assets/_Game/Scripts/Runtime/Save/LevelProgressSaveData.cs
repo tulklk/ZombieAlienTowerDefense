@@ -11,5 +11,10 @@ namespace AlienDefense.Save
         public int BestStars;
         public int CompletionCount;
         public int BestRemainingBaseHealth;
+        /// <summary>Best remaining base HP as 0–100 percent. Monotonic; never downgraded on worse replays.</summary>
+        public int BestRemainingHpPercent;
+        public bool ClearRewardClaimed;
+        public bool Hp50RewardClaimed;
+        public bool PerfectRewardClaimed;
     }
 }

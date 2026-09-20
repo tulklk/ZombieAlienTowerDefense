@@ -1055,15 +1055,20 @@ namespace AlienDefense.Core
         }
 
         /// <summary>Placeholder star formula for Phase 13's save foundation: 3 stars for undamaged base, 2 for
-        /// at least half base health remaining, 1 for a plain win. Phase 14 may replace this with richer rules;
-        /// PlayerProfileService never computes stars itself, only stores whatever this returns.</summary>
+        /// at least half base health remaining, 1 for a plain win. Also records remaining HP percent for
+        /// MainMenu objectives (Clear / 50%+ / Perfect).</summary>
         private LevelCompletedResult BuildLevelCompletedResult()
         {
-            int remaining = BaseHealth.CurrentHealth;
             int max = BaseHealth.MaxHealth;
+            int remaining = max > 0
+                ? Mathf.Clamp(BaseHealth.CurrentHealth, 0, max)
+                : Mathf.Max(0, BaseHealth.CurrentHealth);
+            int percent = max > 0
+                ? Mathf.Clamp(Mathf.RoundToInt(100f * remaining / max), 0, 100)
+                : 0;
 
             int stars = 1;
-            if (remaining >= max)
+            if (remaining >= max && max > 0)
             {
                 stars = 3;
             }
@@ -1072,7 +1077,17 @@ namespace AlienDefense.Core
                 stars = 2;
             }
 
-            return new LevelCompletedResult(_resolvedLevelId, stars, remaining);
+#if UNITY_EDITOR
+            LevelProgressSnapshot previous = _applicationServices?.PlayerProfileService != null
+                ? _applicationServices.PlayerProfileService.GetLevelProgress(_resolvedLevelId)
+                : LevelProgressSnapshot.NotStarted(_resolvedLevelId);
+            Debug.Log(
+                $"[LevelResult] Level: {_resolvedLevelId} | Base HP: {remaining} / {max} | Remaining HP: {percent}% | " +
+                $"Previous Best: {previous.BestRemainingHpPercent}% | New Best: {Mathf.Max(previous.BestRemainingHpPercent, percent)}% | " +
+                $"Clear: True | 50%+: {percent >= 50} | Perfect: {percent >= 100}");
+#endif
+
+            return new LevelCompletedResult(_resolvedLevelId, stars, remaining, percent);
         }
 
         private void DespawnAllEnemies()

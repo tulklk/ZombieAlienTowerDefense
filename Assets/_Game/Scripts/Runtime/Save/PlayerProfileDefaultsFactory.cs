@@ -21,6 +21,7 @@ namespace AlienDefense.Save
                 LevelProgress = new List<LevelProgressSaveData>(),
                 UnlockedTowerIds = defaults != null ? new List<string>(defaults.DefaultUnlockedTowerIds) : new List<string>(),
                 TowerUpgrades = new List<PermanentTowerUpgradeSaveData>(),
+                Inventory = new List<MetaItemStackSaveData>(),
                 MetaCurrency = 0,
                 Gems = 0,
                 VipTier = 0,

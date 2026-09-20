@@ -98,6 +98,12 @@ namespace AlienDefense.Save
                 progress.BestRemainingBaseHealth = clampedHealth;
             }
 
+            int clampedPercent = Mathf.Clamp(result.RemainingHpPercent, 0, 100);
+            if (clampedPercent > progress.BestRemainingHpPercent)
+            {
+                progress.BestRemainingHpPercent = clampedPercent;
+            }
+
             if (string.IsNullOrEmpty(_data.HighestUnlockedLevelId))
             {
                 _data.HighestUnlockedLevelId = result.LevelId;
@@ -177,6 +183,96 @@ namespace AlienDefense.Save
 
             _data.Gems += amount;
             RequestImmediateSave();
+        }
+
+        public int GetItemAmount(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || _data.Inventory == null)
+            {
+                return 0;
+            }
+
+            for (int i = 0; i < _data.Inventory.Count; i++)
+            {
+                MetaItemStackSaveData stack = _data.Inventory[i];
+                if (stack != null && stack.ItemId == itemId)
+                {
+                    return Mathf.Max(0, stack.Amount);
+                }
+            }
+
+            return 0;
+        }
+
+        public void AddItem(string itemId, int amount)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || amount <= 0)
+            {
+                Debug.LogError($"[PlayerProfileService] Ignored AddItem('{itemId}', {amount}).");
+                return;
+            }
+
+            if (_data.Inventory == null)
+            {
+                _data.Inventory = new System.Collections.Generic.List<MetaItemStackSaveData>();
+            }
+
+            for (int i = 0; i < _data.Inventory.Count; i++)
+            {
+                MetaItemStackSaveData stack = _data.Inventory[i];
+                if (stack != null && stack.ItemId == itemId)
+                {
+                    stack.Amount = Mathf.Max(0, stack.Amount) + amount;
+                    RequestImmediateSave();
+                    return;
+                }
+            }
+
+            _data.Inventory.Add(new MetaItemStackSaveData { ItemId = itemId, Amount = amount });
+            RequestImmediateSave();
+        }
+
+        /// <summary>Marks one objective reward as claimed for a level. Returns false if already claimed or level id empty.</summary>
+        public bool TryMarkObjectiveRewardClaimed(string levelId, AlienDefense.Meta.LevelObjectiveKind kind)
+        {
+            if (string.IsNullOrWhiteSpace(levelId))
+            {
+                return false;
+            }
+
+            LevelProgressSaveData progress = FindOrCreateLevelProgress(levelId);
+            switch (kind)
+            {
+                case AlienDefense.Meta.LevelObjectiveKind.Clear:
+                    if (progress.ClearRewardClaimed)
+                    {
+                        return false;
+                    }
+
+                    progress.ClearRewardClaimed = true;
+                    break;
+                case AlienDefense.Meta.LevelObjectiveKind.Hp50:
+                    if (progress.Hp50RewardClaimed)
+                    {
+                        return false;
+                    }
+
+                    progress.Hp50RewardClaimed = true;
+                    break;
+                case AlienDefense.Meta.LevelObjectiveKind.Perfect:
+                    if (progress.PerfectRewardClaimed)
+                    {
+                        return false;
+                    }
+
+                    progress.PerfectRewardClaimed = true;
+                    break;
+                default:
+                    return false;
+            }
+
+            RequestImmediateSave();
+            return true;
         }
 
         /// <summary>VIP tier only ever goes up — a lower tier is silently ignored rather than downgrading a purchase.</summary>

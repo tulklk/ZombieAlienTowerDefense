@@ -16,6 +16,7 @@ namespace AlienDefense.Save
         public List<LevelProgressSaveData> LevelProgress = new List<LevelProgressSaveData>();
         public List<string> UnlockedTowerIds = new List<string>();
         public List<PermanentTowerUpgradeSaveData> TowerUpgrades = new List<PermanentTowerUpgradeSaveData>();
+        public List<MetaItemStackSaveData> Inventory = new List<MetaItemStackSaveData>();
         public int MetaCurrency;
         public int Gems;
         public int VipTier;

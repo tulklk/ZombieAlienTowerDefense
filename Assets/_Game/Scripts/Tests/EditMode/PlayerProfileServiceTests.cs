@@ -38,22 +38,23 @@ namespace AlienDefense.Tests.EditMode
         {
             PlayerProfileService service = CreateService(out _);
 
-            service.SetLevelCompleted(new LevelCompletedResult("level_01", 2, 15));
+            service.SetLevelCompleted(new LevelCompletedResult("level_01", 2, 15, 75));
 
             LevelProgressSnapshot progress = service.GetLevelProgress("level_01");
             Assert.IsTrue(progress.IsCompleted);
             Assert.AreEqual(2, progress.BestStars);
             Assert.AreEqual(1, progress.CompletionCount);
             Assert.AreEqual(15, progress.BestRemainingBaseHealth);
+            Assert.AreEqual(75, progress.BestRemainingHpPercent);
         }
 
         [Test]
         public void SetLevelCompleted_WorseResultLater_NeverDecreasesBestStars()
         {
             PlayerProfileService service = CreateService(out _);
-            service.SetLevelCompleted(new LevelCompletedResult("level_01", 3, 20));
+            service.SetLevelCompleted(new LevelCompletedResult("level_01", 3, 20, 100));
 
-            service.SetLevelCompleted(new LevelCompletedResult("level_01", 1, 5));
+            service.SetLevelCompleted(new LevelCompletedResult("level_01", 1, 5, 25));
 
             LevelProgressSnapshot progress = service.GetLevelProgress("level_01");
             Assert.AreEqual(3, progress.BestStars, "Best stars must never decrease.");
@@ -65,7 +66,7 @@ namespace AlienDefense.Tests.EditMode
         {
             PlayerProfileService service = CreateService(out _);
 
-            service.SetLevelCompleted(new LevelCompletedResult("level_01", 99, 10));
+            service.SetLevelCompleted(new LevelCompletedResult("level_01", 99, 10, 50));
 
             Assert.AreEqual(3, service.GetLevelProgress("level_01").BestStars);
         }
@@ -286,7 +287,7 @@ namespace AlienDefense.Tests.EditMode
             PlayerProfileService service = CreateService(out _);
 
             LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(".*"));
-            Assert.DoesNotThrow(() => service.SetLevelCompleted(new LevelCompletedResult("", 1, 1)));
+            Assert.DoesNotThrow(() => service.SetLevelCompleted(new LevelCompletedResult("", 1, 1, 1)));
         }
     }
 }

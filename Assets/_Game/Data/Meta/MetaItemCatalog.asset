@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 785a9c68f6564b79a74b417b7370bb86, type: 3}
+  m_Name: MetaItemCatalog
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Meta.MetaItemCatalog
+  _items:
+  - {fileID: 11400000, guid: ccb1101c80b54d5fa6540861a2820d28, type: 2}
+  - {fileID: 11400000, guid: 8a463dd77c4f413ea8f46cd8b67eb30b, type: 2}
+  - {fileID: 11400000, guid: 39c9c4b809f04acb91a0e707eea3a7a6, type: 2}
+  - {fileID: 11400000, guid: 71c9ac4a9e4a4220ae157390d9671794, type: 2}
+  - {fileID: 11400000, guid: 150cf741dc73478582599dfce5b1fdf5, type: 2}
+  - {fileID: 11400000, guid: 4621bf69b52a47bfa08365e071eb1044, type: 2}
+  - {fileID: 11400000, guid: b5c911abb0e94e2e845e89f5742fe230, type: 2}
+  - {fileID: 11400000, guid: b5f5c0890c41415b80c4ab13ed680640, type: 2}
+  - {fileID: 11400000, guid: e2cabd3b42be4ea9ac557bfac827bd7a, type: 2}

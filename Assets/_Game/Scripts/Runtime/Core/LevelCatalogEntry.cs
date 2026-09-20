@@ -1,5 +1,6 @@
 using System;
 using AlienDefense.Data;
+using AlienDefense.Meta;
 using UnityEngine;
 
 namespace AlienDefense.Core
@@ -26,10 +27,37 @@ namespace AlienDefense.Core
             "is still locked. Falls back to MenuPreviewSprite itself (rendered full-color) if left empty.")]
         private Sprite _menuPreviewSpriteLocked;
 
+        [SerializeField]
+        private ObjectiveRewardBundle _clearRewards = new ObjectiveRewardBundle();
+
+        [SerializeField]
+        private ObjectiveRewardBundle _hp50Rewards = new ObjectiveRewardBundle();
+
+        [SerializeField]
+        private ObjectiveRewardBundle _perfectRewards = new ObjectiveRewardBundle();
+
         public LevelDefinition LevelDefinition => _levelDefinition;
         public string SceneName => _sceneName;
         public string LevelId => _levelDefinition != null ? _levelDefinition.LevelId : null;
         public Sprite MenuPreviewSprite => _menuPreviewSprite;
         public Sprite MenuPreviewSpriteLocked => _menuPreviewSpriteLocked != null ? _menuPreviewSpriteLocked : _menuPreviewSprite;
+        public ObjectiveRewardBundle ClearRewards => _clearRewards;
+        public ObjectiveRewardBundle Hp50Rewards => _hp50Rewards;
+        public ObjectiveRewardBundle PerfectRewards => _perfectRewards;
+
+        public ObjectiveRewardBundle GetObjectiveRewards(LevelObjectiveKind kind)
+        {
+            switch (kind)
+            {
+                case LevelObjectiveKind.Clear:
+                    return _clearRewards;
+                case LevelObjectiveKind.Hp50:
+                    return _hp50Rewards;
+                case LevelObjectiveKind.Perfect:
+                    return _perfectRewards;
+                default:
+                    return null;
+            }
+        }
     }
 }

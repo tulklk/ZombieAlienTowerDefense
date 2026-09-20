@@ -19,15 +19,65 @@ MonoBehaviour:
       type: 3}
     _menuPreviewSpriteLocked: {fileID: 21300000, guid: 51b6522cbfcd4e34fb0a87da4aabdba2,
       type: 3}
+    _clearRewards:
+      _rewards: []
+    _hp50Rewards:
+      _rewards: []
+    _perfectRewards:
+      _rewards: []
   - _levelDefinition: {fileID: 11400000, guid: 88c9dbff2f460a24486edce65cf085da, type: 2}
     _sceneName: Level_01
     _menuPreviewSprite: {fileID: 21300000, guid: 2db5515b8e5c8f24abbe330772250423,
       type: 3}
     _menuPreviewSpriteLocked: {fileID: 21300000, guid: 2792ebf14ad782647bdb80534749999c,
       type: 3}
+    _clearRewards:
+      _rewards:
+      - Kind: 0
+        ItemId: microcircuit
+        Amount: 90
+        HideUntilUnlocked: 0
+      - Kind: 0
+        ItemId: volt_drip
+        Amount: 154
+        HideUntilUnlocked: 0
+    _hp50Rewards:
+      _rewards:
+      - Kind: 0
+        ItemId: research_resource
+        Amount: 300
+        HideUntilUnlocked: 1
+    _perfectRewards:
+      _rewards:
+      - Kind: 0
+        ItemId: rare_atom
+        Amount: 1
+        HideUntilUnlocked: 0
   - _levelDefinition: {fileID: 11400000, guid: 4858ffa2f5d2ee448a1c051f1cdd05a6, type: 2}
     _sceneName: Level_01
     _menuPreviewSprite: {fileID: 21300000, guid: d3caec237eda94b4b8eb0626927b07ca,
       type: 3}
     _menuPreviewSpriteLocked: {fileID: 21300000, guid: b055738a4f065da4cb292c1319ff0c5d,
       type: 3}
+    _clearRewards:
+      _rewards:
+      - Kind: 0
+        ItemId: microcircuit
+        Amount: 75
+        HideUntilUnlocked: 0
+      - Kind: 0
+        ItemId: volt_drip
+        Amount: 112
+        HideUntilUnlocked: 0
+    _hp50Rewards:
+      _rewards:
+      - Kind: 0
+        ItemId: research_resource
+        Amount: 300
+        HideUntilUnlocked: 1
+    _perfectRewards:
+      _rewards:
+      - Kind: 0
+        ItemId: rare_atom
+        Amount: 1
+        HideUntilUnlocked: 0

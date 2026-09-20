@@ -64,6 +64,12 @@ namespace AlienDefense.Save
                 case 1:
                     return MigrateV1ToV2(data);
 
+                case 2:
+                    return MigrateV2ToV3(data);
+
+                case 3:
+                    return MigrateV3ToV4(data);
+
                 default:
                     Debug.LogError($"[SaveMigrationPipeline] No migration step defined from version {data.SaveVersion}.");
                     data.SaveVersion = SaveConstants.CurrentSaveVersion;
@@ -80,6 +86,65 @@ namespace AlienDefense.Save
 
             ProfileIdentityUtility.EnsureDisplayIdentity(data);
             data.SaveVersion = 2;
+            return data;
+        }
+
+        private static PlayerProfileSaveData MigrateV2ToV3(PlayerProfileSaveData data)
+        {
+            if (data.Inventory == null)
+            {
+                data.Inventory = new System.Collections.Generic.List<MetaItemStackSaveData>();
+            }
+
+            if (data.LevelProgress != null)
+            {
+                for (int i = 0; i < data.LevelProgress.Count; i++)
+                {
+                    LevelProgressSaveData entry = data.LevelProgress[i];
+                    if (entry == null)
+                    {
+                        continue;
+                    }
+
+                    // Claim flags default false on new fields — nothing to stamp.
+                }
+            }
+
+            data.SaveVersion = 3;
+            return data;
+        }
+
+        /// <summary>Fills BestRemainingHpPercent for completed levels that predate the field.
+        /// Prefers BestStars mapping (aligned with prior objective unlock) — never defaults to 100.</summary>
+        private static PlayerProfileSaveData MigrateV3ToV4(PlayerProfileSaveData data)
+        {
+            if (data.LevelProgress != null)
+            {
+                for (int i = 0; i < data.LevelProgress.Count; i++)
+                {
+                    LevelProgressSaveData entry = data.LevelProgress[i];
+                    if (entry == null || !entry.IsCompleted || entry.BestRemainingHpPercent > 0)
+                    {
+                        continue;
+                    }
+
+                    // Keep Clear unlockable without falsely unlocking Perfect.
+                    if (entry.BestStars >= 3)
+                    {
+                        entry.BestRemainingHpPercent = 100;
+                    }
+                    else if (entry.BestStars >= 2)
+                    {
+                        entry.BestRemainingHpPercent = 50;
+                    }
+                    else
+                    {
+                        entry.BestRemainingHpPercent = 1;
+                    }
+                }
+            }
+
+            data.SaveVersion = 4;
             return data;
         }
     }

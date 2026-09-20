@@ -97,6 +97,7 @@ namespace AlienDefense.Tests.PlayMode
 
             Assert.AreEqual(3, result.Stars);
             Assert.AreEqual(20, result.RemainingBaseHealth);
+            Assert.AreEqual(100, result.RemainingHpPercent);
             Assert.AreEqual("level_01", result.LevelId);
         }
 
@@ -108,6 +109,7 @@ namespace AlienDefense.Tests.PlayMode
             var result = (LevelCompletedResult)InvokePrivateMethodWithResult(root, "BuildLevelCompletedResult");
 
             Assert.AreEqual(2, result.Stars);
+            Assert.AreEqual(50, result.RemainingHpPercent);
         }
 
         [Test]
@@ -118,6 +120,7 @@ namespace AlienDefense.Tests.PlayMode
             var result = (LevelCompletedResult)InvokePrivateMethodWithResult(root, "BuildLevelCompletedResult");
 
             Assert.AreEqual(1, result.Stars);
+            Assert.AreEqual(5, result.RemainingHpPercent);
         }
 
         [UnityTest]

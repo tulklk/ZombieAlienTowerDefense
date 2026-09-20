@@ -7,7 +7,7 @@ namespace AlienDefense.UI.MainMenu
     {
         public static string Format(int displayIndex)
         {
-            return $"Level {displayIndex}";
+            return $"Campaign Level {displayIndex}";
         }
     }
 }

@@ -1,18 +1,13 @@
+using System.Collections.Generic;
 using AlienDefense.Core;
+using AlienDefense.Meta;
 using AlienDefense.Progression;
 using AlienDefense.Save;
 using UnityEngine;
 
 namespace AlienDefense.UI.MainMenu
 {
-    /// <summary>Drives the center level-selection area (title/status/objectives/preview/Prev-Next) and the Play
-    /// button. Replaces the old separate LevelSelectionPresenter/scene: MainMenu now shows one focused campaign
-    /// level at a time (matching the reference composition) instead of a scrollable grid of every level.
-    ///
-    /// No lobby/play-stamina system exists in PlayerProfileSaveData — only the in-level UFO tractor Energy
-    /// (EnergyWalletService, session-only, never persisted) exists, and that is a completely different currency
-    /// used to build/upgrade towers mid-match. Play never shows or spends an energy cost here; see
-    /// PlayButtonView's doc comment for the same rule from the view side.</summary>
+    /// <summary>Drives center level-selection + Play. Level 1 hides objectives; Level 2+ shows claimable chests.</summary>
     public sealed class MainMenuLevelSelectionPresenter : MonoBehaviour
     {
         [SerializeField]
@@ -24,13 +19,16 @@ namespace AlienDefense.UI.MainMenu
         [SerializeField]
         private PlayButtonView _playButtonView;
 
+        [SerializeField]
+        private ObjectiveRewardOverlayView _rewardOverlay;
+
+        [SerializeField]
+        private MetaItemCatalog _metaItemCatalog;
+
         private ApplicationServices _services;
         private ILevelAccessProvider _accessProvider;
+        private ObjectiveRewardService _rewardService;
         private int _selectedIndex;
-
-        /// <summary>Which way LevelPreviewView should slide for the NEXT RefreshCurrentLevel call only: -1 from
-        /// Previous, +1 from Next, 0 for the initial reveal (Initialize never touches this field, so it stays at
-        /// its C# default of 0 for that first call).</summary>
         private int _navigationDirection;
 
         public void Initialize(ApplicationServices services)
@@ -40,11 +38,17 @@ namespace AlienDefense.UI.MainMenu
                 ? new ProfileLevelAccessProvider(services.PlayerProfileService, services.LevelCatalog)
                 : new DefaultLevelAccessProvider(services.LevelCatalog);
 
+            if (services.PlayerProfileService != null && services.LevelCatalog != null)
+            {
+                _rewardService = new ObjectiveRewardService(services.PlayerProfileService, services.LevelCatalog);
+            }
+
             if (_view != null)
             {
                 _view.PreviousClicked += HandlePreviousClicked;
                 _view.NextClicked += HandleNextClicked;
                 _view.MoreClicked += HandleMoreClicked;
+                _view.ObjectiveClaimClicked += HandleObjectiveClaimClicked;
             }
 
             if (_playButtonView != null)
@@ -56,10 +60,6 @@ namespace AlienDefense.UI.MainMenu
             RefreshCurrentLevel();
         }
 
-        /// <summary>Starts on the level right after the highest one completed so far (i.e. "what to play next"),
-        /// falling back to the first catalog entry. This project has no "last opened level" persistence and
-        /// doesn't need one: MainMenu fully reloads every time it's entered (SceneTransitionService), so
-        /// recomputing "what's next" from HighestUnlockedLevelId here is equivalent and needs no extra save field.</summary>
         private int ResolveInitialIndex()
         {
             LevelCatalog catalog = _services.LevelCatalog;
@@ -100,8 +100,6 @@ namespace AlienDefense.UI.MainMenu
 
         private void HandleMoreClicked()
         {
-            // MainMenuMorePanel (Settings/Credits/Language/Exit) doesn't exist yet — placeholder hook only,
-            // matches MainMenuPresenter.HandleExitClicked's existing Editor-safe no-op pattern.
             Debug.Log("[MainMenuLevelSelectionPresenter] More requested (no MainMenuMorePanel yet).");
         }
 
@@ -126,6 +124,37 @@ namespace AlienDefense.UI.MainMenu
 
             _services.LevelLaunchContext.SetSelectedLevel(entry.LevelId);
             _services.SceneTransition.TryLoadSceneViaBootstrap(entry.SceneName);
+        }
+
+        private void HandleObjectiveClaimClicked(LevelObjectiveKind kind)
+        {
+            if (_rewardService == null || _services?.LevelCatalog == null)
+            {
+                return;
+            }
+
+            if (_selectedIndex <= 0)
+            {
+                return;
+            }
+
+            LevelCatalogEntry entry = _services.LevelCatalog.GetEntry(_selectedIndex);
+            if (entry == null)
+            {
+                return;
+            }
+
+            if (!_rewardService.TryClaim(entry.LevelId, kind, out List<GrantedObjectiveReward> granted))
+            {
+                return;
+            }
+
+            if (_rewardOverlay != null && granted != null && granted.Count > 0)
+            {
+                _rewardOverlay.Show(granted);
+            }
+
+            RefreshCurrentLevel();
         }
 
         private void RefreshCurrentLevel()
@@ -155,7 +184,9 @@ namespace AlienDefense.UI.MainMenu
             _view.SetTitle(title);
             _view.SetStatus(status);
             _view.SetNavigationAvailable(_selectedIndex > 0, _selectedIndex < catalog.Count - 1);
-            _view.SetObjectives(BuildObjectives(progress, isUnlocked));
+            // Level 1 (index 0): hide objectives; Level 2+ shows claimable chests + preview bubble.
+            _view.SetObjectives(
+                _selectedIndex == 0 ? null : BuildObjectives(entry.LevelId, progress, isUnlocked));
 
             Sprite previewSprite = isUnlocked ? entry.MenuPreviewSprite : entry.MenuPreviewSpriteLocked;
             _previewView?.ShowPreview(previewSprite, isUnlocked, _navigationDirection);
@@ -168,28 +199,67 @@ namespace AlienDefense.UI.MainMenu
             _playButtonView?.SetInteractable(canPlay);
         }
 
-        /// <summary>Maps the existing 3-star formula (LevelCompositionRoot.BuildLevelCompletedResult: 1 star =
-        /// win, 2 = half+ base HP, 3 = undamaged base) onto 3 objective slots — no separate objective/reward
-        /// domain exists, so this only ever reflects star thresholds already being tracked. Still shown (as
-        /// dimmed Locked slots) for a level the player hasn't unlocked yet, so the reward row previews what's
-        /// waiting once they get there instead of leaving a gap — see PlayButtonView.SetVisible for the
-        /// complementary rule (the Start/Play button itself is what disappears while locked, not this row).</summary>
-        private static LevelObjectivePresentation[] BuildObjectives(LevelProgressSnapshot progress, bool isUnlocked)
+        /// <summary>Maps BestStars thresholds onto Clear / HP50 / Perfect claim states. Level 1 skipped at call site.</summary>
+        private LevelObjectivePresentation[] BuildObjectives(string levelId, LevelProgressSnapshot progress, bool isUnlocked)
         {
-            var objectives = new LevelObjectivePresentation[3];
-
-            if (!isUnlocked)
+            return new[]
             {
-                objectives[0] = new LevelObjectivePresentation("Complete level", LevelObjectiveState.Locked);
-                objectives[1] = new LevelObjectivePresentation("Base HP 50%+", LevelObjectiveState.Locked);
-                objectives[2] = new LevelObjectivePresentation("Perfect (Base untouched)", LevelObjectiveState.Locked);
-                return objectives;
+                BuildOne(levelId, LevelObjectiveKind.Clear, "Clear", progress, isUnlocked),
+                BuildOne(levelId, LevelObjectiveKind.Hp50, "50%+ HP", progress, isUnlocked),
+                BuildOne(levelId, LevelObjectiveKind.Perfect, "Perfect", progress, isUnlocked),
+            };
+        }
+
+        private LevelObjectivePresentation BuildOne(
+            string levelId,
+            LevelObjectiveKind kind,
+            string label,
+            LevelProgressSnapshot progress,
+            bool isUnlocked)
+        {
+            ObjectiveRewardUiState rewardState = ObjectiveRewardUiState.Locked;
+            if (_rewardService != null)
+            {
+                rewardState = _rewardService.GetUiState(levelId, kind);
+            }
+            else if (isUnlocked)
+            {
+                bool achieved = ObjectiveRewardService.IsObjectiveAchieved(progress, kind);
+                rewardState = achieved
+                    ? (progress.IsObjectiveRewardClaimed(kind) ? ObjectiveRewardUiState.Claimed : ObjectiveRewardUiState.Claimable)
+                    : ObjectiveRewardUiState.Locked;
             }
 
-            objectives[0] = new LevelObjectivePresentation("Complete level", progress.IsCompleted ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
-            objectives[1] = new LevelObjectivePresentation("Base HP 50%+", progress.BestStars >= 2 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
-            objectives[2] = new LevelObjectivePresentation("Perfect (Base untouched)", progress.BestStars >= 3 ? LevelObjectiveState.Completed : LevelObjectiveState.Incomplete);
-            return objectives;
+            LevelObjectiveState legacy = rewardState == ObjectiveRewardUiState.Locked
+                ? (isUnlocked ? LevelObjectiveState.Incomplete : LevelObjectiveState.Locked)
+                : LevelObjectiveState.Completed;
+
+            ObjectiveRewardPreviewEntry[] preview = BuildPreview(levelId, kind, rewardState);
+            return new LevelObjectivePresentation(kind, label, legacy, rewardState, preview);
+        }
+
+        private ObjectiveRewardPreviewEntry[] BuildPreview(string levelId, LevelObjectiveKind kind, ObjectiveRewardUiState state)
+        {
+            if (_rewardService == null)
+            {
+                return System.Array.Empty<ObjectiveRewardPreviewEntry>();
+            }
+
+            IReadOnlyList<ObjectiveRewardEntry> entries = _rewardService.GetRewardEntries(levelId, kind);
+            var list = new List<ObjectiveRewardPreviewEntry>(entries.Count);
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ObjectiveRewardEntry e = entries[i];
+                if (e == null || e.Amount <= 0)
+                {
+                    continue;
+                }
+
+                bool mystery = e.HideUntilUnlocked && state == ObjectiveRewardUiState.Locked;
+                list.Add(new ObjectiveRewardPreviewEntry(e.ItemId, e.Amount, mystery));
+            }
+
+            return list.ToArray();
         }
 
         private void OnDestroy()
@@ -199,6 +269,7 @@ namespace AlienDefense.UI.MainMenu
                 _view.PreviousClicked -= HandlePreviousClicked;
                 _view.NextClicked -= HandleNextClicked;
                 _view.MoreClicked -= HandleMoreClicked;
+                _view.ObjectiveClaimClicked -= HandleObjectiveClaimClicked;
             }
 
             if (_playButtonView != null)

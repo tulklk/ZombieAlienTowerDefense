@@ -32,6 +32,7 @@ namespace AlienDefense.UI.MainMenu
         public event Action PreviousClicked;
         public event Action NextClicked;
         public event Action MoreClicked;
+        public event Action<AlienDefense.Meta.LevelObjectiveKind> ObjectiveClaimClicked;
 
         private void Awake()
         {
@@ -49,6 +50,11 @@ namespace AlienDefense.UI.MainMenu
             {
                 _moreButton.onClick.AddListener(HandleMoreClicked);
             }
+
+            if (_objectivesPanel != null)
+            {
+                _objectivesPanel.ClaimClicked += HandleObjectiveClaimClicked;
+            }
         }
 
         public void SetTitle(string title)
@@ -63,6 +69,7 @@ namespace AlienDefense.UI.MainMenu
         {
             if (_statusText != null)
             {
+                _statusText.richText = true;
                 _statusText.text = status;
             }
         }
@@ -100,6 +107,11 @@ namespace AlienDefense.UI.MainMenu
             MoreClicked?.Invoke();
         }
 
+        private void HandleObjectiveClaimClicked(AlienDefense.Meta.LevelObjectiveKind kind)
+        {
+            ObjectiveClaimClicked?.Invoke(kind);
+        }
+
         private void OnDestroy()
         {
             if (_previousButton != null)
@@ -115,6 +127,11 @@ namespace AlienDefense.UI.MainMenu
             if (_moreButton != null)
             {
                 _moreButton.onClick.RemoveListener(HandleMoreClicked);
+            }
+
+            if (_objectivesPanel != null)
+            {
+                _objectivesPanel.ClaimClicked -= HandleObjectiveClaimClicked;
             }
         }
     }

@@ -62,6 +62,7 @@ namespace AlienDefense.Save
             RepairLevelProgress(data);
             RepairUnlockedTowers(data);
             RepairTowerUpgrades(data);
+            RepairInventory(data);
             RepairSettings(data.Settings);
 
             if (data.Statistics.TotalTowerDamage < 0)
@@ -138,6 +139,8 @@ namespace AlienDefense.Save
                     entry.BestRemainingBaseHealth = 0;
                 }
 
+                entry.BestRemainingHpPercent = Mathf.Clamp(entry.BestRemainingHpPercent, 0, 100);
+
                 repaired.Add(entry);
             }
 
@@ -195,6 +198,50 @@ namespace AlienDefense.Save
             }
 
             data.TowerUpgrades = repaired;
+        }
+
+        private static void RepairInventory(PlayerProfileSaveData data)
+        {
+            if (data.Inventory == null)
+            {
+                data.Inventory = new List<MetaItemStackSaveData>();
+                return;
+            }
+
+            var repaired = new List<MetaItemStackSaveData>();
+            var seenIds = new HashSet<string>();
+            for (int i = 0; i < data.Inventory.Count; i++)
+            {
+                MetaItemStackSaveData entry = data.Inventory[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.ItemId))
+                {
+                    continue;
+                }
+
+                if (entry.Amount < 0)
+                {
+                    entry.Amount = 0;
+                }
+
+                if (!seenIds.Add(entry.ItemId))
+                {
+                    // Merge duplicate stacks into the first occurrence.
+                    for (int j = 0; j < repaired.Count; j++)
+                    {
+                        if (repaired[j].ItemId == entry.ItemId)
+                        {
+                            repaired[j].Amount += entry.Amount;
+                            break;
+                        }
+                    }
+
+                    continue;
+                }
+
+                repaired.Add(entry);
+            }
+
+            data.Inventory = repaired;
         }
 
         private static void RepairSettings(SettingsSaveData settings)

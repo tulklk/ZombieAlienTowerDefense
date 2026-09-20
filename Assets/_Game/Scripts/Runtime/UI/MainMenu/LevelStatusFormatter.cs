@@ -9,11 +9,12 @@ namespace AlienDefense.UI.MainMenu
     public static class LevelStatusFormatter
     {
         private const string NotStartedText = "Not completed";
-        private const string PerfectText = "Perfect";
-        private const int PerfectStars = 3;
+        private const string ColorLow = "#FF9B3D";
+        private const string ColorMid = "#FFD43B";
+        private const string ColorPerfect = "#45E55B";
 
-        /// <param name="maxBaseHealth">The level's LevelDefinition.BaseMaxHealth, needed to turn the saved
-        /// absolute BestRemainingBaseHealth into the displayed percentage.</param>
+        /// <param name="maxBaseHealth">Fallback when BestRemainingHpPercent is unset: turn absolute
+        /// BestRemainingBaseHealth into a percentage.</param>
         public static string Format(LevelProgressSnapshot progress, int maxBaseHealth)
         {
             if (!progress.IsCompleted)
@@ -21,16 +22,42 @@ namespace AlienDefense.UI.MainMenu
                 return NotStartedText;
             }
 
-            if (progress.BestStars >= PerfectStars)
+            int percent = ResolveBestPercent(progress, maxBaseHealth);
+            string color = PercentColorHex(percent);
+            return $"Remaining HP: <color={color}>{percent}%</color>";
+        }
+
+        public static int ResolveBestPercent(LevelProgressSnapshot progress, int maxBaseHealth)
+        {
+            if (progress.BestRemainingHpPercent > 0)
             {
-                return PerfectText;
+                return Mathf.Clamp(progress.BestRemainingHpPercent, 0, 100);
             }
 
-            int percent = maxBaseHealth > 0
-                ? Mathf.Clamp(Mathf.RoundToInt(100f * progress.BestRemainingBaseHealth / maxBaseHealth), 0, 100)
-                : 0;
+            if (maxBaseHealth > 0)
+            {
+                return Mathf.Clamp(
+                    Mathf.RoundToInt(100f * progress.BestRemainingBaseHealth / maxBaseHealth),
+                    0,
+                    100);
+            }
 
-            return $"HP remaining: {percent}%";
+            return 0;
+        }
+
+        public static string PercentColorHex(int percent)
+        {
+            if (percent >= 100)
+            {
+                return ColorPerfect;
+            }
+
+            if (percent >= 50)
+            {
+                return ColorMid;
+            }
+
+            return ColorLow;
         }
 
         public static string FormatLockedRequirement(string previousLevelTitle)
