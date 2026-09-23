@@ -33,6 +33,12 @@ namespace AlienDefense.Core
         private TowerCatalog _towerCatalog;
         private SceneTransitionService _sceneTransition;
 
+        /// <summary>Lives as long as the app, like the profile: the services bundle is rebuilt on every scene load
+        /// (BindSceneTransition), and a fresh queue there would drop the rewards a level hands to MainMenu.</summary>
+        private readonly PendingRewardPresentation _pendingRewards = new PendingRewardPresentation();
+        private AlienDefense.Economy.PlayEnergyService _playEnergy;
+        private AlienDefense.Progression.PlayerLevelCurve _playerLevels = new AlienDefense.Progression.PlayerLevelCurve();
+
         public ApplicationServices Services { get; private set; }
 
         /// <summary>Creates and initializes the one application root if it doesn't exist yet. Safe to call on
@@ -78,6 +84,15 @@ namespace AlienDefense.Core
             PlayerProfileSaveData profileData = saveService.LoadOrCreateDefault(playerProfileDefaults, firstLevelId);
             _playerProfileService = new PlayerProfileService(saveService, profileData);
             _settingsService = new SettingsService(_playerProfileService);
+            _playEnergy = playerProfileDefaults != null
+                ? new AlienDefense.Economy.PlayEnergyService(_playerProfileService, playerProfileDefaults.MaxPlayEnergy,
+                    playerProfileDefaults.PlayEnergyCostPerLevel, playerProfileDefaults.PlayEnergyRegenMinutes)
+                : new AlienDefense.Economy.PlayEnergyService(_playerProfileService, 60, 5, 8f);
+            if (playerProfileDefaults != null)
+            {
+                _playerLevels = new AlienDefense.Progression.PlayerLevelCurve(playerProfileDefaults.XpForLevel2,
+                    playerProfileDefaults.XpIncreasePerLevel, playerProfileDefaults.MaxPlayerLevel);
+            }
 
             Application.focusChanged += HandleFocusChanged;
             Application.quitting += HandleQuitting;
@@ -119,7 +134,8 @@ namespace AlienDefense.Core
 
         private void RebuildServicesBundle()
         {
-            Services = new ApplicationServices(_sceneTransition, _levelLaunchContext, _levelCatalog, _playerProfileService, _settingsService, _towerCatalog);
+            Services = new ApplicationServices(_sceneTransition, _levelLaunchContext, _levelCatalog, _playerProfileService,
+                _settingsService, _towerCatalog, _pendingRewards, _playEnergy, _playerLevels);
         }
 
         private void HandleFocusChanged(bool hasFocus)

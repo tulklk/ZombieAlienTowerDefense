@@ -5,6 +5,7 @@ using AlienDefense.Economy;
 using AlienDefense.Progression;
 using AlienDefense.Settings;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace AlienDefense.UI
 {
@@ -88,7 +89,7 @@ namespace AlienDefense.UI
 
             if (_victoryPanelView != null)
             {
-                _victoryPanelView.NextClicked += HandleNextLevelClicked;
+                _victoryPanelView.NextClicked += HandleVictoryNextClicked;
             }
 
             if (_victoryResultView != null)
@@ -182,14 +183,97 @@ namespace AlienDefense.UI
 
         private void HandleMainMenuClicked()
         {
-            _applicationServices?.LevelLaunchContext.Clear();
-            _applicationServices?.SceneTransition.TryLoadSceneViaBootstrap(SceneNames.MainMenu);
+            LeaveLevelFor(SceneNames.MainMenu);
         }
 
         private void HandleLevelSelectionClicked()
         {
+            LeaveLevelFor(SceneNames.LevelSelection);
+        }
+
+        /// <summary>Leaves the level straight for <paramref name="sceneName"/> through this scene's
+        /// SceneTransitionService (its own loading overlay, then the menu activates) - no detour through the
+        /// Bootstrap scene, which is only needed to create the application on a cold start. The application root
+        /// is DontDestroyOnLoad, so the menu still receives the same services (and the queued victory rewards).
+        ///
+        /// When the application is not running - the gameplay scene was entered directly, which is what pressing
+        /// Play on Level_01 in the editor does - there are no ApplicationServices. In the editor the missing half of
+        /// the application is created on the spot (same assets Bootstrap uses) so the button still goes straight to
+        /// the menu; only if even that fails does it fall back to cold-booting the Bootstrap scene.</summary>
+        private void LeaveLevelFor(string sceneName)
+        {
             _applicationServices?.LevelLaunchContext.Clear();
-            _applicationServices?.SceneTransition.TryLoadSceneViaBootstrap(SceneNames.LevelSelection);
+
+            if (_applicationServices?.SceneTransition != null)
+            {
+                _applicationServices.SceneTransition.TryLoadScene(sceneName, SceneTransitionStyle.QuickFade);
+                return;
+            }
+
+#if UNITY_EDITOR
+            if (TryCreateEditorApplicationServices(out ApplicationServices created)
+                && created?.SceneTransition != null)
+            {
+                Debug.Log($"[GameStateUIController] The level was played directly (no Bootstrap), so the application " +
+                    $"services were created here; loading '{sceneName}' straight away.", this);
+                _applicationServices = created;
+                created.LevelLaunchContext.Clear();
+                created.SceneTransition.TryLoadScene(sceneName, SceneTransitionStyle.QuickFade);
+                return;
+            }
+#endif
+
+            Debug.LogWarning($"[GameStateUIController] No ApplicationServices in this session (the level was started " +
+                $"directly instead of through Bootstrap); cold-booting Bootstrap to reach '{sceneName}'.", this);
+
+            BootstrapLoadContext.RequestLoad(sceneName, initializeApplication: true);
+            SceneManager.LoadScene(SceneNames.Bootstrap, LoadSceneMode.Single);
+        }
+
+#if UNITY_EDITOR
+        /// <summary>Editor-only convenience for "press Play on the gameplay scene": builds the application root from
+        /// the very assets the Bootstrap scene holds and binds this scene's own SceneServicesHost to it, so leaving
+        /// the level behaves exactly like a normal session instead of restarting at Bootstrap. A real build always
+        /// starts at Bootstrap, so this path never exists there.</summary>
+        private bool TryCreateEditorApplicationServices(out ApplicationServices services)
+        {
+            services = null;
+
+            var levelCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<LevelCatalog>(
+                "Assets/_Game/Data/Levels/LevelCatalog.asset");
+            var profileDefaults = UnityEditor.AssetDatabase.LoadAssetAtPath<AlienDefense.Save.PlayerProfileDefaults>(
+                "Assets/_Game/Data/Save/PlayerProfileDefaults.asset");
+            var towerCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<AlienDefense.Towers.TowerCatalog>(
+                "Assets/_Game/Data/Towers/TowerCatalog.asset");
+            if (levelCatalog == null || profileDefaults == null)
+            {
+                return false;
+            }
+
+            ApplicationCompositionRoot root = ApplicationCompositionRoot.EnsureInitialized(
+                levelCatalog, profileDefaults, towerCatalog);
+            if (root == null)
+            {
+                return false;
+            }
+
+            // The root binds a scene's SceneTransitionService when that scene loads; this one loaded before the root
+            // existed, so it is bound by hand here.
+            var host = FindFirstObjectByType<SceneServicesHost>(FindObjectsInactive.Include);
+            host?.BindApplicationRoot(root);
+
+            services = root.Services;
+            return true;
+        }
+#endif
+
+        /// <summary>The victory screen's Next returns to MainMenu, where the rewards this level granted fly into
+        /// the HUD (ApplicationServices.PendingRewards). VictoryPanelView disables its own button on the first tap,
+        /// so a double tap cannot start two transitions - and the transition service ignores a second request while
+        /// one is already loading either way.</summary>
+        private void HandleVictoryNextClicked()
+        {
+            HandleMainMenuClicked();
         }
 
         private void HandleNextLevelClicked()
@@ -255,7 +339,7 @@ namespace AlienDefense.UI
 
             if (_victoryPanelView != null)
             {
-                _victoryPanelView.NextClicked -= HandleNextLevelClicked;
+                _victoryPanelView.NextClicked -= HandleVictoryNextClicked;
             }
 
             if (_victoryResultView != null)

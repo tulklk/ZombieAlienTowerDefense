@@ -1,6 +1,8 @@
 using AlienDefense.Building;
 using AlienDefense.Core;
+using AlienDefense.Save;
 using AlienDefense.Towers;
+using AlienDefense.UI.MainMenu;
 using UnityEngine;
 
 namespace AlienDefense.UI
@@ -17,6 +19,7 @@ namespace AlienDefense.UI
         private EnergyTowerTransactionService _transactionService;
         private TowerDefinition[] _catalog;
         private GameSpeedController _gameSpeed;
+        private PlayerProfileService _profile;
         private BuildNode _pendingNode;
 
         public bool IsShowing => _pendingNode != null;
@@ -76,17 +79,21 @@ namespace AlienDefense.UI
             return cheapest == int.MaxValue ? 0 : cheapest;
         }
 
-        public void Initialize(EnergyTowerTransactionService transactionService, TowerDefinition[] catalog, GameSpeedController gameSpeed)
+        /// <param name="profile">Optional - only read to print the player's saved Gem total on the panel.</param>
+        public void Initialize(EnergyTowerTransactionService transactionService, TowerDefinition[] catalog,
+            GameSpeedController gameSpeed, PlayerProfileService profile = null)
         {
             Unsubscribe();
 
             _transactionService = transactionService;
             _catalog = catalog;
             _gameSpeed = gameSpeed;
+            _profile = profile;
 
             if (_view != null)
             {
                 _view.CardClicked += HandleCardClicked;
+                _view.RerollClicked += HandleRerollClicked;
                 _view.Hide();
             }
         }
@@ -101,6 +108,19 @@ namespace AlienDefense.UI
             }
 
             _pendingNode = node;
+            PopulateCards();
+            _gameSpeed?.Pause();
+        }
+
+        /// <summary>Fills the panel from the pending node: which towers exist, what they cost, which are affordable
+        /// right now, and the player's Gem total. Called when the panel opens and when Free is tapped.</summary>
+        private void PopulateCards()
+        {
+            BuildNode node = _pendingNode;
+            if (_view == null || node == null || _catalog == null)
+            {
+                return;
+            }
 
             var cards = new TowerCardData[_catalog.Length];
             for (int i = 0; i < _catalog.Length; i++)
@@ -113,11 +133,19 @@ namespace AlienDefense.UI
 
                 int cost = _transactionService != null ? _transactionService.GetBuildCost(definition) : 0;
                 bool affordable = _transactionService != null && _transactionService.CanAffordBuild(node, definition);
-                cards[i] = new TowerCardData(definition.DisplayName, definition.Description, cost + " Energy", definition.Icon, affordable);
+                cards[i] = new TowerCardData(definition.DisplayName, definition.Description, cost + " Energy",
+                    definition.Icon, affordable, definition.ChoiceCardSprite);
             }
 
             _view.Show(cards);
-            _gameSpeed?.Pause();
+            _view.SetGems(CurrencyFormatter.Format(_profile != null ? _profile.Gems : 0));
+        }
+
+        /// <summary>The Free button. This project's catalog is its whole choice, so there is no other set of towers
+        /// to deal - refreshing re-reads the offer instead (Energy may have changed while the panel was open).</summary>
+        private void HandleRerollClicked()
+        {
+            PopulateCards();
         }
 
         private void HandleCardClicked(int index)
@@ -140,6 +168,7 @@ namespace AlienDefense.UI
             if (_view != null)
             {
                 _view.CardClicked -= HandleCardClicked;
+                _view.RerollClicked -= HandleRerollClicked;
             }
         }
 

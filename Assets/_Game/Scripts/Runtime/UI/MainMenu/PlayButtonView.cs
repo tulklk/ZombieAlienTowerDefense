@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,9 +9,8 @@ namespace AlienDefense.UI.MainMenu
     /// <summary>Large center-bottom CTA. Dumb view: forwards clicks, never loads a scene itself. Swaps its own
     /// background sprite + label between "Start" (StartBtn, never completed this level before) and "Play"
     /// (PlayBtn, already completed it at least once) — purely cosmetic, matches the reference composition.
-    /// The energy-cost slot (icon + amount) is shown by MainMenuLevelSelectionPresenter as a flat cosmetic
-    /// "cost 5" display — no lobby/play-stamina system exists in this project, so nothing is ever actually
-    /// deducted on click; see ShowEnergyCost's own doc comment.</summary>
+    /// The energy-cost slot (icon + amount) shows what a start costs; MainMenuLevelSelectionPresenter spends it
+    /// through PlayEnergyService on click, and calls PlayDenied when the player cannot afford it.</summary>
     public sealed class PlayButtonView : MonoBehaviour
     {
         [SerializeField]
@@ -30,14 +30,15 @@ namespace AlienDefense.UI.MainMenu
         private Sprite _playSprite;
 
         [SerializeField]
-        [Tooltip("Optional. Hidden unless ShowEnergyCost is called — no lobby stamina system exists yet, this " +
-            "is a flat cosmetic display only, nothing is ever actually spent on click.")]
+        [Tooltip("Optional. Hidden unless ShowEnergyCost is called.")]
         private GameObject _energyCostRoot;
 
         [SerializeField]
         private TMP_Text _energyCostText;
 
         public event Action Clicked;
+
+        private Tween _deniedTween;
 
         private void Awake()
         {
@@ -91,8 +92,8 @@ namespace AlienDefense.UI.MainMenu
             gameObject.SetActive(visible);
         }
 
-        /// <summary>Only ever a flat cosmetic "cost" display next to the lightning icon — no lobby-stamina
-        /// system exists in this project, so nothing is actually deducted when Play is clicked.</summary>
+        /// <summary>The energy a start costs, next to the lightning icon. Display only - the spend happens in the
+        /// presenter.</summary>
         public void ShowEnergyCost(int cost)
         {
             if (_energyCostRoot != null)
@@ -106,6 +107,15 @@ namespace AlienDefense.UI.MainMenu
             }
         }
 
+        /// <summary>Not enough energy: a short sideways shake, no scene load.</summary>
+        public void PlayDenied()
+        {
+            _deniedTween?.Kill(true);
+            _deniedTween = transform.DOShakePosition(0.35f, new Vector3(18f, 0f, 0f), 18, 0f, false, true)
+                .SetUpdate(true)
+                .SetLink(gameObject);
+        }
+
         private void HandleClicked()
         {
             Clicked?.Invoke();
@@ -113,6 +123,7 @@ namespace AlienDefense.UI.MainMenu
 
         private void OnDestroy()
         {
+            _deniedTween?.Kill();
             if (_button != null)
             {
                 _button.onClick.RemoveListener(HandleClicked);

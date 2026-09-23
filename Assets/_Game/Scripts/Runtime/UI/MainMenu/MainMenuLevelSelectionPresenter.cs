@@ -122,6 +122,13 @@ namespace AlienDefense.UI.MainMenu
                 return;
             }
 
+            // Starting a level costs lobby energy; without enough, the button shakes and nothing loads.
+            if (_services.PlayEnergy != null && !_services.PlayEnergy.TrySpendForLevel(System.DateTime.UtcNow))
+            {
+                _playButtonView?.PlayDenied();
+                return;
+            }
+
             _services.LevelLaunchContext.SetSelectedLevel(entry.LevelId);
             _services.SceneTransition.TryLoadSceneViaBootstrap(entry.SceneName);
         }
@@ -195,7 +202,7 @@ namespace AlienDefense.UI.MainMenu
             bool canPlay = isUnlocked;
             _playButtonView?.SetVisible(canPlay);
             _playButtonView?.SetPlayedBefore(progress.IsCompleted);
-            _playButtonView?.ShowEnergyCost(5);
+            _playButtonView?.ShowEnergyCost(_services?.PlayEnergy != null ? _services.PlayEnergy.CostPerLevel : 0);
             _playButtonView?.SetInteractable(canPlay);
         }
 

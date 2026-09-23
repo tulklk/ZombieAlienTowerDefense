@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: MetaItem_card_mortar
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Meta.MetaItemDefinition
   _id: card_mortar
-  _displayName: Mortar upgrade card
-  _description: Upgrade part required for the Mortar.
-  _icon: {fileID: 21300000, guid: 2b48f242c23e2204c84d01868a23b08e, type: 3}
+  _displayName: Mortar Tower upgrade card
+  _description: Upgrade part required for the Mortar Tower
+  _icon: {fileID: 21300000, guid: f8071b9a806924746a3ead9b92ac2480, type: 3}
   _rarity: 0
-  _headerColor: {r: 0.25, g: 0.55, b: 0.95, a: 1}
+  _headerColor: {r: 0.1, g: 0.62, b: 0.78, a: 1}

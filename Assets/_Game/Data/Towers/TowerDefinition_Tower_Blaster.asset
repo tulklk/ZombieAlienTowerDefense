@@ -15,6 +15,8 @@ MonoBehaviour:
   _id: tower_blaster
   _displayName: Blaster Tower
   _icon: {fileID: 0}
+  _statsIcon: {fileID: 21300000, guid: ca64ad7e57207e240b8398ddc4aa4703, type: 3}
+  _choiceCardSprite: {fileID: 21300000, guid: 510020cd8c8d015419f8c3c73e74bf60, type: 3}
   _description: Twin rockets that arc up and crash down on the target
   _prefab: {fileID: 6171785530919239617, guid: e94c20233ffb9ee4881e7b06070cb7ef, type: 3}
   _buildCost: 75

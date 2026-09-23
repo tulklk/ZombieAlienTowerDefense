@@ -9,12 +9,15 @@ namespace AlienDefense.Save
     public sealed class PlayerProfileService
     {
         private const float SettingsSaveDebounceSeconds = 0.75f;
+        private const int MaxRememberedRewardTransactions = 32;
 
         private readonly SaveService _saveService;
         private readonly PlayerProfileSaveData _data;
 
         private bool _hasPendingDebouncedSave;
         private float _debounceSecondsRemaining;
+        private int _batchDepth;
+        private bool _batchDirty;
 
         public PlayerProfileService(SaveService saveService, PlayerProfileSaveData initialData)
         {
@@ -230,6 +233,114 @@ namespace AlienDefense.Save
 
             _data.Inventory.Add(new MetaItemStackSaveData { ItemId = itemId, Amount = amount });
             RequestImmediateSave();
+        }
+
+        public int StoredPlayEnergy => Mathf.Max(0, _data.PlayEnergy);
+        public long PlayEnergyUpdatedUtcTicks => _data.PlayEnergyUpdatedUtcTicks;
+
+        /// <summary>Only PlayEnergyService writes this: the amount it settled on and the moment it settled.</summary>
+        public void SetPlayEnergyState(int amount, long updatedUtcTicks)
+        {
+            _data.PlayEnergy = Mathf.Max(0, amount);
+            _data.PlayEnergyUpdatedUtcTicks = updatedUtcTicks;
+            RequestImmediateSave();
+        }
+
+        public int PlayerExperience => Mathf.Max(0, _data.PlayerExperience);
+
+        public void AddPlayerExperience(int amount)
+        {
+            if (amount <= 0)
+            {
+                Debug.LogError($"[PlayerProfileService] Ignored AddPlayerExperience({amount}); amount must be positive.");
+                return;
+            }
+
+            _data.PlayerExperience = Mathf.Max(0, _data.PlayerExperience) + amount;
+            RequestImmediateSave();
+        }
+
+        public bool IsFirstClearRewardClaimed(string levelId)
+        {
+            LevelProgressSaveData progress = FindLevelProgress(levelId);
+            return progress != null && progress.FirstClearRewardClaimed;
+        }
+
+        /// <summary>Flags a level's first-clear-only victory rewards as paid. False if they already were.</summary>
+        public bool TryMarkFirstClearRewardClaimed(string levelId)
+        {
+            if (string.IsNullOrWhiteSpace(levelId))
+            {
+                return false;
+            }
+
+            LevelProgressSaveData progress = FindOrCreateLevelProgress(levelId);
+            if (progress.FirstClearRewardClaimed)
+            {
+                return false;
+            }
+
+            progress.FirstClearRewardClaimed = true;
+            RequestImmediateSave();
+            return true;
+        }
+
+        public bool HasRewardTransaction(string transactionId)
+        {
+            return !string.IsNullOrEmpty(transactionId)
+                && _data.RewardTransactions != null
+                && _data.RewardTransactions.Contains(transactionId);
+        }
+
+        /// <summary>Records a reward payout id (level + run). Returns false - pay nothing - when that id was
+        /// already recorded, which is what makes a duplicated victory callback harmless.</summary>
+        public bool TryRegisterRewardTransaction(string transactionId)
+        {
+            if (string.IsNullOrWhiteSpace(transactionId))
+            {
+                return false;
+            }
+
+            if (_data.RewardTransactions == null)
+            {
+                _data.RewardTransactions = new System.Collections.Generic.List<string>();
+            }
+
+            if (_data.RewardTransactions.Contains(transactionId))
+            {
+                return false;
+            }
+
+            _data.RewardTransactions.Add(transactionId);
+            if (_data.RewardTransactions.Count > MaxRememberedRewardTransactions)
+            {
+                _data.RewardTransactions.RemoveRange(0, _data.RewardTransactions.Count - MaxRememberedRewardTransactions);
+            }
+
+            RequestImmediateSave();
+            return true;
+        }
+
+        /// <summary>Groups several mutations into one disk write (a victory pays up to ten reward lines). Every
+        /// BeginBatch must be paired with EndBatch; the write happens once, at the outermost EndBatch.</summary>
+        public void BeginBatch()
+        {
+            _batchDepth++;
+        }
+
+        public void EndBatch()
+        {
+            if (_batchDepth <= 0)
+            {
+                return;
+            }
+
+            _batchDepth--;
+            if (_batchDepth == 0 && _batchDirty)
+            {
+                _batchDirty = false;
+                RequestImmediateSave();
+            }
         }
 
         /// <summary>Marks one objective reward as claimed for a level. Returns false if already claimed or level id empty.</summary>
@@ -524,6 +635,12 @@ namespace AlienDefense.Save
 
         private void RequestImmediateSave()
         {
+            if (_batchDepth > 0)
+            {
+                _batchDirty = true;
+                return;
+            }
+
             _hasPendingDebouncedSave = false;
             _saveService.RequestSave(_data);
         }

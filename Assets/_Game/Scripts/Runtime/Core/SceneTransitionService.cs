@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using AlienDefense.UI;
 using UnityEngine;
@@ -10,6 +11,9 @@ namespace AlienDefense.Core
     /// transition and destroys it before the target scene activates.</summary>
     public sealed class SceneTransitionService : MonoBehaviour
     {
+        /// <summary>Canvas.sortingOrder maximum, so the fade cover draws over every UI in the scene being left.</summary>
+        private const int FadeCoverSortOrder = 32767;
+
         [SerializeField, Min(0f)]
         [Tooltip("The loading screen stays up at least this long even if the actual scene load finishes sooner " +
             "(e.g. MainMenu loads almost instantly) — so branding/art actually gets seen. 0 = no artificial floor, " +
@@ -20,8 +24,19 @@ namespace AlienDefense.Core
         [Tooltip("Spawned at transition start and destroyed when the transition ends. Assign LoadingOverlay prefab.")]
         private LoadingOverlayView _loadingOverlayPrefab;
 
+        [Header("Quick fade (SceneTransitionStyle.QuickFade)")]
+        [SerializeField, Min(0f)]
+        [Tooltip("How long the screen fades to black before the target scene is activated.")]
+        private float _quickFadeOutSeconds = 0.18f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("How long the black cover fades away once the target scene has painted its first frame.")]
+        private float _quickFadeInSeconds = 0.22f;
+
         private LoadingOverlayView _activeOverlay;
+        private readonly List<Canvas> _hiddenSceneCanvases = new List<Canvas>();
         private Camera _activeOverlayCamera;
+        private CanvasGroup _fadeCover;
 
         public SceneTransitionState State { get; private set; } = SceneTransitionState.Idle;
         public bool IsTransitioning => State == SceneTransitionState.Loading;
@@ -43,6 +58,13 @@ namespace AlienDefense.Core
         /// <summary>Requests a scene load. Returns false without starting anything if a transition is already running.</summary>
         public bool TryLoadScene(string sceneName)
         {
+            return TryLoadScene(sceneName, SceneTransitionStyle.BrandedSplash);
+        }
+
+        /// <summary>Requests a scene load with an explicit cover style. QuickFade is for returns to a menu, where the
+        /// branded splash would read as a detour through the Bootstrap scene.</summary>
+        public bool TryLoadScene(string sceneName, SceneTransitionStyle style)
+        {
             if (string.IsNullOrWhiteSpace(sceneName))
             {
                 Debug.LogError("[SceneTransitionService] Cannot load a scene with an empty name.", this);
@@ -61,7 +83,7 @@ namespace AlienDefense.Core
                 return false;
             }
 
-            StartCoroutine(LoadSceneRoutine(sceneName));
+            StartCoroutine(LoadSceneRoutine(sceneName, style));
             return true;
         }
 
@@ -92,11 +114,24 @@ namespace AlienDefense.Core
             return true;
         }
 
-        private IEnumerator LoadSceneRoutine(string sceneName)
+        private IEnumerator LoadSceneRoutine(string sceneName, SceneTransitionStyle style)
         {
             State = SceneTransitionState.Loading;
             Time.timeScale = 1f;
-            SpawnOverlay();
+
+            if (style == SceneTransitionStyle.QuickFade)
+            {
+                SpawnFadeCover();
+
+                // Fade to black BEFORE hiding the level's UI, otherwise the HUD and the victory panel would pop out
+                // a beat before the screen is covered.
+                yield return FadeCover(0f, 1f, _quickFadeOutSeconds);
+                HideLeavingSceneUi();
+            }
+            else
+            {
+                SpawnOverlay();
+            }
 
             try
             {
@@ -119,18 +154,23 @@ namespace AlienDefense.Core
 
                 if (operation == null)
                 {
+                    RestoreLeavingSceneUi();
                     State = SceneTransitionState.Failed;
                     SceneLoadFailed?.Invoke(sceneName, "Scene could not be loaded. Is it added to Build Settings?");
                     yield break;
                 }
 
+                // QuickFade never holds the screen artificially: the menu is ready in a frame or two and the point of
+                // this style is that the player goes straight there.
+                float minimumDuration = style == SceneTransitionStyle.QuickFade ? 0f : _minimumLoadDurationSeconds;
+
                 float elapsedSeconds = 0f;
-                while (elapsedSeconds < _minimumLoadDurationSeconds || operation.progress < 0.9f)
+                while (elapsedSeconds < minimumDuration || operation.progress < 0.9f)
                 {
                     elapsedSeconds += Time.unscaledDeltaTime;
 
-                    float timeProgress = _minimumLoadDurationSeconds > 0f
-                        ? Mathf.Clamp01(elapsedSeconds / _minimumLoadDurationSeconds)
+                    float timeProgress = minimumDuration > 0f
+                        ? Mathf.Clamp01(elapsedSeconds / minimumDuration)
                         : 1f;
                     float realProgress = Mathf.Clamp01(operation.progress / 0.9f);
 
@@ -153,6 +193,11 @@ namespace AlienDefense.Core
                 // and its camera keeps clearing to a solid color with no UI on it once the Canvas is gone -
                 // that solid color is the "black flash" players see between scenes.
                 yield return null;
+
+                if (style == SceneTransitionStyle.QuickFade)
+                {
+                    yield return FadeCover(1f, 0f, _quickFadeInSeconds);
+                }
 
                 DestroyOverlay();
 
@@ -193,11 +238,129 @@ namespace AlienDefense.Core
             _activeOverlay.BindCamera(_activeOverlayCamera);
             _activeOverlay.Show();
             _activeOverlay.InitializeForTransition();
+            HideLeavingSceneUi();
+        }
+
+        /// <summary>Builds the plain black cover used by QuickFade. Deliberately not the LoadingOverlay prefab: that
+        /// prefab is the boot splash, and players read it as "the game went back through Bootstrap". Screen Space -
+        /// Overlay needs no camera, so this also survives the frame where the old scene's camera is already gone and
+        /// the new one has not woken up yet.</summary>
+        private void SpawnFadeCover()
+        {
+            DestroyFadeCover();
+
+            var coverObject = new GameObject("SceneFadeCover", typeof(Canvas), typeof(CanvasGroup));
+            coverObject.transform.SetParent(transform, false);
+
+            var canvas = coverObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = FadeCoverSortOrder;
+
+            _fadeCover = coverObject.GetComponent<CanvasGroup>();
+            _fadeCover.alpha = 0f;
+            _fadeCover.interactable = false;
+            _fadeCover.blocksRaycasts = true;
+
+            var imageObject = new GameObject("Cover", typeof(UnityEngine.UI.Image));
+            imageObject.transform.SetParent(coverObject.transform, false);
+
+            var image = imageObject.GetComponent<UnityEngine.UI.Image>();
+            image.color = Color.black;
+            image.raycastTarget = true;
+
+            var rect = image.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private IEnumerator FadeCover(float from, float to, float durationSeconds)
+        {
+            if (_fadeCover == null)
+            {
+                yield break;
+            }
+
+            if (durationSeconds <= 0f)
+            {
+                _fadeCover.alpha = to;
+                yield break;
+            }
+
+            float elapsedSeconds = 0f;
+            while (elapsedSeconds < durationSeconds)
+            {
+                elapsedSeconds += Time.unscaledDeltaTime;
+
+                if (_fadeCover == null)
+                {
+                    yield break;
+                }
+
+                _fadeCover.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(elapsedSeconds / durationSeconds));
+                yield return null;
+            }
+
+            if (_fadeCover != null)
+            {
+                _fadeCover.alpha = to;
+            }
+        }
+
+        private void DestroyFadeCover()
+        {
+            if (_fadeCover != null)
+            {
+                UnityEngine.Object.DestroyImmediate(_fadeCover.gameObject);
+                _fadeCover = null;
+            }
+
+            Transform existing = transform.Find("SceneFadeCover");
+            if (existing != null)
+            {
+                UnityEngine.Object.DestroyImmediate(existing.gameObject);
+            }
+        }
+
+        /// <summary>The loading screen draws through its own camera (Screen Space - Camera), and a Screen Space -
+        /// Overlay canvas always composites after every camera - so the level's HUD and its victory panel would sit
+        /// on top of the loading screen for the whole transition. Every canvas of the scene being left is switched
+        /// off for that reason; they are restored only if the load never happens, since the scene is unloaded
+        /// otherwise. The overlay's own canvas (a child of this service) is never touched.</summary>
+        private void HideLeavingSceneUi()
+        {
+            foreach (Canvas canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (canvas == null || !canvas.enabled || canvas.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                canvas.enabled = false;
+                _hiddenSceneCanvases.Add(canvas);
+            }
+        }
+
+        /// <summary>Only used when a transition ends without the scene actually changing (a failed load).</summary>
+        private void RestoreLeavingSceneUi()
+        {
+            for (int i = 0; i < _hiddenSceneCanvases.Count; i++)
+            {
+                if (_hiddenSceneCanvases[i] != null)
+                {
+                    _hiddenSceneCanvases[i].enabled = true;
+                }
+            }
+
+            _hiddenSceneCanvases.Clear();
         }
 
         private void DestroyOverlay()
         {
             bool destroyedAny = false;
+
+            DestroyFadeCover();
 
             if (_activeOverlay != null)
             {

@@ -45,6 +45,21 @@ namespace AlienDefense.Vfx
             return pool;
         }
 
+        /// <summary>VFX instances alive across every pool; read-only, for the development performance monitor.</summary>
+        public int TotalActive
+        {
+            get
+            {
+                int total = 0;
+                foreach (VfxPool pool in _pools.Values)
+                {
+                    total += pool.ActiveCount;
+                }
+
+                return total;
+            }
+        }
+
         public void Clear()
         {
             foreach (VfxPool pool in _pools.Values)

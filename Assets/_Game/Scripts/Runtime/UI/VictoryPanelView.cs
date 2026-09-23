@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using AlienDefense.Combat;
+using System.Text;
 using AlienDefense.Progression;
 using AlienDefense.UI.MainMenu;
 using DG.Tweening;
@@ -15,8 +15,8 @@ namespace AlienDefense.UI
     /// reused rather than instantiated per click.
     ///
     /// Strictly a presenter of <see cref="LevelVictoryResult"/>: rewards are already granted and saved by the time
-    /// Show is called, so nothing here can hand them out twice, and Next only raises an event for
-    /// GameStateUIController to navigate with.</summary>
+    /// Show is called, so nothing here can hand them out twice (tapping a reward only opens its detail popup), and
+    /// Next only raises an event for GameStateUIController to navigate with.</summary>
     public sealed class VictoryPanelView : MonoBehaviour
     {
         /// <summary>One "damage leaders" line on the main panel.</summary>
@@ -51,6 +51,9 @@ namespace AlienDefense.UI
             public TMP_Text PercentText;
             public TMP_Text ValueText;
             public Image Bar;
+
+            [Tooltip("Optional. The tower's upgrade tier; hidden for sources without one.")]
+            public Image[] Stars;
         }
 
         private const float CountUpDuration = 0.7f;
@@ -86,7 +89,24 @@ namespace AlienDefense.UI
 
         [Header("Rewards")]
         [SerializeField]
+        [Tooltip("Pre-built reward tiles. When a level grants more rewards than there are tiles, the first one is " +
+            "cloned (once - the clones are kept and reused).")]
         private RewardItem[] _rewardItems = new RewardItem[0];
+
+        [SerializeField]
+        [Tooltip("Optional. The area the tiles are laid out in; defaults to the first tile's parent.")]
+        private RectTransform _rewardGrid;
+
+        [SerializeField]
+        [Tooltip("Gap between reward tiles (x, y) in canvas units.")]
+        private Vector2 _rewardSpacing = new Vector2(26f, 24f);
+
+        [SerializeField, Min(1)]
+        private int _maxRewardColumns = 5;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("Inner margin kept free around the grid.")]
+        private float _rewardGridPadding = 12f;
 
         [SerializeField]
         [Tooltip("Optional. Shown when the level granted nothing.")]
@@ -136,6 +156,14 @@ namespace AlienDefense.UI
         [SerializeField]
         private Button _statsPopupClose;
 
+        [SerializeField]
+        [Tooltip("Filled star of a statistics row.")]
+        private Sprite _starSprite;
+
+        [SerializeField]
+        [Tooltip("Empty star of a statistics row.")]
+        private Sprite _noStarSprite;
+
         [Header("Data")]
         [SerializeField]
         private VictoryRewardCatalog _rewardCatalog;
@@ -145,16 +173,25 @@ namespace AlienDefense.UI
         private string _perfectClearText = "Perfect Clear";
 
         [SerializeField]
+        [Tooltip("Shown when the base finished below 50% HP.")]
+        private string _clearText = "Clear";
+
+        [SerializeField]
         private string _completedText = "Level Complete";
 
         /// <summary>Raised when Next is tapped (once - the button disables itself).</summary>
         public event Action NextClicked;
 
+        private readonly List<RewardItem> _rewardPool = new List<RewardItem>();
         private LevelVictoryResult _result;
         private Sequence _introSequence;
         private Tween _popupTween;
         private bool _listenersWired;
+        private bool _resultShown;
         private bool _nextRaised;
+        private float _rewardItemScale = 1f;
+        private Vector2 _iconInsetSize;
+        private bool _hasIconInsetSize;
 
         private void Awake()
         {
@@ -189,13 +226,10 @@ namespace AlienDefense.UI
                 _rewardPopupClose.onClick.AddListener(CloseRewardDetail);
             }
 
+            _rewardPool.Clear();
             for (int i = 0; i < _rewardItems.Length; i++)
             {
-                int index = i;
-                if (_rewardItems[i].Button != null)
-                {
-                    _rewardItems[i].Button.onClick.AddListener(() => OpenRewardDetail(index));
-                }
+                AddToPool(_rewardItems[i]);
             }
         }
 
@@ -205,6 +239,9 @@ namespace AlienDefense.UI
         {
             WireListeners();
             _result = result;
+            _resultShown = false;
+            _introSequence?.Kill(); // before anything else, so the old reveal cannot re-enable Next
+            _introSequence = null;
 
             HidePopupImmediate(_rewardPopup);
             HidePopupImmediate(_statsPopup);
@@ -212,13 +249,16 @@ namespace AlienDefense.UI
             _nextRaised = false;
             if (_nextButton != null)
             {
-                _nextButton.interactable = true;
+                _nextButton.interactable = false; // enabled once the reveal has put everything on screen
             }
 
             PopulateHeader();
             PopulateLeaders();
             PopulateRewards();
             PopulateStatistics();
+
+            // The result is on the panel from here on; Next may leave (the reveal only animates it in).
+            _resultShown = result != null;
             PlayIntro();
         }
 
@@ -231,16 +271,47 @@ namespace AlienDefense.UI
 
             if (_resultText != null)
             {
-                _resultText.text = _result != null && _result.IsPerfectClear ? _perfectClearText : _completedText;
+                _resultText.text = BuildResultLine();
             }
         }
 
+        /// <summary>100% base HP -> "Perfect Clear"; 50-99% -> "Remaining HP: 62%" (same wording and colour
+        /// thresholds MainMenu prints under the level title); below 50% -> "Clear".</summary>
+        private string BuildResultLine()
+        {
+            if (_result == null)
+            {
+                return string.Empty;
+            }
+
+            if (_result.IsPerfectClear)
+            {
+                return _perfectClearText;
+            }
+
+            if (_result.MaxBaseHealth <= 0)
+            {
+                return _completedText;
+            }
+
+            int percent = _result.RemainingHpPercent;
+            if (percent < 50)
+            {
+                return _clearText;
+            }
+
+            return $"Remaining HP: <color={LevelStatusFormatter.PercentColorHex(percent)}>{percent}%</color>";
+        }
+
+        private IReadOnlyList<DamageResultEntry> Sources =>
+            _result != null ? _result.DamageSources : Array.Empty<DamageResultEntry>();
+
+        private IReadOnlyList<VictoryReward> Rewards =>
+            _result != null ? _result.Rewards : Array.Empty<VictoryReward>();
+
         private void PopulateLeaders()
         {
-            IReadOnlyList<CombatStatsService.Contributor> sources = _result != null
-                ? _result.DamageSources
-                : Array.Empty<CombatStatsService.Contributor>();
-
+            IReadOnlyList<DamageResultEntry> sources = Sources;
             float best = sources.Count > 0 ? Mathf.Max(1f, sources[0].Damage) : 1f;
             for (int i = 0; i < _leaderRows.Length; i++)
             {
@@ -256,7 +327,7 @@ namespace AlienDefense.UI
                     continue;
                 }
 
-                CombatStatsService.Contributor source = sources[i];
+                DamageResultEntry source = sources[i];
                 if (row.NameText != null)
                 {
                     row.NameText.text = source.Name;
@@ -264,14 +335,10 @@ namespace AlienDefense.UI
 
                 if (row.ValueText != null)
                 {
-                    row.ValueText.text = CurrencyFormatter.Format(Mathf.RoundToInt(source.Damage));
+                    row.ValueText.text = FormatDamage(source.Damage);
                 }
 
-                if (row.Icon != null)
-                {
-                    row.Icon.sprite = source.Icon;
-                    row.Icon.enabled = source.Icon != null;
-                }
+                SetIcon(row.Icon, source.Icon);
 
                 if (row.Bar != null)
                 {
@@ -292,10 +359,12 @@ namespace AlienDefense.UI
 
         private void PopulateRewards()
         {
-            IReadOnlyList<VictoryReward> rewards = _result != null ? _result.Rewards : Array.Empty<VictoryReward>();
-            for (int i = 0; i < _rewardItems.Length; i++)
+            IReadOnlyList<VictoryReward> rewards = Rewards;
+            EnsureRewardSlots(rewards.Count);
+
+            for (int i = 0; i < _rewardPool.Count; i++)
             {
-                RewardItem item = _rewardItems[i];
+                RewardItem item = _rewardPool[i];
                 bool used = i < rewards.Count;
                 if (item.Root != null)
                 {
@@ -310,15 +379,12 @@ namespace AlienDefense.UI
                 VictoryReward reward = rewards[i];
                 VictoryRewardCatalog.Entry entry = GetEntry(reward.Type);
 
-                if (item.Icon != null)
-                {
-                    item.Icon.sprite = entry.Icon;
-                    item.Icon.enabled = entry.Icon != null;
-                }
+                SetIcon(item.Icon, entry.Icon);
+                FitIcon(item, entry.IconHasOwnFrame);
 
                 if (item.Frame != null)
                 {
-                    item.Frame.color = entry.HeaderColor;
+                    item.Frame.color = entry.IconHasOwnFrame ? Color.clear : entry.HeaderColor; // clear still takes taps
                 }
 
                 if (item.AmountText != null)
@@ -327,22 +393,155 @@ namespace AlienDefense.UI
                 }
             }
 
+            LayoutRewards(rewards.Count);
+
             if (_noRewardLabel != null)
             {
                 _noRewardLabel.SetActive(rewards.Count == 0);
             }
         }
 
+        /// <summary>Card art brings its own frame, so it fills the whole tile; plain icons (coins, XP) keep the inset
+        /// they were built with inside the coloured frame.</summary>
+        private void FitIcon(RewardItem item, bool fillTile)
+        {
+            var icon = item.Icon != null ? item.Icon.rectTransform : null;
+            var frame = item.Frame != null ? item.Frame.rectTransform : null;
+            if (icon == null || frame == null)
+            {
+                return;
+            }
+
+            if (!_hasIconInsetSize)
+            {
+                _iconInsetSize = icon.sizeDelta;
+                _hasIconInsetSize = true;
+            }
+
+            icon.sizeDelta = fillTile ? frame.sizeDelta : _iconInsetSize;
+        }
+
+        /// <summary>More rewards than pre-built tiles: clone the first tile until there are enough. Clones are kept,
+        /// so re-opening the panel never instantiates again.</summary>
+        private void EnsureRewardSlots(int count)
+        {
+            if (_rewardPool.Count >= count || _rewardPool.Count == 0 || _rewardPool[0].Root == null)
+            {
+                return;
+            }
+
+            RewardItem template = _rewardPool[0];
+            Transform parent = template.Root.transform.parent;
+            while (_rewardPool.Count < count)
+            {
+                GameObject clone = Instantiate(template.Root, parent, false);
+                clone.name = template.Root.name + "_" + (_rewardPool.Count + 1);
+                Transform templateRoot = template.Root.transform;
+                AddToPool(new RewardItem
+                {
+                    Root = clone,
+                    Button = Counterpart(template.Button, templateRoot, clone.transform),
+                    Frame = Counterpart(template.Frame, templateRoot, clone.transform),
+                    Icon = Counterpart(template.Icon, templateRoot, clone.transform),
+                    AmountText = Counterpart(template.AmountText, templateRoot, clone.transform),
+                });
+            }
+        }
+
+        private void AddToPool(RewardItem item)
+        {
+            int index = _rewardPool.Count;
+            _rewardPool.Add(item);
+            if (item.Button != null)
+            {
+                item.Button.onClick.AddListener(() => OpenRewardDetail(index));
+            }
+        }
+
+        /// <summary>The component in <paramref name="cloneRoot"/> sitting where <paramref name="original"/> sits
+        /// under <paramref name="templateRoot"/>.</summary>
+        private static T Counterpart<T>(T original, Transform templateRoot, Transform cloneRoot) where T : Component
+        {
+            if (original == null)
+            {
+                return null;
+            }
+
+            var path = new StringBuilder();
+            for (Transform cursor = original.transform; cursor != null && cursor != templateRoot; cursor = cursor.parent)
+            {
+                path.Insert(0, path.Length > 0 ? cursor.name + "/" : cursor.name);
+            }
+
+            Transform match = path.Length == 0 ? cloneRoot : cloneRoot.Find(path.ToString());
+            return match != null ? match.GetComponent<T>() : null;
+        }
+
+        /// <summary>Centres the used tiles in the reward area: one row up to 4, two balanced rows up to 8 (4+4,
+        /// 3+3, ...), then rows of <see cref="_maxRewardColumns"/>. The whole block is scaled down when it would
+        /// not fit, so tiles never overlap or leave the panel on any aspect ratio.</summary>
+        private void LayoutRewards(int count)
+        {
+            _rewardItemScale = 1f;
+            if (count <= 0 || _rewardPool.Count == 0 || _rewardPool[0].Root == null)
+            {
+                return;
+            }
+
+            RectTransform area = _rewardGrid != null ? _rewardGrid : _rewardPool[0].Root.transform.parent as RectTransform;
+            var templateRect = _rewardPool[0].Root.transform as RectTransform;
+            if (area == null || templateRect == null)
+            {
+                return;
+            }
+
+            Vector2 tile = templateRect.sizeDelta;
+            int maxColumns = Mathf.Max(1, _maxRewardColumns);
+            int columns = count <= 4 ? count : count <= 8 ? Mathf.CeilToInt(count * 0.5f) : maxColumns;
+            columns = Mathf.Clamp(columns, 1, maxColumns);
+            int rows = Mathf.CeilToInt(count / (float)columns);
+
+            float gridWidth = columns * tile.x + (columns - 1) * _rewardSpacing.x;
+            float gridHeight = rows * tile.y + (rows - 1) * _rewardSpacing.y;
+            Rect bounds = area.rect;
+            float availableWidth = Mathf.Max(1f, bounds.width - 2f * _rewardGridPadding);
+            float availableHeight = Mathf.Max(1f, bounds.height - 2f * _rewardGridPadding);
+            float scale = Mathf.Min(1f, availableWidth / Mathf.Max(1f, gridWidth), availableHeight / Mathf.Max(1f, gridHeight));
+            _rewardItemScale = scale;
+
+            // Positions are relative to the area's centre, whatever its pivot is.
+            Vector2 centre = new Vector2((0.5f - area.pivot.x) * bounds.width, (0.5f - area.pivot.y) * bounds.height);
+            for (int i = 0; i < count; i++)
+            {
+                int row = i / columns;
+                int column = i % columns;
+                int inRow = Mathf.Min(columns, count - row * columns);
+                float rowWidth = inRow * tile.x + (inRow - 1) * _rewardSpacing.x;
+                float x = -rowWidth * 0.5f + tile.x * 0.5f + column * (tile.x + _rewardSpacing.x);
+                float y = gridHeight * 0.5f - tile.y * 0.5f - row * (tile.y + _rewardSpacing.y);
+
+                var rect = _rewardPool[i].Root.transform as RectTransform;
+                if (rect == null)
+                {
+                    continue;
+                }
+
+                rect.anchorMin = new Vector2(area.pivot.x, area.pivot.y);
+                rect.anchorMax = rect.anchorMin;
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = centre + new Vector2(x, y) * scale;
+                rect.localScale = Vector3.one * scale;
+            }
+        }
+
         private void PopulateStatistics()
         {
-            IReadOnlyList<CombatStatsService.Contributor> sources = _result != null
-                ? _result.DamageSources
-                : Array.Empty<CombatStatsService.Contributor>();
+            IReadOnlyList<DamageResultEntry> sources = Sources;
             float total = _result != null ? _result.TotalDamage : 0f;
 
             if (_statsTotalText != null)
             {
-                _statsTotalText.text = "All Damage: " + CurrencyFormatter.Format(Mathf.RoundToInt(total));
+                _statsTotalText.text = "All Damage: " + FormatDamage(total);
             }
 
             for (int i = 0; i < _statRows.Length; i++)
@@ -359,8 +558,8 @@ namespace AlienDefense.UI
                     continue;
                 }
 
-                CombatStatsService.Contributor source = sources[i];
-                float share = total > 0f ? Mathf.Clamp01(source.Damage / total) : 0f;
+                DamageResultEntry source = sources[i];
+                float share = DamageResultEntry.ShareOf(source.Damage, total);
 
                 if (row.NameText != null)
                 {
@@ -374,20 +573,67 @@ namespace AlienDefense.UI
 
                 if (row.ValueText != null)
                 {
-                    row.ValueText.text = CurrencyFormatter.Format(Mathf.RoundToInt(source.Damage));
+                    row.ValueText.text = FormatDamage(source.Damage);
                 }
 
-                if (row.Icon != null)
-                {
-                    row.Icon.sprite = source.Icon;
-                    row.Icon.enabled = source.Icon != null;
-                }
+                SetIcon(row.Icon, source.Icon);
 
                 if (row.Bar != null)
                 {
                     row.Bar.fillAmount = share;
                 }
+
+                PopulateStars(row.Stars, source);
             }
+        }
+
+        /// <summary>Stars mean the tower's permanent upgrade tier - the only star-like rating the game has. A
+        /// source without a tier (the UFO), or a row with more tiers than star images, hides the stars instead of
+        /// showing a made-up rating.</summary>
+        private void PopulateStars(Image[] stars, DamageResultEntry source)
+        {
+            if (stars == null)
+            {
+                return;
+            }
+
+            bool show = source.MaxStars > 0 && source.MaxStars <= stars.Length && _starSprite != null;
+            for (int i = 0; i < stars.Length; i++)
+            {
+                Image star = stars[i];
+                if (star == null)
+                {
+                    continue;
+                }
+
+                bool visible = show && i < source.MaxStars;
+                star.gameObject.SetActive(visible);
+                if (!visible)
+                {
+                    continue;
+                }
+
+                bool filled = i < source.Stars;
+                Sprite sprite = filled ? _starSprite : (_noStarSprite != null ? _noStarSprite : _starSprite);
+                star.sprite = sprite;
+                star.color = filled || _noStarSprite != null ? Color.white : new Color(0.25f, 0.25f, 0.25f, 0.8f);
+            }
+        }
+
+        private static string FormatDamage(float damage)
+        {
+            return CurrencyFormatter.Format((long)Math.Round(Math.Max(0f, damage)));
+        }
+
+        private static void SetIcon(Image image, Sprite sprite)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.enabled = sprite != null;
         }
 
         // ------------------------------------------------------------------------------------------------------------
@@ -423,7 +669,7 @@ namespace AlienDefense.UI
                 SetGroupAlpha(row.Root, 0f);
             }
 
-            foreach (RewardItem item in _rewardItems)
+            foreach (RewardItem item in _rewardPool)
             {
                 SetScale(item.Root, Vector3.zero);
             }
@@ -473,15 +719,16 @@ namespace AlienDefense.UI
             }
 
             float rewardTime = 1.15f;
-            foreach (RewardItem item in _rewardItems)
+            float rewardScale = _rewardItemScale;
+            foreach (RewardItem item in _rewardPool)
             {
                 if (item.Root == null || !item.Root.activeSelf)
                 {
                     continue;
                 }
 
-                _introSequence.Insert(rewardTime, item.Root.transform.DOScale(1.15f, 0.16f).SetEase(Ease.OutQuad));
-                _introSequence.Insert(rewardTime + 0.16f, item.Root.transform.DOScale(1f, 0.10f).SetEase(Ease.OutQuad));
+                _introSequence.Insert(rewardTime, item.Root.transform.DOScale(rewardScale * 1.15f, 0.16f).SetEase(Ease.OutQuad));
+                _introSequence.Insert(rewardTime + 0.16f, item.Root.transform.DOScale(rewardScale, 0.10f).SetEase(Ease.OutQuad));
                 rewardTime += 0.08f;
             }
 
@@ -492,23 +739,37 @@ namespace AlienDefense.UI
                 _introSequence.Insert(Mathf.Max(1.8f, rewardTime + 0.15f),
                     _nextButton.transform.DOScale(1f, 0.28f).SetEase(Ease.OutBack));
             }
+
+            _introSequence.OnComplete(EnableNext);
+            _introSequence.OnKill(EnableNext); // a killed reveal (re-show, scene change) must not strand the button
+        }
+
+        private void EnableNext()
+        {
+            if (_nextButton == null || _nextRaised || !_resultShown)
+            {
+                return;
+            }
+
+            _nextButton.transform.localScale = Vector3.one;
+            _nextButton.interactable = true;
         }
 
         /// <summary>Coins and XP count up instead of appearing at their final value.</summary>
         private void AppendCountUps(Sequence sequence, float startTime)
         {
-            IReadOnlyList<VictoryReward> rewards = _result != null ? _result.Rewards : Array.Empty<VictoryReward>();
-            for (int i = 0; i < _rewardItems.Length && i < rewards.Count; i++)
+            IReadOnlyList<VictoryReward> rewards = Rewards;
+            for (int i = 0; i < _rewardPool.Count && i < rewards.Count; i++)
             {
-                TMP_Text label = _rewardItems[i].AmountText;
+                TMP_Text label = _rewardPool[i].AmountText;
                 VictoryReward reward = rewards[i];
                 if (label == null || reward.Amount < 100)
                 {
                     continue; // small counts read better as a plain number
                 }
 
+                // No "0" is written up front: the tile is still scaled to zero until its tween starts from 0.
                 int shown = 0;
-                label.text = "0";
                 sequence.Insert(startTime + i * 0.08f, DOTween.To(() => shown, value =>
                 {
                     shown = value;
@@ -521,9 +782,10 @@ namespace AlienDefense.UI
         // Popups
         // ------------------------------------------------------------------------------------------------------------
 
+        /// <summary>Display only: shows what the tile is. Never grants anything.</summary>
         private void OpenRewardDetail(int index)
         {
-            IReadOnlyList<VictoryReward> rewards = _result != null ? _result.Rewards : Array.Empty<VictoryReward>();
+            IReadOnlyList<VictoryReward> rewards = Rewards;
             if (index < 0 || index >= rewards.Count)
             {
                 return;
@@ -547,11 +809,7 @@ namespace AlienDefense.UI
                 _rewardPopupAmount.text = CurrencyFormatter.Format(reward.Amount);
             }
 
-            if (_rewardPopupIcon != null)
-            {
-                _rewardPopupIcon.sprite = entry.Icon;
-                _rewardPopupIcon.enabled = entry.Icon != null;
-            }
+            SetIcon(_rewardPopupIcon, entry.Icon);
 
             if (_rewardPopupHeader != null)
             {
@@ -566,6 +824,7 @@ namespace AlienDefense.UI
             ClosePopup(_rewardPopup, _rewardPopupPanel);
         }
 
+        /// <summary>Display only: the statistics were filled once in Show from the frozen result.</summary>
         private void OpenStatistics()
         {
             OpenPopup(_statsPopup, _statsPopupPanel);
@@ -641,9 +900,9 @@ namespace AlienDefense.UI
 
         private void HandleNextClicked()
         {
-            if (_nextRaised)
+            if (_nextRaised || !_resultShown)
             {
-                return; // a second tap before the scene swaps must not start a second transition
+                return; // nothing to leave yet, or a second tap before the scene swaps
             }
 
             _nextRaised = true;
@@ -652,6 +911,8 @@ namespace AlienDefense.UI
                 _nextButton.interactable = false; // one shot: the scene load follows
             }
 
+            HidePopupImmediate(_rewardPopup);
+            HidePopupImmediate(_statsPopup);
             NextClicked?.Invoke();
         }
 
@@ -728,9 +989,10 @@ namespace AlienDefense.UI
         }
 
 #if UNITY_EDITOR
-        /// <summary>Editor-only preview: fills the panel with sample data so the layout and the reveal can be checked
-        /// without finishing a level. Never compiled into a build.</summary>
-        [ContextMenu("Debug Show Victory")]
+        /// <summary>Editor-only layout preview with sample numbers, so the panel can be checked without finishing a
+        /// level. Never compiled into a build, and never used by the game flow (which always passes the real
+        /// result).</summary>
+        [ContextMenu("Debug Show Victory (layout preview)")]
         private void DebugShowVictory()
         {
             gameObject.SetActive(true);
@@ -738,18 +1000,23 @@ namespace AlienDefense.UI
             {
                 new VictoryReward(VictoryRewardType.Coins, 5800),
                 new VictoryReward(VictoryRewardType.Experience, 3000),
-                new VictoryReward(VictoryRewardType.Gems, 5),
+                new VictoryReward(VictoryRewardType.UfoBaseCard, 5),
+                new VictoryReward(VictoryRewardType.BlasterCard, 10),
+                new VictoryReward(VictoryRewardType.FrostCard, 20),
+                new VictoryReward(VictoryRewardType.MortarCard, 10),
+                new VictoryReward(VictoryRewardType.TeslaCard, 5),
+                new VictoryReward(VictoryRewardType.ReactorBlueprint, 1),
+                new VictoryReward(VictoryRewardType.AntiGravityBlueprint, 3),
             };
 
-            var damage = new List<CombatStatsService.Contributor>
+            var damage = new List<DamageResultEntry>
             {
-                new CombatStatsService.Contributor("Mortar Tower", null, 1600f),
-                new CombatStatsService.Contributor("Blaster Tower", null, 800f),
-                new CombatStatsService.Contributor("Frost Tower", null, 450f),
-                new CombatStatsService.Contributor("UFO", null, 120f),
+                new DamageResultEntry("Blaster", null, 6400f, 1, 3),
+                new DamageResultEntry("Mortar", null, 4500f, 2, 3),
+                new DamageResultEntry("Frost", null, 1500f, 1, 3),
             };
 
-            Show(new LevelVictoryResult("level_debug", "CAMPAIGN LEVEL 1", 3, true, 20, 20, rewards, damage, 2970f, true));
+            Show(new LevelVictoryResult("level_debug", "CAMPAIGN LEVEL 1", 2, false, 13, 20, rewards, damage, 12400f, true));
         }
 #endif
 

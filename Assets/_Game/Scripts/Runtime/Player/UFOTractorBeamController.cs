@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using System.Collections.Generic;
 using AlienDefense.CameraSystem;
@@ -196,7 +197,17 @@ namespace AlienDefense.Player
         /// <summary>Advances the shared scan timer by deltaTime and admits new captures/absorptions across all
         /// three categories once it elapses. Separated from Update() so tests can drive it with an explicit
         /// deltaTime instead of relying on Time.deltaTime.</summary>
+        private static readonly ProfilerMarker TickMarker = new ProfilerMarker("AlienDefense.TractorBeam.Scan");
+
         public void Tick(float deltaTime)
+        {
+            using (TickMarker.Auto())
+            {
+                TickCore(deltaTime);
+            }
+        }
+
+        private void TickCore(float deltaTime)
         {
             if (_cargoFullFeedbackCooldown > 0f)
             {

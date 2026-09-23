@@ -8,8 +8,9 @@ Shader "AlienDefense/EnergyBallGlowShell"
         _GlowStrength ("Glow Strength", Range(0, 5)) = 1.6
         _GlowAlpha ("Glow Alpha", Range(0, 1)) = 0.28
         _RimPower ("Rim Power", Range(0.5, 8)) = 1.4
-        _PulseSpeed ("Pulse Speed", Range(0, 10)) = 1.8
-        _PulseAmount ("Pulse Amount", Range(0, 1)) = 0.08
+        _PulseSpeed ("Pulse Speed", Range(0, 10)) = 1.6
+        _PulseAmount ("Pulse Amount (brightness)", Range(0, 1)) = 0.55
+        _PulseScale ("Pulse Scale (halo breathing size)", Range(0, 0.5)) = 0.07
     }
 
     SubShader
@@ -59,12 +60,26 @@ Shader "AlienDefense/EnergyBallGlowShell"
                 float _RimPower;
                 float _PulseSpeed;
                 float _PulseAmount;
+                float _PulseScale;
             CBUFFER_END
+
+            // Same two-frequency wave as the core shader, so the halo and the hotspot breathe together.
+            float PulsePhase01()
+            {
+                float wave = sin(_Time.y * _PulseSpeed) * 0.5 + 0.5;
+                float flicker = sin(_Time.y * _PulseSpeed * 2.37) * 0.5 + 0.5;
+                return saturate(wave * 0.85 + flicker * 0.15);
+            }
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
-                VertexPositionInputs posInputs = GetVertexPositionInputs(IN.positionOS.xyz);
+
+                // The halo physically swells and shrinks. A halo that only changes brightness is nearly
+                // invisible on a 30-pixel pickup; one that changes size reads instantly.
+                float3 positionOS = IN.positionOS.xyz + normalize(IN.normalOS) * (_PulseScale * PulsePhase01());
+
+                VertexPositionInputs posInputs = GetVertexPositionInputs(positionOS);
                 OUT.positionHCS = posInputs.positionCS;
                 OUT.positionWS = posInputs.positionWS;
                 // Flip normal for Cull Front so Fresnel still uses outward-facing silhouette.
@@ -78,7 +93,7 @@ Shader "AlienDefense/EnergyBallGlowShell"
                 float3 viewDirWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
                 float fresnel = pow(1.0 - saturate(dot(normalWS, viewDirWS)), _RimPower);
 
-                float pulse = 1.0 + sin(_Time.y * _PulseSpeed) * _PulseAmount;
+                float pulse = lerp(1.0 - _PulseAmount, 1.0 + _PulseAmount, PulsePhase01());
 
                 half3 rgb = _GlowColor.rgb * fresnel * _GlowStrength * pulse;
                 float alpha = fresnel * _GlowAlpha * pulse;

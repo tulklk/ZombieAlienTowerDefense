@@ -23,7 +23,6 @@ namespace AlienDefense.EditorTools
     {
         private const string WinSpriteDir = "Assets/_Game/Art/Sprite/Play/WinPanel";
         private const string PauseSpriteDir = "Assets/_Game/Art/Sprite/Play/PausePanel";
-        private const string MenuIconDir = "Assets/_Game/Art/Sprite/MainMenu/Avatar";
         private const string GeneratedTextureDir = "Assets/_Game/Art/Textures/UI";
         private const string CatalogPath = "Assets/_Game/Data/UI/VictoryRewardCatalog.asset";
 
@@ -51,7 +50,6 @@ namespace AlienDefense.EditorTools
         private static readonly Color PopupBody = new Color(0.10f, 0.33f, 0.62f, 1f);
         private static readonly Color RowTint = new Color(0.07f, 0.24f, 0.45f, 0.75f);
         private static readonly Color CoinTheme = new Color(0.27f, 0.72f, 0.33f, 1f);
-        private static readonly Color GemTheme = new Color(0.55f, 0.32f, 0.85f, 1f);
         private static readonly Color XpTheme = new Color(0.18f, 0.56f, 0.87f, 1f);
 
         [MenuItem("AlienDefense/Setup/HUD/Rebuild Victory Panel (Open Scene)")]
@@ -156,6 +154,7 @@ namespace AlienDefense.EditorTools
             Place(rewardSection.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0f, -BottomBoxTop * PanelHeight), new Vector2(boxWidth, bottomHeight));
 
             BuildRewardGrid(rewardSection.transform, so, boxWidth);
+            so.FindProperty("_rewardGrid").objectReferenceValue = rewardSection.GetComponent<RectTransform>();
             TMP_Text noReward = Text(rewardSection.transform, "NoRewardLabel", "No rewards", new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(boxWidth - 40f, 60f), 34f, TextAlignmentOptions.Center, SubText, FontStyles.Bold);
             so.FindProperty("_noRewardLabel").objectReferenceValue = noReward.gameObject;
@@ -176,6 +175,7 @@ namespace AlienDefense.EditorTools
             so.FindProperty("_statisticsButton").objectReferenceValue = statsButton;
             so.FindProperty("_nextButton").objectReferenceValue = next;
             so.FindProperty("_rewardCatalog").objectReferenceValue = catalog;
+            VictoryRewardSetup.ApplyPanelReferences(so);
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(view);
             return view;
@@ -366,6 +366,7 @@ namespace AlienDefense.EditorTools
                 row.FindPropertyRelative("PercentText").objectReferenceValue = percent;
                 row.FindPropertyRelative("ValueText").objectReferenceValue = valueText;
                 row.FindPropertyRelative("Bar").objectReferenceValue = barImage;
+                VictoryRewardSetup.AddStatStars(rowObject.transform, row);
                 rowObject.SetActive(false);
             }
 
@@ -392,59 +393,13 @@ namespace AlienDefense.EditorTools
         // Catalog + generated art
         // ------------------------------------------------------------------------------------------------------------
 
+        /// <summary>Every reward kind's name, text and art live in VictoryRewardSetup, so a rebuild never drops the
+        /// card and blueprint entries.</summary>
         private static VictoryRewardCatalog EnsureCatalog()
         {
             EnsureFolder(Path.GetDirectoryName(CatalogPath).Replace('\\', '/'));
-            var catalog = AssetDatabase.LoadAssetAtPath<VictoryRewardCatalog>(CatalogPath);
-            if (catalog == null)
-            {
-                catalog = ScriptableObject.CreateInstance<VictoryRewardCatalog>();
-                AssetDatabase.CreateAsset(catalog, CatalogPath);
-            }
-
-            var entries = new List<VictoryRewardCatalog.Entry>
-            {
-                new VictoryRewardCatalog.Entry
-                {
-                    Type = VictoryRewardType.Coins,
-                    DisplayName = "Coins",
-                    Description = "Basic currency for essential items and upgrades",
-                    Icon = Load(MenuIconDir, "coinicon"),
-                    HeaderColor = CoinTheme,
-                },
-                new VictoryRewardCatalog.Entry
-                {
-                    Type = VictoryRewardType.Gems,
-                    DisplayName = "Gems",
-                    Description = "Premium currency earned by clearing a level with three stars",
-                    Icon = Load(MenuIconDir, "diamondicon"),
-                    HeaderColor = GemTheme,
-                },
-                new VictoryRewardCatalog.Entry
-                {
-                    Type = VictoryRewardType.Experience,
-                    DisplayName = "Experience",
-                    Description = "Experience collected during this level",
-                    Icon = Load(MenuIconDir, "lightningicon"),
-                    HeaderColor = XpTheme,
-                },
-            };
-
-            var so = new SerializedObject(catalog);
-            SerializedProperty array = so.FindProperty("_entries");
-            array.arraySize = entries.Count;
-            for (int i = 0; i < entries.Count; i++)
-            {
-                SerializedProperty entry = array.GetArrayElementAtIndex(i);
-                entry.FindPropertyRelative("Type").enumValueIndex = (int)entries[i].Type;
-                entry.FindPropertyRelative("DisplayName").stringValue = entries[i].DisplayName;
-                entry.FindPropertyRelative("Description").stringValue = entries[i].Description;
-                entry.FindPropertyRelative("Icon").objectReferenceValue = entries[i].Icon;
-                entry.FindPropertyRelative("HeaderColor").colorValue = entries[i].HeaderColor;
-            }
-
-            so.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(catalog);
+            VictoryRewardCatalog catalog = VictoryRewardSetup.LoadOrCreateCatalog();
+            VictoryRewardSetup.FillCatalog(catalog);
             return catalog;
         }
 

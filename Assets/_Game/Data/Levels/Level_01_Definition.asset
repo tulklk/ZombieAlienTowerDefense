@@ -29,3 +29,40 @@ MonoBehaviour:
   _waves:
   - {fileID: 11400000, guid: c89e129dcc9c60e45b93709e2f974cbb, type: 2}
   _bossEncounter: {fileID: 11400000, guid: da863f9ed8dd58a4ba36d9fe004eea69, type: 2}
+  _victoryRewards:
+  - Type: 0
+    Amount: 5800
+    Grant: 0
+    Requirement: 0
+  - Type: 2
+    Amount: 3000
+    Grant: 0
+    Requirement: 0
+  - Type: 3
+    Amount: 5
+    Grant: 0
+    Requirement: 0
+  - Type: 4
+    Amount: 10
+    Grant: 0
+    Requirement: 0
+  - Type: 6
+    Amount: 20
+    Grant: 0
+    Requirement: 0
+  - Type: 5
+    Amount: 10
+    Grant: 0
+    Requirement: 0
+  - Type: 7
+    Amount: 5
+    Grant: 0
+    Requirement: 0
+  - Type: 8
+    Amount: 1
+    Grant: 0
+    Requirement: 0
+  - Type: 9
+    Amount: 3
+    Grant: 0
+    Requirement: 0

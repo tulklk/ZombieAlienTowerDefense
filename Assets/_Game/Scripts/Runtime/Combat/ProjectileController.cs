@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using AlienDefense.Vfx;
 using UnityEngine;
@@ -139,7 +140,17 @@ namespace AlienDefense.Combat
             }
         }
 
+        private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("AlienDefense.Projectile.Update");
+
         private void Update()
+        {
+            using (UpdateMarker.Auto())
+            {
+                UpdateCore();
+            }
+        }
+
+        private void UpdateCore()
         {
             if (!_isInitialized)
             {

@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using AlienDefense.Enemies;
 using UnityEngine;
 
@@ -34,7 +35,17 @@ namespace AlienDefense.Towers
             _strategy = strategy;
         }
 
+        private static readonly ProfilerMarker TickMarker = new ProfilerMarker("AlienDefense.Tower.TargetSearch");
+
         public void Tick(float deltaTime)
+        {
+            using (TickMarker.Auto())
+            {
+                TickCore(deltaTime);
+            }
+        }
+
+        private void TickCore(float deltaTime)
         {
             if (CurrentTarget != null && (!CurrentTarget.IsTargetable || !IsWithinRange(CurrentTarget)))
             {

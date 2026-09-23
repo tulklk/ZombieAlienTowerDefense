@@ -25,18 +25,26 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CoreIntensity: 0.85
-    - _EmissionStrength: 1.15
-    - _NoiseScale: 3
-    - _NoiseSpeed: 0.7
-    - _NoiseStrength: 0.1
-    - _PulseAmount: 0.12
-    - _PulseSpeed: 2
-    - _RimPower: 2
-    - _RimStrength: 1.1
+    - _CoreIntensity: 1
+    - _EmissionStrength: 0.95
+    - _HighlightPower: 34
+    - _HighlightStrength: 0.45
+    - _NoiseScale: 4
+    - _NoiseSpeed: 0.8
+    - _NoiseStrength: 0.06
+    - _PulseAmount: 1.5
+    - _PulseDim: 0.5
+    - _PulseFocus: 0.18
+    - _PulseSpeed: 3.4
+    - _RimPower: 2.6
+    - _RimStart: 0.1
+    - _RimStrength: 1
     m_Colors:
     - _BaseColor: {r: 0, g: 0.455, b: 0.851, a: 1}
-    - _CoreColor: {r: 0.333, g: 1, b: 1, a: 1}
-    - _RimColor: {r: 0.549, g: 1, b: 1, a: 1}
+    - _CoreColor: {r: 0.1, g: 0.52, b: 1, a: 1}
+    - _HighlightColor: {r: 0.45, g: 0.82, b: 1, a: 1}
+    - _MidColor: {r: 0.01, g: 0.26, b: 0.86, a: 1}
+    - _PulseColor: {r: 0.01, g: 0.26, b: 1, a: 1}
+    - _RimColor: {r: 0, g: 0.06, b: 0.3, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

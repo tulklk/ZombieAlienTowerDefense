@@ -55,10 +55,10 @@ namespace AlienDefense.EditorTools
                 // "+6"
                 RectTransform numberRect = NewRect("Amount", content);
                 numberRect.sizeDelta = new Vector2(120f, 56f);
-                numberRect.anchoredPosition = new Vector2(-48f, 0f);
+                numberRect.anchoredPosition = new Vector2(-56f, 0f);
                 var number = numberRect.gameObject.AddComponent<TextMeshProUGUI>();
                 number.font = font;
-                number.fontSize = 42f;
+                number.fontSize = 50f;
                 number.fontStyle = FontStyles.Bold;
                 number.alignment = TextAlignmentOptions.Right;
                 number.textWrappingMode = TextWrappingModes.NoWrap;
@@ -70,8 +70,8 @@ namespace AlienDefense.EditorTools
 
                 // The badge, tilted like the reference.
                 RectTransform badgeRect = NewRect("XpBadge", content);
-                badgeRect.sizeDelta = new Vector2(66f, 66f);
-                badgeRect.anchoredPosition = new Vector2(38f, 0f);
+                badgeRect.sizeDelta = new Vector2(78f, 78f);
+                badgeRect.anchoredPosition = new Vector2(44f, 0f);
                 badgeRect.localRotation = Quaternion.Euler(0f, 0f, -8f);
                 var badgeImage = badgeRect.gameObject.AddComponent<Image>();
                 badgeImage.sprite = badge;
@@ -84,7 +84,7 @@ namespace AlienDefense.EditorTools
                 lettersRect.offsetMin = lettersRect.offsetMax = Vector2.zero;
                 var letters = lettersRect.gameObject.AddComponent<TextMeshProUGUI>();
                 letters.font = font;
-                letters.fontSize = 30f;
+                letters.fontSize = 34f;
                 letters.fontStyle = FontStyles.Bold;
                 letters.alignment = TextAlignmentOptions.Center;
                 letters.color = BadgeLetters;

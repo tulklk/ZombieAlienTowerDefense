@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -487,7 +488,17 @@ namespace AlienDefense.Waves
             return SpawnTrackedEnemy(definition, _waveRunId);
         }
 
+        private static readonly ProfilerMarker SpawnMarker = new ProfilerMarker("AlienDefense.WaveController.SpawnEnemy");
+
         private EnemyController SpawnTrackedEnemy(EnemyDefinition definition, int runId)
+        {
+            using (SpawnMarker.Auto())
+            {
+                return SpawnTrackedEnemyCore(definition, runId);
+            }
+        }
+
+        private EnemyController SpawnTrackedEnemyCore(EnemyDefinition definition, int runId)
         {
             Vector3 spawnPosition = _path.GetPoint(0);
             Quaternion spawnRotation = ComputeSpawnRotation();
@@ -516,6 +527,16 @@ namespace AlienDefense.Waves
 
                 _tracker.RecordEnemyResolved();
                 RaiseProgressChanged();
+
+                // Killing the boss wins the level on the spot, whatever is still walking - LevelCompositionRoot
+                // clears the stragglers. Only a real kill counts: a boss that walks into the base does not win.
+                if (_bossEncounterRunning && resolvedEnemy == _bossEncounterBoss
+                    && (reason == EnemyResolveReason.Defeated || reason == EnemyResolveReason.Captured))
+                {
+                    CompleteBossEncounter();
+                    return;
+                }
+
                 TryCompleteWave(_waveRunId);
             }
 
@@ -672,6 +693,25 @@ namespace AlienDefense.Waves
                 CurrentWaveIndex++;
                 BeginPreparation();
             }
+        }
+
+        /// <summary>Closes the level from the boss kill: the encounter counts as cleared even with escorts,
+        /// summoned minions or earlier stragglers still alive. Anything still tracked resolves harmlessly afterwards -
+        /// TryCompleteWave ignores a run that is already Completed.</summary>
+        private void CompleteBossEncounter()
+        {
+            if (CurrentState == WaveState.Completed && !_bossEncounterRunning)
+            {
+                return;
+            }
+
+            CurrentState = WaveState.Completed;
+            _bossEncounterRunning = false;
+            _bossEncounterGroup.Clear();
+            _bossEncounterBoss = null;
+            EncounterPhase = BossEncounterPhase.Cleared;
+            StopBossCountdown();
+            FireAllWavesCompleted();
         }
 
         private void FireAllWavesCompleted()

@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using AlienDefense.Common;
 using UnityEngine;
@@ -156,7 +157,17 @@ namespace AlienDefense.Enemies
             _behaviorSpeedMultiplier = Mathf.Max(0f, multiplier);
         }
 
+        private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("AlienDefense.EnemyMovement.Update");
+
         private void Update()
+        {
+            using (UpdateMarker.Auto())
+            {
+                UpdateCore();
+            }
+        }
+
+        private void UpdateCore()
         {
             if (!_isInitialized || !_isMoving || _isPaused)
             {

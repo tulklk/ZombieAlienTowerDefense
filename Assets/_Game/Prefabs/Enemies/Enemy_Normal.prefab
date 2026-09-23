@@ -585,13 +585,18 @@ PrefabInstance:
     - target: {fileID: 1110153609883755096, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
         type: 3}
       propertyPath: m_CullingMode
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 2624144870075657859, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
         type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 4300000, guid: c4f1e81afa0eda04681b2f8493422566, type: 2}
+    - target: {fileID: 2624144870075657859, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
+        type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2624144870075657859, guid: 64bbdb1e0ebbf704c85f86f497a1819d,
         type: 3}
       propertyPath: m_SkinnedMotionVectors

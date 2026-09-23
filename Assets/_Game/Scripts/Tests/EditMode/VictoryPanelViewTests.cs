@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using AlienDefense.Combat;
 using AlienDefense.Progression;
 using AlienDefense.UI;
 using NUnit.Framework;
@@ -37,10 +36,10 @@ namespace AlienDefense.Tests.EditMode
 
             view.Show(Result(
                 rewards: new List<VictoryReward> { new VictoryReward(VictoryRewardType.Coins, 1200) },
-                sources: new List<CombatStatsService.Contributor>
+                sources: new List<DamageResultEntry>
                 {
-                    new CombatStatsService.Contributor("Mortar Tower", null, 1600f),
-                    new CombatStatsService.Contributor("Blaster Tower", null, 400f),
+                    new DamageResultEntry("Mortar Tower", null, 1600f),
+                    new DamageResultEntry("Blaster Tower", null, 400f),
                 },
                 totalDamage: 2000f));
 
@@ -59,7 +58,7 @@ namespace AlienDefense.Tests.EditMode
         {
             (VictoryPanelView view, Parts parts) = CreateView();
 
-            view.Show(Result(new List<VictoryReward>(), new List<CombatStatsService.Contributor>(), 0f));
+            view.Show(Result(new List<VictoryReward>(), new List<DamageResultEntry>(), 0f));
 
             Assert.IsTrue(parts.NoRewardLabel.activeSelf);
             Assert.IsTrue(parts.NoDamageLabel.activeSelf);
@@ -74,10 +73,10 @@ namespace AlienDefense.Tests.EditMode
 
             view.Show(Result(
                 new List<VictoryReward>(),
-                new List<CombatStatsService.Contributor>
+                new List<DamageResultEntry>
                 {
-                    new CombatStatsService.Contributor("Mortar Tower", null, 750f),
-                    new CombatStatsService.Contributor("Rocket", null, 250f),
+                    new DamageResultEntry("Mortar Tower", null, 750f),
+                    new DamageResultEntry("Rocket", null, 250f),
                 },
                 totalDamage: 1000f));
 
@@ -89,7 +88,7 @@ namespace AlienDefense.Tests.EditMode
             // A level where nothing landed must not divide by zero.
             view.Show(Result(
                 new List<VictoryReward>(),
-                new List<CombatStatsService.Contributor> { new CombatStatsService.Contributor("Rocket", null, 0f) },
+                new List<DamageResultEntry> { new DamageResultEntry("Rocket", null, 0f) },
                 totalDamage: 0f));
 
             Assert.AreEqual("0%", parts.Stats[0].Percent.text);
@@ -103,7 +102,7 @@ namespace AlienDefense.Tests.EditMode
             int clicks = 0;
             view.NextClicked += () => clicks++;
 
-            view.Show(Result(new List<VictoryReward>(), new List<CombatStatsService.Contributor>(), 0f));
+            view.Show(Result(new List<VictoryReward>(), new List<DamageResultEntry>(), 0f));
 
             parts.NextButton.onClick.Invoke();
             parts.NextButton.onClick.Invoke(); // a second tap before the scene swaps must not count
@@ -112,8 +111,113 @@ namespace AlienDefense.Tests.EditMode
             Assert.IsFalse(parts.NextButton.interactable);
         }
 
+        [TestCase(20, 20, "Perfect Clear")]
+        [TestCase(13, 20, "Remaining HP: ")]
+        [TestCase(10, 20, "Remaining HP: ")]
+        [TestCase(9, 20, "Clear")]
+        [TestCase(1, 20, "Clear")]
+        public void ResultLine_FollowsTheBaseHpRule(int remaining, int max, string expectedStart)
+        {
+            (VictoryPanelView view, Parts parts) = CreateView();
+
+            view.Show(new LevelVictoryResult("level_01", "CAMPAIGN LEVEL 1", 1, isPerfectClear: remaining >= max,
+                remaining, max, new List<VictoryReward>(), new List<DamageResultEntry>(), 0f, hasNextLevel: true));
+
+            StringAssert.StartsWith(expectedStart, parts.ResultText.text);
+            if (expectedStart == "Clear")
+            {
+                Assert.AreEqual("Clear", parts.ResultText.text, "Below 50% the line is just 'Clear'.");
+            }
+        }
+
+        [Test]
+        public void ResultLine_ShowsTheRemainingPercent()
+        {
+            (VictoryPanelView view, Parts parts) = CreateView();
+
+            // 62% of the base left (Acceptance test 9).
+            view.Show(new LevelVictoryResult("level_01", "CAMPAIGN LEVEL 1", 2, isPerfectClear: false,
+                62, 100, new List<VictoryReward>(), new List<DamageResultEntry>(), 0f, hasNextLevel: true));
+
+            StringAssert.Contains("62%", parts.ResultText.text);
+            StringAssert.StartsWith("Remaining HP: ", parts.ResultText.text);
+        }
+
+        [Test]
+        public void Rewards_MoreThanTheBuiltTiles_GrowThePoolOnce()
+        {
+            (VictoryPanelView view, Parts parts) = CreateView();
+            var rewards = new List<VictoryReward>
+            {
+                new VictoryReward(VictoryRewardType.Coins, 5800),
+                new VictoryReward(VictoryRewardType.Experience, 3000),
+                new VictoryReward(VictoryRewardType.UfoBaseCard, 5),
+                new VictoryReward(VictoryRewardType.BlasterCard, 10),
+                new VictoryReward(VictoryRewardType.FrostCard, 20),
+            };
+
+            view.Show(Result(rewards, new List<DamageResultEntry>(), 0f));
+            int tilesAfterFirstShow = parts.Rewards[0].Root.transform.parent.childCount;
+            view.Show(Result(rewards, new List<DamageResultEntry>(), 0f));
+
+            Assert.AreEqual(tilesAfterFirstShow, parts.Rewards[0].Root.transform.parent.childCount,
+                "Showing the panel again reuses the clones instead of instantiating more.");
+
+            var shownAmounts = new List<string>();
+            foreach (Transform child in parts.Rewards[0].Root.transform.parent)
+            {
+                var amount = child.Find("Amount")?.GetComponent<TMP_Text>();
+                if (child.name.StartsWith("Reward") && child.gameObject.activeSelf && amount != null)
+                {
+                    shownAmounts.Add(amount.text);
+                }
+            }
+
+            CollectionAssert.AreEquivalent(new[] { "5.8K", "3K", "5", "10", "20" }, shownAmounts,
+                "Every granted reward gets a tile with its compact amount.");
+        }
+
+        [Test]
+        public void Statistics_ThreeTowers_SplitFiftyThirtyTwenty()
+        {
+            (VictoryPanelView view, Parts parts) = CreateView(statRows: 3);
+
+            view.Show(Result(new List<VictoryReward>(), new List<DamageResultEntry>
+            {
+                new DamageResultEntry("Blaster", null, 500f),
+                new DamageResultEntry("Mortar", null, 300f),
+                new DamageResultEntry("Frost", null, 200f),
+            }, 1000f));
+
+            Assert.AreEqual("All Damage: 1K", parts.StatsTotal.text);
+            Assert.AreEqual("50%", parts.Stats[0].Percent.text);
+            Assert.AreEqual("30%", parts.Stats[1].Percent.text);
+            Assert.AreEqual("20%", parts.Stats[2].Percent.text);
+            Assert.AreEqual(0.5f, parts.Stats[0].Bar.fillAmount, 0.001f);
+        }
+
+        [Test]
+        public void OpeningAndClosingPopups_ChangesNoNumbers()
+        {
+            (VictoryPanelView view, Parts parts) = CreateView();
+            view.Show(Result(
+                new List<VictoryReward> { new VictoryReward(VictoryRewardType.Coins, 1200) },
+                new List<DamageResultEntry> { new DamageResultEntry("Blaster", null, 1000f) },
+                1000f));
+
+            for (int i = 0; i < 3; i++)
+            {
+                parts.StatisticsButton.onClick.Invoke();
+                parts.RewardButtons[0].onClick.Invoke(); // a reward tap only opens its detail popup
+            }
+
+            Assert.AreEqual("All Damage: 1K", parts.StatsTotal.text);
+            Assert.AreEqual("100%", parts.Stats[0].Percent.text);
+            Assert.AreEqual("1.2K", parts.Rewards[0].Amount.text);
+        }
+
         private static LevelVictoryResult Result(List<VictoryReward> rewards,
-            List<CombatStatsService.Contributor> sources, float totalDamage)
+            List<DamageResultEntry> sources, float totalDamage)
         {
             return new LevelVictoryResult("level_01", "CAMPAIGN LEVEL 1", 3, isPerfectClear: true,
                 remainingBaseHealth: 20, maxBaseHealth: 20, rewards, sources, totalDamage, hasNextLevel: true);
@@ -152,9 +256,10 @@ namespace AlienDefense.Tests.EditMode
             public LeaderParts[] Leaders;
             public StatParts[] Stats;
             public RewardParts[] Rewards;
+            public Button[] RewardButtons;
         }
 
-        private (VictoryPanelView, Parts) CreateView()
+        private (VictoryPanelView, Parts) CreateView(int statRows = 2)
         {
             var root = new GameObject("VictoryPanel");
             _objects.Add(root);
@@ -164,8 +269,9 @@ namespace AlienDefense.Tests.EditMode
             var parts = new Parts
             {
                 Leaders = new LeaderParts[2],
-                Stats = new StatParts[2],
+                Stats = new StatParts[statRows],
                 Rewards = new RewardParts[2],
+                RewardButtons = new Button[2],
                 LevelText = NewText(root, "LevelText"),
                 ResultText = NewText(root, "ResultText"),
                 StatsTotal = NewText(root, "StatsTotal"),
@@ -223,7 +329,8 @@ namespace AlienDefense.Tests.EditMode
                 TMP_Text amount = NewText(item, "Amount");
                 SerializedProperty element = rewards.GetArrayElementAtIndex(i);
                 element.FindPropertyRelative("Root").objectReferenceValue = item;
-                element.FindPropertyRelative("Button").objectReferenceValue = NewButton(item, "Button");
+                parts.RewardButtons[i] = NewButton(item, "Button");
+                element.FindPropertyRelative("Button").objectReferenceValue = parts.RewardButtons[i];
                 element.FindPropertyRelative("Icon").objectReferenceValue = NewImage(item, "Icon");
                 element.FindPropertyRelative("AmountText").objectReferenceValue = amount;
                 parts.Rewards[i] = new RewardParts { Root = item, Amount = amount };

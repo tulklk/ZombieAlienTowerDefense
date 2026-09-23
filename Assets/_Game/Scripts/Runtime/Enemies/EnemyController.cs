@@ -67,6 +67,8 @@ namespace AlienDefense.Enemies
 
         private bool _isResolved;
         private bool _isCaptured;
+        private bool _cinematicHold;
+        private bool _releaseDeferredByHold;
         private bool _isCombatActive = true;
         private Animator _animator;
         private float _animatorSpeedBeforeFreeze = 1f;
@@ -169,6 +171,8 @@ namespace AlienDefense.Enemies
             RestoreCombatActive();
             _isResolved = false;
             _isCaptured = false;
+            _cinematicHold = false;
+            _releaseDeferredByHold = false;
             _generation++;
 
             float health = definition.MaxHealth * modifiers.HealthMultiplier;
@@ -219,6 +223,39 @@ namespace AlienDefense.Enemies
         public void ForceResolve(EnemyResolveReason reason)
         {
             Resolve(reason);
+        }
+
+        /// <summary>Keeps this instance out of the pool after it dies so something else can keep showing it - the
+        /// victory cinematic orbits the boss's body long after EnemyDeathVisual's hold would have recycled it.
+        /// The enemy is already resolved by then (unregistered, untargetable, no rewards left to give), so this
+        /// only postpones the pool release. Returns false when it is already back in the pool, so the caller can
+        /// fall back instead of animating around a recycled object.</summary>
+        public bool TryHoldForCinematic()
+        {
+            if (!gameObject.activeSelf)
+            {
+                return false;
+            }
+
+            _cinematicHold = true;
+            return true;
+        }
+
+        /// <summary>Ends a <see cref="TryHoldForCinematic"/> hold and performs the pool release that was waiting
+        /// on it. Safe to call when no hold is active.</summary>
+        public void ReleaseCinematicHold()
+        {
+            if (!_cinematicHold)
+            {
+                return;
+            }
+
+            _cinematicHold = false;
+            if (_releaseDeferredByHold)
+            {
+                _releaseDeferredByHold = false;
+                _releaseToPool?.Invoke(this);
+            }
         }
 
         /// <summary>Called by the owning pool when this instance is returned, including prewarm.</summary>
@@ -355,13 +392,25 @@ namespace AlienDefense.Enemies
             }
             else
             {
-                _releaseToPool?.Invoke(this);
+                ReleaseToPool();
             }
         }
 
         private IEnumerator ReleaseAfterDeathVisual()
         {
             yield return new WaitForSeconds(_deathVisual.Duration);
+            ReleaseToPool();
+        }
+
+        /// <summary>The single exit back to the pool, so a cinematic hold cannot be bypassed by one of the paths.</summary>
+        private void ReleaseToPool()
+        {
+            if (_cinematicHold)
+            {
+                _releaseDeferredByHold = true;
+                return;
+            }
+
             _releaseToPool?.Invoke(this);
         }
     }

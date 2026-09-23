@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System.Collections.Generic;
 using AlienDefense.Building;
 using AlienDefense.Core;
@@ -97,7 +98,17 @@ namespace AlienDefense.UI.Minimap
             _controller.InitializeBuildNodes(buildNodePositions);
         }
 
+        private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("AlienDefense.Minimap.Update");
+
         private void Update()
+        {
+            using (UpdateMarker.Auto())
+            {
+                UpdateCore();
+            }
+        }
+
+        private void UpdateCore()
         {
             if (_player == null)
             {

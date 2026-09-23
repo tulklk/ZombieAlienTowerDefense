@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using System.Collections.Generic;
 using AlienDefense.Combat;
@@ -171,7 +172,17 @@ namespace AlienDefense.UI
             Place(view);
         }
 
+        private static readonly ProfilerMarker LateUpdateMarker = new ProfilerMarker("AlienDefense.DamagePopups.LateUpdate");
+
         private void LateUpdate()
+        {
+            using (LateUpdateMarker.Auto())
+            {
+                LateUpdateCore();
+            }
+        }
+
+        private void LateUpdateCore()
         {
             for (int i = 0; i < _active.Count; i++)
             {

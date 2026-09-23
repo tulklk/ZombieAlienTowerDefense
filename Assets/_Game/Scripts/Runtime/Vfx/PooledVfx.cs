@@ -18,9 +18,21 @@ namespace AlienDefense.Vfx
         private float _lifetime;
         private float _elapsed;
         private bool _isActive;
+        private Vector3 _prefabScale;
+        private bool _hasPrefabScale;
+
+        /// <summary>Uniform size for this one playback (1 = the prefab's own scale). Always reset on release, so a
+        /// scaled-up one-off - a boss explosion sized from the boss itself - never leaks into the next user of the
+        /// pooled instance.</summary>
+        public void SetScaleMultiplier(float multiplier)
+        {
+            CachePrefabScale();
+            transform.localScale = _prefabScale * Mathf.Max(0.01f, multiplier);
+        }
 
         public void Play(float lifetime, Action<PooledVfx> releaseToPool)
         {
+            CachePrefabScale();
             _lifetime = Mathf.Max(0.05f, lifetime);
             _releaseToPool = releaseToPool;
             _elapsed = 0f;
@@ -47,6 +59,11 @@ namespace AlienDefense.Vfx
             _isActive = false;
             _elapsed = 0f;
 
+            if (_hasPrefabScale)
+            {
+                transform.localScale = _prefabScale;
+            }
+
             for (int i = 0; i < _particleSystems.Length; i++)
             {
                 if (_particleSystems[i] != null)
@@ -54,6 +71,17 @@ namespace AlienDefense.Vfx
                     _particleSystems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 }
             }
+        }
+
+        private void CachePrefabScale()
+        {
+            if (_hasPrefabScale)
+            {
+                return;
+            }
+
+            _prefabScale = transform.localScale;
+            _hasPrefabScale = true;
         }
 
         private void Update()

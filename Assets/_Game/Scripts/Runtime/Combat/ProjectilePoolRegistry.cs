@@ -45,6 +45,21 @@ namespace AlienDefense.Combat
             return pool;
         }
 
+        /// <summary>Projectiles alive across every pool; read-only, for the development performance monitor.</summary>
+        public int TotalActive
+        {
+            get
+            {
+                int total = 0;
+                foreach (ProjectilePool pool in _pools.Values)
+                {
+                    total += pool.ActiveCount;
+                }
+
+                return total;
+            }
+        }
+
         public void Clear()
         {
             foreach (ProjectilePool pool in _pools.Values)

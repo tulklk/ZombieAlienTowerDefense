@@ -96,7 +96,8 @@ namespace AlienDefense.UI
         {
             if (_canvasGroup != null)
             {
-                _canvasGroup.alpha = 1f - _progress;
+                // Stays fully readable for the first part of its life, then fades out.
+                _canvasGroup.alpha = 1f - Mathf.InverseLerp(0.45f, 1f, _progress);
             }
         }
 

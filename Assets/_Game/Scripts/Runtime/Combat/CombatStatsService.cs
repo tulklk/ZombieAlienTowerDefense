@@ -20,11 +20,15 @@ namespace AlienDefense.Combat
             public readonly Sprite Icon;
             public readonly float Damage;
 
-            public Contributor(string name, Sprite icon, float damage)
+            /// <summary>The tower type behind this line; null for the UFO and anything that is not a tower.</summary>
+            public readonly TowerDefinition Tower;
+
+            public Contributor(string name, Sprite icon, float damage, TowerDefinition tower = null)
             {
                 Name = name;
                 Icon = icon;
                 Damage = damage;
+                Tower = tower;
             }
         }
 
@@ -33,6 +37,7 @@ namespace AlienDefense.Combat
             public string Name;
             public Sprite Icon;
             public float Damage;
+            public TowerDefinition Tower;
         }
 
         private readonly Dictionary<string, Entry> _entries = new Dictionary<string, Entry>();
@@ -55,7 +60,7 @@ namespace AlienDefense.Combat
             _leaders.Clear();
             foreach (Entry entry in _entries.Values)
             {
-                _leaders.Add(new Contributor(entry.Name, entry.Icon, entry.Damage));
+                _leaders.Add(new Contributor(entry.Name, entry.Icon, entry.Damage, entry.Tower));
             }
 
             _leaders.Sort((a, b) => b.Damage.CompareTo(a.Damage));
@@ -65,6 +70,13 @@ namespace AlienDefense.Combat
             }
 
             return _leaders;
+        }
+
+        /// <summary>Starts a fresh match: every total goes back to zero. Called when a level (or a restart of it)
+        /// is built - never when the victory panel opens, which only reads the finished numbers.</summary>
+        public void BeginRun()
+        {
+            Reset();
         }
 
         public void Reset()
@@ -87,6 +99,13 @@ namespace AlienDefense.Combat
 
         private void HandleDamageApplied(GameObject source, float amount)
         {
+            RegisterDamage(source, amount);
+        }
+
+        /// <summary>Adds damage that actually came off an enemy's health (EnemyHealth reports it after clamping,
+        /// so overkill never counts). Normally fed by EnemyHealth.DamageApplied.</summary>
+        public void RegisterDamage(GameObject source, float amount)
+        {
             if (source == null || amount <= 0f)
             {
                 return;
@@ -99,25 +118,27 @@ namespace AlienDefense.Combat
             int id = source.GetInstanceID();
             if (!_sourceKeys.TryGetValue(id, out string key))
             {
-                Resolve(source, out key, out string name, out Sprite icon);
+                Resolve(source, out key, out string name, out Sprite icon, out TowerDefinition tower);
                 _sourceKeys[id] = key;
                 if (!_entries.ContainsKey(key))
                 {
-                    _entries[key] = new Entry { Name = name, Icon = icon };
+                    _entries[key] = new Entry { Name = name, Icon = icon, Tower = tower };
                 }
             }
 
             _entries[key].Damage += amount;
         }
 
-        private void Resolve(GameObject source, out string key, out string name, out Sprite icon)
+        private void Resolve(GameObject source, out string key, out string name, out Sprite icon, out TowerDefinition tower)
         {
-            var tower = source.GetComponentInParent<TowerController>();
-            if (tower != null && tower.Definition != null)
+            tower = null;
+            var towerController = source.GetComponentInParent<TowerController>();
+            if (towerController != null && towerController.Definition != null)
             {
-                key = "tower:" + tower.Definition.name;
-                name = string.IsNullOrEmpty(tower.Definition.DisplayName) ? tower.Definition.name : tower.Definition.DisplayName;
-                icon = tower.Definition.Icon;
+                key = "tower:" + towerController.Definition.name;
+                name = string.IsNullOrEmpty(towerController.Definition.DisplayName) ? towerController.Definition.name : towerController.Definition.DisplayName;
+                icon = towerController.Definition.Icon;
+                tower = towerController.Definition;
                 return;
             }
 

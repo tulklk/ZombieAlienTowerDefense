@@ -18,14 +18,59 @@ MonoBehaviour:
     Description: Basic currency for essential items and upgrades
     Icon: {fileID: 21300000, guid: 50b6f41324ed46c46b0a574873fcbdbf, type: 3}
     HeaderColor: {r: 0.27, g: 0.72, b: 0.33, a: 1}
+    IconHasOwnFrame: 0
   - Type: 1
     DisplayName: Gems
     Description: Premium currency earned by clearing a level with three stars
     Icon: {fileID: 21300000, guid: a202e06c9c2fdce4e80178e0291703e3, type: 3}
     HeaderColor: {r: 0.55, g: 0.32, b: 0.85, a: 1}
+    IconHasOwnFrame: 0
   - Type: 2
-    DisplayName: Experience
-    Description: Experience collected during this level
-    Icon: {fileID: 21300000, guid: 82ccf7aeb1ee12641af30ea8304239ad, type: 3}
+    DisplayName: Player XP
+    Description: Earn XP to level up your character
+    Icon: {fileID: 21300000, guid: c7226204146589843b6cb8945a71cfab, type: 3}
     HeaderColor: {r: 0.18, g: 0.56, b: 0.87, a: 1}
+    IconHasOwnFrame: 0
+  - Type: 3
+    DisplayName: UFO Base upgrade card
+    Description: Upgrade part required for the UFO Base
+    Icon: {fileID: 21300000, guid: 74815771b6abfc14fbcaa9e822bff306, type: 3}
+    HeaderColor: {r: 0.1, g: 0.62, b: 0.78, a: 1}
+    IconHasOwnFrame: 1
+  - Type: 4
+    DisplayName: Blaster Tower upgrade card
+    Description: Upgrade part required for the Blaster Tower
+    Icon: {fileID: 21300000, guid: 9b47d97294833854582d5a0b32c22abf, type: 3}
+    HeaderColor: {r: 0.1, g: 0.62, b: 0.78, a: 1}
+    IconHasOwnFrame: 1
+  - Type: 5
+    DisplayName: Mortar Tower upgrade card
+    Description: Upgrade part required for the Mortar Tower
+    Icon: {fileID: 21300000, guid: f8071b9a806924746a3ead9b92ac2480, type: 3}
+    HeaderColor: {r: 0.1, g: 0.62, b: 0.78, a: 1}
+    IconHasOwnFrame: 1
+  - Type: 6
+    DisplayName: Frost Tower upgrade card
+    Description: Upgrade part required for the Frost Tower
+    Icon: {fileID: 21300000, guid: 035bdf66cddd9404aa9e255dd3670908, type: 3}
+    HeaderColor: {r: 0.1, g: 0.62, b: 0.78, a: 1}
+    IconHasOwnFrame: 1
+  - Type: 7
+    DisplayName: Tesla upgrade card
+    Description: Upgrade part required for the Tesla
+    Icon: {fileID: 21300000, guid: cc8ac4a0a5957d14d87354adb897bcd7, type: 3}
+    HeaderColor: {r: 0.1, g: 0.62, b: 0.78, a: 1}
+    IconHasOwnFrame: 1
+  - Type: 8
+    DisplayName: Reactor blueprint
+    Description: Upgrade part required for the Reactor
+    Icon: {fileID: 21300000, guid: 7061eae58c11dae449619d22c6039026, type: 3}
+    HeaderColor: {r: 0.2, g: 0.4, b: 0.85, a: 1}
+    IconHasOwnFrame: 1
+  - Type: 9
+    DisplayName: Anti-gravity blueprint
+    Description: Upgrade part required for the Anti-Gravity
+    Icon: {fileID: 21300000, guid: 5c732ee9921198a4e976aa221b27f682, type: 3}
+    HeaderColor: {r: 0.2, g: 0.4, b: 0.85, a: 1}
+    IconHasOwnFrame: 1
   _fallbackHeaderColor: {r: 0.16, g: 0.52, b: 0.86, a: 1}

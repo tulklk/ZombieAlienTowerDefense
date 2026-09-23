@@ -6,8 +6,8 @@ using UnityEngine.UI;
 namespace AlienDefense.UI.MainMenu
 {
     /// <summary>Avatar + player level/XP bar, top-left of TopHUD. Avatar is clickable and opens the Profile overlay
-    /// (wired by MainMenuPresenter). Level/power come from PlayerProfileService.DisplayLevel + PlayerPowerCalculator;
-    /// XP fill stays at 0 until a real XP economy exists. SetUnavailable remains for callers that lack services.</summary>
+    /// (wired by MainMenuPresenter). Shows the player level and XP progress (PlayerLevelCurve over the saved lifetime
+    /// XP) and power (PlayerPowerCalculator). SetUnavailable remains for callers that lack services.</summary>
     public sealed class PlayerProfileWidgetView : MonoBehaviour
     {
         [SerializeField]
@@ -25,6 +25,10 @@ namespace AlienDefense.UI.MainMenu
 
         [SerializeField]
         private Image _xpFillImage;
+
+        [SerializeField]
+        [Tooltip("Optional. XP numbers drawn on the bar, e.g. '1.2K/3.5K'.")]
+        private TMP_Text _xpText;
 
         [SerializeField]
         [Tooltip("Optional. Secondary progression/currency line under the XP bar.")]
@@ -65,8 +69,13 @@ namespace AlienDefense.UI.MainMenu
             }
         }
 
-        public void SetLevel(int level, float xpProgress01, string secondaryText)
+        public void SetLevel(int level, float xpProgress01, string secondaryText, string xpText = null)
         {
+            if (_xpText != null)
+            {
+                _xpText.text = xpText ?? string.Empty;
+            }
+
             if (_playerLevelText != null)
             {
                 _playerLevelText.text = level.ToString();
@@ -96,6 +105,11 @@ namespace AlienDefense.UI.MainMenu
             if (_playerLevelText != null)
             {
                 _playerLevelText.text = "—";
+            }
+
+            if (_xpText != null)
+            {
+                _xpText.text = string.Empty;
             }
 
             if (_xpFillImage != null)

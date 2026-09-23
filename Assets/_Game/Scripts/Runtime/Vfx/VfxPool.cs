@@ -24,6 +24,10 @@ namespace AlienDefense.Vfx
                 Mathf.Max(1, maxSize));
         }
 
+        /// <summary>How many instances are currently checked out of the pool. Read-only bookkeeping the pool already
+        /// keeps (UnityEngine.Pool.ObjectPool) - used by the development performance monitor.</summary>
+        public int ActiveCount => _pool.CountActive;
+
         public void Prewarm(int count)
         {
             if (count <= 0)

@@ -20,6 +20,9 @@ namespace AlienDefense.UI
             public Sprite Icon;
             [Tooltip("Header colour of the detail popup for this reward.")]
             public Color HeaderColor;
+
+            [Tooltip("The icon art already draws its own card frame, so the grid tile shows no coloured frame behind it.")]
+            public bool IconHasOwnFrame;
         }
 
         [SerializeField]

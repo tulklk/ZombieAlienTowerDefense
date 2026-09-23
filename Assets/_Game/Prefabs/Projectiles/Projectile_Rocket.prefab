@@ -63,7 +63,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1080029061475765745}
-  - {fileID: 3586438361582053154}
+  - {fileID: 734129054664996571}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1598879569591027516
@@ -80,11 +80,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Combat.ProjectileController
   _trail: {fileID: 0}
   _attachedParticles:
-  - {fileID: 6550550313635160876}
-  - {fileID: 624870458981048043}
-  - {fileID: 8979080977034565125}
+  - {fileID: 6997901136057021141}
+  - {fileID: 3701480139570564882}
+  - {fileID: 5145831375217870844}
   _detonateAtLastPositionWhenTargetLost: 1
---- !u!1001 &4025463904966570539
+--- !u!1001 &876199560094376914
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -152,29 +152,29 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1ae3e87d343a88445822f7eeba93e927, type: 3}
---- !u!198 &624870458981048043 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 4573034099484339392, guid: 1ae3e87d343a88445822f7eeba93e927,
-    type: 3}
-  m_PrefabInstance: {fileID: 4025463904966570539}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &3586438361582053154 stripped
+--- !u!4 &734129054664996571 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 439317188854076681, guid: 1ae3e87d343a88445822f7eeba93e927,
     type: 3}
-  m_PrefabInstance: {fileID: 4025463904966570539}
+  m_PrefabInstance: {fileID: 876199560094376914}
   m_PrefabAsset: {fileID: 0}
---- !u!198 &6550550313635160876 stripped
+--- !u!198 &3701480139570564882 stripped
 ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 7869311210221228295, guid: 1ae3e87d343a88445822f7eeba93e927,
+  m_CorrespondingSourceObject: {fileID: 4573034099484339392, guid: 1ae3e87d343a88445822f7eeba93e927,
     type: 3}
-  m_PrefabInstance: {fileID: 4025463904966570539}
+  m_PrefabInstance: {fileID: 876199560094376914}
   m_PrefabAsset: {fileID: 0}
---- !u!198 &8979080977034565125 stripped
+--- !u!198 &5145831375217870844 stripped
 ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 5422695161092940846, guid: 1ae3e87d343a88445822f7eeba93e927,
     type: 3}
-  m_PrefabInstance: {fileID: 4025463904966570539}
+  m_PrefabInstance: {fileID: 876199560094376914}
+  m_PrefabAsset: {fileID: 0}
+--- !u!198 &6997901136057021141 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 7869311210221228295, guid: 1ae3e87d343a88445822f7eeba93e927,
+    type: 3}
+  m_PrefabInstance: {fileID: 876199560094376914}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &7220600832133699723
 PrefabInstance:

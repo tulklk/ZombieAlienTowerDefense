@@ -30,6 +30,11 @@ namespace AlienDefense.UI
         private MainMenuRewardsPresenter _rewardsPresenter;
 
         [SerializeField]
+        [Tooltip("Optional. Flies the rewards a just-finished level granted into the TopHUD. Does nothing when the " +
+            "menu was not reached from a win.")]
+        private MainMenuRewardFlyPresenter _rewardFlyPresenter;
+
+        [SerializeField]
         private MenuShellPresenter _menuShellPresenter;
 
         [SerializeField]
@@ -52,6 +57,9 @@ namespace AlienDefense.UI
             }
 
             _profilePresenter?.Initialize(services);
+
+            // Last, so the HUD it counts up has already been filled with the real totals.
+            _rewardFlyPresenter?.Initialize(services, _resourcePresenter);
 
             SetupFeatureRails();
             WireProfileAvatar();

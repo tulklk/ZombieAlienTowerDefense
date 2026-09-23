@@ -16,5 +16,8 @@ namespace AlienDefense.Save
         public bool ClearRewardClaimed;
         public bool Hp50RewardClaimed;
         public bool PerfectRewardClaimed;
+
+        /// <summary>The LevelDefinition's first-clear-only victory rewards have been paid out.</summary>
+        public bool FirstClearRewardClaimed;
     }
 }

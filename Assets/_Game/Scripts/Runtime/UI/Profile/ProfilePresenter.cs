@@ -227,7 +227,7 @@ namespace AlienDefense.UI.Profile
             }
 
             _view.SetIdentity(profile.DisplayName, profile.ProfileId, _defaultAvatarSprite);
-            _view.SetLevel(profile.DisplayLevel);
+            _view.SetLevel(_services.PlayerLevels.Evaluate(profile.PlayerExperience).Level);
             _view.SetEnergyUnavailable();
 
             int power = PlayerPowerCalculator.Compute(profile, _services.TowerCatalog);

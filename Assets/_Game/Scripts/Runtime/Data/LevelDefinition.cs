@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using AlienDefense.Progression;
 using AlienDefense.Waves;
 using UnityEngine;
 
@@ -65,8 +68,16 @@ namespace AlienDefense.Data
             "cinematic. The level is only won when this encounter is cleared too. Leave empty for a normal level.")]
         private BossEncounterDefinition _bossEncounter;
 
+        [Header("Victory Rewards")]
+        [SerializeField]
+        [Tooltip("What winning this level grants (coins, player XP, upgrade cards, blueprints). Each line can be " +
+            "every-clear or first-clear-only, and can require a 50% HP / Perfect result. Leave empty to use the " +
+            "default star-based coin formula (LevelRewardCalculator).")]
+        private LevelRewardEntry[] _victoryRewards = Array.Empty<LevelRewardEntry>();
+
         public string LevelId => _levelId;
         public BossEncounterDefinition BossEncounter => _bossEncounter;
+        public IReadOnlyList<LevelRewardEntry> VictoryRewards => _victoryRewards ?? Array.Empty<LevelRewardEntry>();
         public int StartingResource => _startingResource;
         public int BaseMaxHealth => _baseMaxHealth;
         public float PreparationDuration => _preparationDuration;

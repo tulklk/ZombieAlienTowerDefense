@@ -1,15 +1,26 @@
 using System.Collections.Generic;
-using AlienDefense.Combat;
+using UnityEngine;
 
 namespace AlienDefense.Progression
 {
-    /// <summary>What a level handed out on a win. New reward kinds (upgrade cards, blueprints, ...) are added here
-    /// and given an entry in VictoryRewardCatalog; the victory panel itself needs no change.</summary>
+    /// <summary>What a level can hand out on a win. The numbers are persisted in LevelDefinition assets, so existing
+    /// values never change meaning - new kinds are only ever appended. Each kind needs an entry in
+    /// VictoryRewardCatalog (icon + popup text) and a sink in LevelRewardService; the victory panel needs no change.</summary>
     public enum VictoryRewardType
     {
         Coins = 0,
         Gems = 1,
+
+        /// <summary>Player XP, saved on the profile (PlayerProfileService.PlayerExperience).</summary>
         Experience = 2,
+
+        UfoBaseCard = 3,
+        BlasterCard = 4,
+        MortarCard = 5,
+        FrostCard = 6,
+        TeslaCard = 7,
+        ReactorBlueprint = 8,
+        AntiGravityBlueprint = 9,
     }
 
     public readonly struct VictoryReward
@@ -24,9 +35,38 @@ namespace AlienDefense.Progression
         }
     }
 
+    /// <summary>One line of the match's damage breakdown, frozen when the level is won. Damage is what actually
+    /// came off enemy health (overkill already excluded by EnemyHealth).</summary>
+    public readonly struct DamageResultEntry
+    {
+        public readonly string Name;
+        public readonly Sprite Icon;
+        public readonly float Damage;
+
+        /// <summary>The tower's permanent upgrade tier (1-based) out of <see cref="MaxStars"/>. 0 = this source has
+        /// no tier (the UFO, a skill), and the row hides its stars.</summary>
+        public readonly int Stars;
+        public readonly int MaxStars;
+
+        public DamageResultEntry(string name, Sprite icon, float damage, int stars = 0, int maxStars = 0)
+        {
+            Name = name;
+            Icon = icon;
+            Damage = damage;
+            MaxStars = Mathf.Max(0, maxStars);
+            Stars = Mathf.Clamp(stars, 0, MaxStars);
+        }
+
+        /// <summary>0..1 share of <paramref name="total"/>; 0 (never NaN) when nothing was dealt.</summary>
+        public static float ShareOf(float damage, float total)
+        {
+            return total > 0f && damage > 0f ? Mathf.Clamp01(damage / total) : 0f;
+        }
+    }
+
     /// <summary>Everything the victory panel shows, built once by LevelCompositionRoot when the level is won: the
-    /// rewards that were actually granted (never granted again by the UI), the star result, and this match's damage
-    /// breakdown. The panel is a pure reader of this - it never searches the scene for gameplay state.</summary>
+    /// rewards that were actually granted (never granted again by the UI), the base-HP result, and this match's
+    /// damage breakdown. The panel is a pure reader of this - it never searches the scene for gameplay state.</summary>
     public sealed class LevelVictoryResult
     {
         public string LevelId { get; }
@@ -39,12 +79,33 @@ namespace AlienDefense.Progression
         public int RemainingBaseHealth { get; }
         public int MaxBaseHealth { get; }
         public IReadOnlyList<VictoryReward> Rewards { get; }
-        public IReadOnlyList<CombatStatsService.Contributor> DamageSources { get; }
+
+        /// <summary>Sorted by damage, biggest first.</summary>
+        public IReadOnlyList<DamageResultEntry> DamageSources { get; }
         public float TotalDamage { get; }
 
-        /// <summary>True when there is another level to go to; the panel's Next button says so either way, but the
-        /// navigation falls back to level selection when this is false.</summary>
+        /// <summary>True when there is another level to go to.</summary>
         public bool HasNextLevel { get; }
+
+        /// <summary>Remaining base HP as a whole 0-100 percent (100 only when the base is untouched).</summary>
+        public int RemainingHpPercent
+        {
+            get
+            {
+                if (MaxBaseHealth <= 0)
+                {
+                    return IsPerfectClear ? 100 : 0;
+                }
+
+                if (RemainingBaseHealth >= MaxBaseHealth)
+                {
+                    return 100;
+                }
+
+                // Rounded like the saved objective percent, but capped at 99 so a damaged base never reads "100%".
+                return Mathf.Clamp(Mathf.RoundToInt(100f * RemainingBaseHealth / MaxBaseHealth), 0, 99);
+            }
+        }
 
         public LevelVictoryResult(
             string levelId,
@@ -54,7 +115,7 @@ namespace AlienDefense.Progression
             int remainingBaseHealth,
             int maxBaseHealth,
             IReadOnlyList<VictoryReward> rewards,
-            IReadOnlyList<CombatStatsService.Contributor> damageSources,
+            IReadOnlyList<DamageResultEntry> damageSources,
             float totalDamage,
             bool hasNextLevel)
         {
@@ -65,8 +126,8 @@ namespace AlienDefense.Progression
             RemainingBaseHealth = remainingBaseHealth;
             MaxBaseHealth = maxBaseHealth;
             Rewards = rewards ?? System.Array.Empty<VictoryReward>();
-            DamageSources = damageSources ?? System.Array.Empty<CombatStatsService.Contributor>();
-            TotalDamage = totalDamage;
+            DamageSources = damageSources ?? System.Array.Empty<DamageResultEntry>();
+            TotalDamage = Mathf.Max(0f, totalDamage);
             HasNextLevel = hasNextLevel;
         }
     }

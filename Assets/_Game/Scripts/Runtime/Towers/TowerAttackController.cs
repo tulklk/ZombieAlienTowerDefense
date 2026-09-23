@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using AlienDefense.Combat;
 using AlienDefense.Enemies;
@@ -63,7 +64,17 @@ namespace AlienDefense.Towers
             _isAttackEnabled = value;
         }
 
+        private static readonly ProfilerMarker TickMarker = new ProfilerMarker("AlienDefense.Tower.Attack");
+
         public void Tick(float deltaTime, EnemyController target)
+        {
+            using (TickMarker.Auto())
+            {
+                TickCore(deltaTime, target);
+            }
+        }
+
+        private void TickCore(float deltaTime, EnemyController target)
         {
             if (!_isAttackEnabled || target == null || _firePoint == null || _attackStrategy == null)
             {

@@ -15,6 +15,8 @@ MonoBehaviour:
   _id: tower_mortar
   _displayName: Mortar Tower
   _icon: {fileID: 0}
+  _statsIcon: {fileID: 21300000, guid: c4f2ce2d00e9bfc4a99338fda520e6bf, type: 3}
+  _choiceCardSprite: {fileID: 21300000, guid: 39ac12edb99b94b488c3f89fb061eace, type: 3}
   _description: Rapid dual-barrel fire with light splash
   _prefab: {fileID: 8868492464935254508, guid: 8e6d315edb151ce4ebffa9909b83d773, type: 3}
   _buildCost: 180

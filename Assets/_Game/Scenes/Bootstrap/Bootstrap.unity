@@ -119,6 +119,81 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &1175263007
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1175263008}
+  - component: {fileID: 1175263010}
+  - component: {fileID: 1175263009}
+  m_Layer: 0
+  m_Name: ThrustTrail
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1175263008
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1175263007}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1284364430}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchoredPosition: {x: 423.45346, y: -5.4474955}
+  m_SizeDelta: {x: 215, y: 56}
+  m_Pivot: {x: 1, y: 0.5}
+--- !u!114 &1175263009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1175263007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 2100000, guid: e9e52d0ef8cc52e4493216ad6605ef82, type: 2}
+  m_Color: {r: 0.55, g: 0.93, b: 1, a: 0.6890722}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 4fe0fdfb838be8749bf8b18495be17ad, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1175263010
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1175263007}
+  m_CullTransparentMesh: 1
 --- !u!1 &1265190011
 GameObject:
   m_ObjectHideFlags: 0
@@ -187,6 +262,14 @@ PrefabInstance:
       propertyPath: m_sharedMaterial
       value: 
       objectReference: {fileID: 2100000, guid: 052409b745d2f6a4f8e5205c74bda3aa, type: 2}
+    - target: {fileID: 552921997, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 443.45346
+      objectReference: {fileID: 0}
+    - target: {fileID: 552921997, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -5.4474955
+      objectReference: {fileID: 0}
     - target: {fileID: 1043898330, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
       propertyPath: m_LocalScale.x
       value: 0
@@ -198,6 +281,14 @@ PrefabInstance:
     - target: {fileID: 1043898330, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
       propertyPath: m_LocalScale.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1969739830, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 1177.5283
+      objectReference: {fileID: 0}
+    - target: {fileID: 1969739830, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 2092.2715
       objectReference: {fileID: 0}
     - target: {fileID: 2025903028, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
       propertyPath: m_text
@@ -218,9 +309,27 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 052409b745d2f6a4f8e5205c74bda3aa, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 1976911656, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
+        type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 1175263008}
+    - targetCorrespondingSourceObject: {fileID: 1976911656, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
+        type: 3}
+      insertIndex: 2
+      addedObject: {fileID: 1437939602}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1976911655, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1284364432}
   m_SourcePrefab: {fileID: 100100000, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678, type: 3}
+--- !u!224 &1284364428 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 552921997, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
+    type: 3}
+  m_PrefabInstance: {fileID: 1284364427}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1284364429 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1043898329, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
@@ -233,6 +342,123 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f1828a430ac73f4cb78826f739cab94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.UI.LoadingOverlayView
+--- !u!224 &1284364430 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 1976911656, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
+    type: 3}
+  m_PrefabInstance: {fileID: 1284364427}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1284364431 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1976911655, guid: f4e8c2a91b3d4f6e8a0b1c2d3e4f5678,
+    type: 3}
+  m_PrefabInstance: {fileID: 1284364427}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1284364432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1284364431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 378d3f0cc3b729d41820039a8f89d534, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.UI.LoadingBarUfoThrust
+  _ufoIcon: {fileID: 1284364428}
+  _glowBack: {fileID: 1437939602}
+  _trail: {fileID: 1175263008}
+  _glowOffset: {x: -4, y: 0}
+  _glowSize: 140
+  _trailOffsetX: 20
+  _trailLength: 215
+  _trailHeight: 56
+  _glowColor: {r: 0.8, g: 0.98, b: 1, a: 1}
+  _trailColor: {r: 0.55, g: 0.93, b: 1, a: 1}
+  _glowIntensity: 1
+  _trailIntensity: 0.85
+  _pulseSpeed: 7
+  _pulseAmount: 0.28
+  _trailStretchAmount: 0.18
+  _bobAmplitude: 2.5
+  _bobSpeed: 3.2
+  _followLag: 6
+--- !u!1 &1437939601
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1437939602}
+  - component: {fileID: 1437939604}
+  - component: {fileID: 1437939603}
+  m_Layer: 0
+  m_Name: ThrustGlow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1437939602
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1437939601}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1284364430}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchoredPosition: {x: 439.45346, y: -5.4474955}
+  m_SizeDelta: {x: 140, y: 140}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1437939603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1437939601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 2100000, guid: e9e52d0ef8cc52e4493216ad6605ef82, type: 2}
+  m_Color: {r: 0.8, g: 0.98, b: 1, a: 0.8106732}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 4fe0fdfb838be8749bf8b18495be17ad, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1437939604
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1437939601}
+  m_CullTransparentMesh: 1
 --- !u!1 &1876543201
 GameObject:
   m_ObjectHideFlags: 0

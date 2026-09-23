@@ -90,6 +90,21 @@ namespace AlienDefense.Save
                 data.Gems = 0;
             }
 
+            if (data.PlayEnergy < 0)
+            {
+                data.PlayEnergy = 0;
+            }
+
+            if (data.PlayerExperience < 0)
+            {
+                data.PlayerExperience = 0;
+            }
+
+            if (data.RewardTransactions == null)
+            {
+                data.RewardTransactions = new List<string>();
+            }
+
             if (data.VipTier < 0)
             {
                 data.VipTier = 0;

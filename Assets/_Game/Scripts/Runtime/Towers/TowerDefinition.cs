@@ -18,6 +18,15 @@ namespace AlienDefense.Towers
         [SerializeField]
         private Sprite _icon;
 
+        [SerializeField]
+        [Tooltip("Optional. Round portrait used by result screens (damage statistics); falls back to Icon.")]
+        private Sprite _statsIcon;
+
+        [SerializeField]
+        [Tooltip("Optional. Full card artwork for the 'Choose Tower' panel (name, art and description are painted " +
+            "into the sprite); falls back to Icon.")]
+        private Sprite _choiceCardSprite;
+
         [SerializeField, TextArea]
         [Tooltip("Short flavor text shown on the 'Choose Tower' card - see TowerChoiceView.")]
         private string _description = "";
@@ -68,6 +77,8 @@ namespace AlienDefense.Towers
         public string Id => _id;
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
+        public Sprite StatsIcon => _statsIcon != null ? _statsIcon : _icon;
+        public Sprite ChoiceCardSprite => _choiceCardSprite != null ? _choiceCardSprite : _icon;
         public string Description => _description;
         public TowerController Prefab => _prefab;
         public int BuildCost => _buildCost;

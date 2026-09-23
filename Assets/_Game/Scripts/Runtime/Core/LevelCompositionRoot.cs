@@ -149,6 +149,11 @@ namespace AlienDefense.Core
         private BossIntroController _bossIntroController;
 
         [SerializeField]
+        [Tooltip("Optional. Plays the finishing cinematic (camera orbit, UFO celebration, boss explosion) between " +
+            "the last enemy dying and the Victory state. Without it the win is reported immediately, as before.")]
+        private VictoryCinematicController _victoryCinematic;
+
+        [SerializeField]
         [Tooltip("Optional (Phase 6, before the Building system exists).")]
         private Transform _towerRuntimeParent;
 
@@ -241,6 +246,11 @@ namespace AlienDefense.Core
         private LevelDefinition _resolvedLevelDefinition;
         private string _resolvedLevelId;
 
+        /// <summary>New for every play-through (a restart reloads the scene and builds a new root), so the victory
+        /// payout can be recorded as a one-off transaction.</summary>
+        private string _runId;
+        private bool _victoryRewardsGranted;
+
         private EnergyPickupPool _energyPickupPool;
         private EnergyPickupRegistry _energyPickupRegistry;
         private EnergyPickupFactory _energyPickupSpawner;
@@ -264,6 +274,40 @@ namespace AlienDefense.Core
 
         /// <summary>Per-match damage totals behind the pause panel's damage leaders.</summary>
         public CombatStatsService CombatStats { get; private set; }
+
+        /// <summary>Read-only load counters for the development performance monitor (RuntimePerformanceMonitor).
+        /// Nothing in gameplay reads them, and they allocate nothing.</summary>
+        /// <summary>True while the finishing cinematic is on screen (development performance monitor phase split).</summary>
+        public bool VictoryCinematicIsPlaying => _victoryCinematic != null && _victoryCinematic.IsPlaying;
+
+        /// <summary>True once the boss group is on the field and fighting (same, for the Boss Battle phase).</summary>
+        public bool BossEncounterIsFighting => _waveController != null
+            && (_waveController.EncounterPhase == AlienDefense.Waves.BossEncounterPhase.Fight
+                || _waveController.EncounterPhase == AlienDefense.Waves.BossEncounterPhase.Intro);
+
+        public int ActiveProjectileCount => _projectilePoolRegistry != null ? _projectilePoolRegistry.TotalActive : 0;
+        public int ActiveVfxCount => _vfxPoolRegistry != null ? _vfxPoolRegistry.TotalActive : 0;
+        public int ActiveTowerCount
+        {
+            get
+            {
+                if (_towerRuntimeParent == null)
+                {
+                    return 0;
+                }
+
+                int count = 0;
+                for (int i = 0; i < _towerRuntimeParent.childCount; i++)
+                {
+                    if (_towerRuntimeParent.GetChild(i).gameObject.activeSelf)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
         private CareerStatisticsTracker _careerStatistics;
         public ProjectileFactory ProjectileSpawner { get; private set; }
         public TowerFactory TowerSpawner { get; private set; }
@@ -379,6 +423,9 @@ namespace AlienDefense.Core
             EnergyCollection = new EnergyCollectionService(EnergyWallet, PlayerLevelProgression);
             PlayerSkills = new PlayerSkillService(_skillCatalog);
             CombatStats = new CombatStatsService();
+            CombatStats.BeginRun();
+            _runId = System.Guid.NewGuid().ToString("N");
+            _victoryRewardsGranted = false;
             _careerStatistics = new CareerStatisticsTracker(_applicationServices?.PlayerProfileService);
 
             Application.targetFrameRate = levelDefinition.TargetFrameRate;
@@ -397,6 +444,7 @@ namespace AlienDefense.Core
             InitializeBuildSystem();
             InitializeWaveSystem();
             InitializeAudioSystem();
+            InitializeVictoryCinematic();
             InitializeGameFlowUI();
         }
 
@@ -675,7 +723,8 @@ namespace AlienDefense.Core
 
             if (_towerChoicePresenter != null)
             {
-                _towerChoicePresenter.Initialize(EnergyTransactions, _towerCatalog, GameSpeed);
+                _towerChoicePresenter.Initialize(EnergyTransactions, _towerCatalog, GameSpeed,
+                    _applicationServices?.PlayerProfileService);
             }
 
             if (_playerBuildNodeProximity != null && _player != null)
@@ -949,37 +998,59 @@ namespace AlienDefense.Core
             }
         }
 
-        /// <summary>Computes the win result, then grants Coin (+ a rare first-time-perfect Gem bonus, both
-        /// scaled by VipTierTable's Coin bonus) and marks the daily quest complete — all via PlayerProfileService's
-        /// own validated mutators, never touching save data directly here.</summary>
+        /// <summary>Banks the win exactly once per run, before anything is shown: saves the level result, pays the
+        /// LevelDefinition's victory rewards through LevelRewardService (coins, player XP, cards, blueprints - all via
+        /// PlayerProfileService's validated mutators), marks the daily quest, unlocks the next level, then freezes the
+        /// match into a LevelVictoryResult for the panel. A second victory callback in the same run returns at the
+        /// guard; LevelRewardService also refuses a run id it has already paid.</summary>
         private void GrantVictoryRewardsAndProgress()
         {
+            if (_victoryRewardsGranted)
+            {
+                Debug.LogWarning("[LevelCompositionRoot] Victory was reported again this run; rewards are not granted twice.", this);
+                return;
+            }
+
+            _victoryRewardsGranted = true;
+
             LevelCompletedResult completionResult = BuildLevelCompletedResult();
             PlayerProfileService profile = _applicationServices?.PlayerProfileService;
-            int coinReward = 0;
-            int gemReward = 0;
+            var grantedRewards = new List<VictoryReward>(10);
 
             if (profile != null)
             {
                 bool isFirstCompletion = !profile.GetLevelProgress(completionResult.LevelId).IsCompleted;
+                var context = new LevelRewardContext(completionResult.LevelId, _runId, completionResult.Stars,
+                    completionResult.RemainingHpPercent, isFirstCompletion);
 
-                float vipCoinBonus = VipTierTable.GetMultiplierForTier(profile.VipTier);
-                coinReward = LevelRewardCalculator.CalculateCoinReward(completionResult.Stars, vipCoinBonus);
-                gemReward = LevelRewardCalculator.CalculateGemReward(completionResult.Stars, isFirstCompletion);
-
-                profile.SetLevelCompleted(completionResult);
-                profile.AddMetaCurrency(coinReward);
-                if (gemReward > 0)
+                profile.BeginBatch();
+                try
                 {
-                    profile.AddGems(gemReward);
+                    new LevelRewardService(profile).TryGrantVictoryRewards(context,
+                        _resolvedLevelDefinition != null ? _resolvedLevelDefinition.VictoryRewards : null, grantedRewards);
+                    profile.SetLevelCompleted(completionResult);
+                    profile.MarkDailyQuestCompleted(System.DateTime.UtcNow);
+                    UnlockNextLevel(profile);
                 }
-
-                profile.MarkDailyQuestCompleted(System.DateTime.UtcNow);
-                UnlockNextLevel(profile);
+                finally
+                {
+                    profile.EndBatch(); // one write for the whole win
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[LevelCompositionRoot] No player profile (level started without Bootstrap); the win " +
+                    "is shown but no rewards can be saved.", this);
             }
 
             // The panel only shows what was granted right here - it can never hand a reward out a second time.
-            _gameStateUIController?.ShowVictoryResult(BuildVictoryResult(completionResult, coinReward, gemReward));
+            LevelVictoryResult victoryResult = BuildVictoryResult(completionResult, grantedRewards, profile);
+
+            // Hand the same already-granted list to MainMenu purely so it can fly the icons into the HUD. Consuming
+            // it there empties it, so reloading MainMenu never replays the shower and never re-adds anything.
+            _applicationServices?.PendingRewards?.Set(victoryResult.Rewards);
+
+            _gameStateUIController?.ShowVictoryResult(victoryResult);
         }
 
         /// <summary>Beating a level opens the next one in the catalog (the campaign's only unlock rule today).</summary>
@@ -992,31 +1063,32 @@ namespace AlienDefense.Core
             }
         }
 
-        /// <summary>Everything the victory panel prints: the granted rewards, the star result and this match's
-        /// damage breakdown (CombatStatsService, which lives and dies with the level, so it never carries over).</summary>
-        private LevelVictoryResult BuildVictoryResult(LevelCompletedResult completionResult, int coinReward, int gemReward)
+        /// <summary>Freezes what the victory panel prints: the granted rewards, the base-HP result and this match's
+        /// damage breakdown (CombatStatsService, reset at the start of every run). Tower rows carry the tower's
+        /// permanent upgrade tier as stars; sources without a tier (the UFO) carry none and hide them.</summary>
+        private LevelVictoryResult BuildVictoryResult(LevelCompletedResult completionResult, List<VictoryReward> rewards,
+            PlayerProfileService profile)
         {
-            var rewards = new List<VictoryReward>(3);
-            if (coinReward > 0)
-            {
-                rewards.Add(new VictoryReward(VictoryRewardType.Coins, coinReward));
-            }
-
-            if (gemReward > 0)
-            {
-                rewards.Add(new VictoryReward(VictoryRewardType.Gems, gemReward));
-            }
-
-            int experience = PlayerLevelProgression != null ? PlayerLevelProgression.CurrentExperience : 0;
-            if (experience > 0)
-            {
-                rewards.Add(new VictoryReward(VictoryRewardType.Experience, experience));
-            }
-
             IReadOnlyList<CombatStatsService.Contributor> sources = CombatStats != null
                 ? CombatStats.GetLeaders(0)
                 : System.Array.Empty<CombatStatsService.Contributor>();
-            var sourcesCopy = new List<CombatStatsService.Contributor>(sources);
+
+            TowerMetaUpgradeService metaUpgrades = profile != null ? new TowerMetaUpgradeService(profile) : null;
+            var damage = new List<DamageResultEntry>(sources.Count);
+            for (int i = 0; i < sources.Count; i++)
+            {
+                CombatStatsService.Contributor source = sources[i];
+                if (source.Damage <= 0f)
+                {
+                    continue;
+                }
+
+                TowerDefinition tower = source.Tower;
+                int maxStars = tower != null && metaUpgrades != null ? tower.LevelCount : 0;
+                int stars = maxStars > 0 ? metaUpgrades.GetCurrentLevelIndex(tower) + 1 : 0;
+                Sprite icon = tower != null ? tower.StatsIcon : source.Icon;
+                damage.Add(new DamageResultEntry(source.Name, icon, source.Damage, stars, maxStars));
+            }
 
             bool hasNext = _applicationServices?.LevelCatalog != null
                 && _applicationServices.LevelCatalog.TryGetNext(_resolvedLevelId, out LevelCatalogEntry _);
@@ -1025,11 +1097,11 @@ namespace AlienDefense.Core
                 completionResult.LevelId,
                 BuildLevelDisplayName(),
                 completionResult.Stars,
-                BaseHealth != null && BaseHealth.CurrentHealth >= BaseHealth.MaxHealth,
+                BaseHealth != null && BaseHealth.MaxHealth > 0 && BaseHealth.CurrentHealth >= BaseHealth.MaxHealth,
                 BaseHealth != null ? BaseHealth.CurrentHealth : 0,
                 BaseHealth != null ? BaseHealth.MaxHealth : 0,
                 rewards,
-                sourcesCopy,
+                damage,
                 CombatStats != null ? CombatStats.TotalDamage : 0f,
                 hasNext);
         }
@@ -1063,8 +1135,9 @@ namespace AlienDefense.Core
             int remaining = max > 0
                 ? Mathf.Clamp(BaseHealth.CurrentHealth, 0, max)
                 : Mathf.Max(0, BaseHealth.CurrentHealth);
+            // 100 means untouched: a base at 99.6% must not round up into a Perfect.
             int percent = max > 0
-                ? Mathf.Clamp(Mathf.RoundToInt(100f * remaining / max), 0, 100)
+                ? (remaining >= max ? 100 : Mathf.Clamp(Mathf.RoundToInt(100f * remaining / max), 0, 99))
                 : 0;
 
             int stars = 1;
@@ -1117,7 +1190,37 @@ namespace AlienDefense.Core
             }
         }
 
+        /// <summary>Runs after the audio system, because the cinematic plays its explosions through AudioService.</summary>
+        private void InitializeVictoryCinematic()
+        {
+            if (_victoryCinematic == null || _waveController == null)
+            {
+                return;
+            }
+
+            _victoryCinematic.Initialize(_waveController, Vfx, _audioService);
+        }
+
+        /// <summary>The last enemy is gone. The finishing cinematic gets first refusal: while it plays the level is
+        /// still PlayingWave (so nothing despawns the boss body or opens the victory panel underneath it), and it
+        /// calls back when the win may be reported. Without a cinematic - or if it declines - this is the original
+        /// immediate ReportVictory.</summary>
         private void HandleAllWavesCompleted()
+        {
+            // Killing the boss wins even with escorts or minions still alive (WaveController closes the encounter on
+            // the kill). Clear them now, so nothing can walk into the base - or keep the fight going - behind the
+            // victory cinematic. The boss body is already out of the registry, held by the cinematic.
+            DespawnAllEnemies();
+
+            if (_victoryCinematic != null && _victoryCinematic.TryPlay(ReportVictoryAfterCinematic))
+            {
+                return;
+            }
+
+            GameFlow.ReportVictory();
+        }
+
+        private void ReportVictoryAfterCinematic()
         {
             GameFlow.ReportVictory();
         }

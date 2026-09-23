@@ -76,6 +76,8 @@ namespace AlienDefense.EditorTools
         private static readonly Color DamageTop = Hex(0xFFB13A);
         private static readonly Color DamageBottom = Hex(0xFF5A2D);
         private static readonly Color DamageOutline = Hex(0x2A120A);
+        private static readonly Color KineticBottom = Hex(0xC9D6E2);
+        private static readonly Color KineticOutline = Hex(0x1B2430);
 
         [MenuItem("AlienDefense/Setup/VFX/Rocket Cartoon VFX + Damage Numbers")]
         private static void Run()
@@ -471,7 +473,9 @@ namespace AlienDefense.EditorTools
             so.FindProperty("_popupPrefab").objectReferenceValue = popupPrefab;
             so.FindProperty("_container").objectReferenceValue = go.transform;
             SerializedProperty styles = so.FindProperty("_styles");
-            styles.arraySize = 1;
+            styles.arraySize = 2;
+
+            // Rockets: orange number with the flame badge.
             SerializedProperty fire = styles.GetArrayElementAtIndex(0);
             fire.FindPropertyRelative("Type").enumValueIndex = (int)DamagePopupStyle.Fire;
             fire.FindPropertyRelative("Icon").objectReferenceValue = EnsureFireIcon();
@@ -480,6 +484,16 @@ namespace AlienDefense.EditorTools
             fire.FindPropertyRelative("OutlineColor").colorValue = DamageOutline;
             fire.FindPropertyRelative("OutlineWidth").floatValue = 0.3f;
             fire.FindPropertyRelative("FontSize").floatValue = 46f;
+
+            // Plain shells (Mortar): a smaller white number, no icon, so fire damage still stands out.
+            SerializedProperty kinetic = styles.GetArrayElementAtIndex(1);
+            kinetic.FindPropertyRelative("Type").enumValueIndex = (int)DamagePopupStyle.Kinetic;
+            kinetic.FindPropertyRelative("Icon").objectReferenceValue = null;
+            kinetic.FindPropertyRelative("TopColor").colorValue = Color.white;
+            kinetic.FindPropertyRelative("BottomColor").colorValue = KineticBottom;
+            kinetic.FindPropertyRelative("OutlineColor").colorValue = KineticOutline;
+            kinetic.FindPropertyRelative("OutlineWidth").floatValue = 0.3f;
+            kinetic.FindPropertyRelative("FontSize").floatValue = 40f;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.MarkSceneDirty(go.scene);
