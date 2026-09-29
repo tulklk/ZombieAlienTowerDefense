@@ -1,4 +1,5 @@
 using AlienDefense.Economy;
+using AlienDefense.Meta;
 using AlienDefense.Progression;
 using AlienDefense.Save;
 using AlienDefense.Settings;
@@ -27,6 +28,14 @@ namespace AlienDefense.Core
         /// <summary>Player level from saved lifetime XP. Never null (defaults when not supplied).</summary>
         public PlayerLevelCurve PlayerLevels { get; }
 
+        /// <summary>Materials, equipment and artifacts, joined to their catalog definitions. Null when built
+        /// without a MetaItemCatalog (tests, and any scene that has no inventory UI).</summary>
+        public InventoryService Inventory { get; }
+
+        /// <summary>Base building state, construction and production. Null when built without a
+        /// BaseBuildingCatalog (tests, and any scene that has no base UI).</summary>
+        public AlienDefense.Base.BaseProgressionService BaseProgression { get; }
+
         public ApplicationServices(
             SceneTransitionService sceneTransition,
             LevelLaunchContext levelLaunchContext,
@@ -36,7 +45,9 @@ namespace AlienDefense.Core
             TowerCatalog towerCatalog = null,
             PendingRewardPresentation pendingRewards = null,
             PlayEnergyService playEnergy = null,
-            PlayerLevelCurve playerLevels = null)
+            PlayerLevelCurve playerLevels = null,
+            MetaItemCatalog metaItemCatalog = null,
+            AlienDefense.Base.BaseBuildingCatalog baseBuildingCatalog = null)
         {
             SceneTransition = sceneTransition;
             LevelLaunchContext = levelLaunchContext;
@@ -47,6 +58,10 @@ namespace AlienDefense.Core
             PendingRewards = pendingRewards ?? new PendingRewardPresentation();
             PlayEnergy = playEnergy;
             PlayerLevels = playerLevels ?? new PlayerLevelCurve();
+            Inventory = metaItemCatalog != null ? new InventoryService(playerProfileService, metaItemCatalog) : null;
+            BaseProgression = baseBuildingCatalog != null
+                ? new AlienDefense.Base.BaseProgressionService(playerProfileService, baseBuildingCatalog, metaItemCatalog)
+                : null;
         }
     }
 }

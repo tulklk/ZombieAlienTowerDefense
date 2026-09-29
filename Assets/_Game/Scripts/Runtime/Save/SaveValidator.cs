@@ -63,6 +63,9 @@ namespace AlienDefense.Save
             RepairUnlockedTowers(data);
             RepairTowerUpgrades(data);
             RepairInventory(data);
+            RepairEquipment(data);
+            RepairArtifacts(data);
+            RepairBaseBuildings(data);
             RepairSettings(data.Settings);
 
             if (data.Statistics.TotalTowerDamage < 0)
@@ -257,6 +260,158 @@ namespace AlienDefense.Save
             }
 
             data.Inventory = repaired;
+        }
+
+        /// <summary>Equipment is keyed by item id alone (a piece is a single upgradable object, not a stack), so
+        /// a duplicate id is dropped rather than merged. Also enforces the "at most one equipped per slot" rule
+        /// lazily: the service re-checks on equip, this only stops a corrupt file from arriving with two.</summary>
+        private static void RepairEquipment(PlayerProfileSaveData data)
+        {
+            if (data.Equipment == null)
+            {
+                data.Equipment = new List<EquipmentSaveData>();
+                return;
+            }
+
+            var repaired = new List<EquipmentSaveData>();
+            var seenIds = new HashSet<string>();
+            for (int i = 0; i < data.Equipment.Count; i++)
+            {
+                EquipmentSaveData entry = data.Equipment[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.ItemId) || !seenIds.Add(entry.ItemId))
+                {
+                    continue;
+                }
+
+                if (entry.Rarity < 0)
+                {
+                    entry.Rarity = 0;
+                }
+
+                if (entry.Level < 1)
+                {
+                    entry.Level = 1;
+                }
+
+                if (entry.Duplicates < 0)
+                {
+                    entry.Duplicates = 0;
+                }
+
+                repaired.Add(entry);
+            }
+
+            data.Equipment = repaired;
+        }
+
+        /// <summary>Artifacts ARE stacks, and the key is (item id, rarity) - the same family at two rarities is
+        /// two legitimate rows - so duplicates of that pair are merged the way inventory stacks are.</summary>
+        private static void RepairArtifacts(PlayerProfileSaveData data)
+        {
+            if (data.Artifacts == null)
+            {
+                data.Artifacts = new List<ArtifactSaveData>();
+                return;
+            }
+
+            var repaired = new List<ArtifactSaveData>();
+            for (int i = 0; i < data.Artifacts.Count; i++)
+            {
+                ArtifactSaveData entry = data.Artifacts[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.ItemId))
+                {
+                    continue;
+                }
+
+                if (entry.Rarity < 0)
+                {
+                    entry.Rarity = 0;
+                }
+
+                if (entry.Amount < 0)
+                {
+                    entry.Amount = 0;
+                }
+
+                bool merged = false;
+                for (int j = 0; j < repaired.Count; j++)
+                {
+                    if (repaired[j].ItemId == entry.ItemId && repaired[j].Rarity == entry.Rarity)
+                    {
+                        repaired[j].Amount += entry.Amount;
+                        merged = true;
+                        break;
+                    }
+                }
+
+                if (!merged)
+                {
+                    repaired.Add(entry);
+                }
+            }
+
+            data.Artifacts = repaired;
+        }
+
+        /// <summary>One row per building id. Also heals a half-written construction: a row that claims to be
+        /// building but carries no completion timestamp would otherwise hang forever, because nothing would ever
+        /// compare true against DateTime.UtcNow.</summary>
+        private static void RepairBaseBuildings(PlayerProfileSaveData data)
+        {
+            if (data.BaseBuildings == null)
+            {
+                data.BaseBuildings = new List<BaseBuildingSaveData>();
+                return;
+            }
+
+            var repaired = new List<BaseBuildingSaveData>();
+            var seenIds = new HashSet<string>();
+            for (int i = 0; i < data.BaseBuildings.Count; i++)
+            {
+                BaseBuildingSaveData entry = data.BaseBuildings[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.BuildingId) || !seenIds.Add(entry.BuildingId))
+                {
+                    continue;
+                }
+
+                if (entry.Level < 0)
+                {
+                    entry.Level = 0;
+                }
+
+                if (entry.State < 0)
+                {
+                    entry.State = 0;
+                }
+
+                bool building = entry.State == (int)AlienDefense.Base.BaseBuildingState.Constructing ||
+                                entry.State == (int)AlienDefense.Base.BaseBuildingState.Upgrading;
+
+                if (building && entry.ConstructionCompleteUtcTicks <= 0)
+                {
+                    // Drop back to whatever the level says: 0 means the plot is empty again, anything else means
+                    // the building simply stays at the level it had reached.
+                    entry.State = entry.Level > 0
+                        ? (int)AlienDefense.Base.BaseBuildingState.Built
+                        : (int)AlienDefense.Base.BaseBuildingState.Available;
+                    entry.ConstructionStartUtcTicks = 0;
+                }
+
+                if (!building)
+                {
+                    entry.ConstructionStartUtcTicks = 0;
+                    entry.ConstructionCompleteUtcTicks = 0;
+                }
+
+                if (entry.LastCollectUtcTicks < 0)
+                {
+                    entry.LastCollectUtcTicks = 0;
+                }
+
+                repaired.Add(entry);
+            }
+
+            data.BaseBuildings = repaired;
         }
 
         private static void RepairSettings(SettingsSaveData settings)

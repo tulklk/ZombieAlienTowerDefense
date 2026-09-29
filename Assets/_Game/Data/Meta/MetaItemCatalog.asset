@@ -24,3 +24,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e2cabd3b42be4ea9ac557bfac827bd7a, type: 2}
   - {fileID: 11400000, guid: 993f54097784fc749a7ce73931a29f61, type: 2}
   - {fileID: 11400000, guid: bed27699f4574cc48b34a0ddc536b77a, type: 2}
+  - {fileID: 11400000, guid: 894410967f44a034c8ee7d182eb1308d, type: 2}
+  _equipment: []
+  _artifacts: []

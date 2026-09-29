@@ -19,8 +19,9 @@ namespace AlienDefense.EditorTools
             var scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1080f, 1920f);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
+            // Expand keeps the whole 1080x1920 design visible on every aspect ratio; taller or wider screens only
+            // add room, whereas a 0.5 match squeezed 20:9 phones to ~966 units wide.
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
             canvasObject.AddComponent<GraphicRaycaster>();
 

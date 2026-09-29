@@ -22,6 +22,11 @@ namespace AlienDefense.Meta
         private MetaItemRarity _rarity = MetaItemRarity.Common;
 
         [SerializeField]
+        [Tooltip("Which inventory section this item shows up in. Material (the default) covers every item that " +
+            "existed before this field was added, so no asset needs re-authoring.")]
+        private MetaItemKind _kind = MetaItemKind.Material;
+
+        [SerializeField]
         private Color _headerColor = new Color(0.16f, 0.72f, 0.95f, 1f);
 
         public string Id => _id;
@@ -29,6 +34,7 @@ namespace AlienDefense.Meta
         public string Description => _description;
         public Sprite Icon => _icon;
         public MetaItemRarity Rarity => _rarity;
+        public MetaItemKind Kind => _kind;
         public Color HeaderColor => _headerColor;
     }
 }

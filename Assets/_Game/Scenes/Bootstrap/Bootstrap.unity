@@ -229,6 +229,9 @@ MonoBehaviour:
   _playerProfileDefaults: {fileID: 11400000, guid: 3c8b14591e3afce4390a9374d63245bf,
     type: 2}
   _towerCatalog: {fileID: 0}
+  _metaItemCatalog: {fileID: 11400000, guid: 0bf05f529565481699f9960e66fc7270, type: 2}
+  _baseBuildingCatalog: {fileID: 11400000, guid: 7fd23bec711abbf4bafc64f1863bccd7,
+    type: 2}
   _bootstrapUICamera: {fileID: 1876543203}
 --- !u!4 &1265190013
 Transform:

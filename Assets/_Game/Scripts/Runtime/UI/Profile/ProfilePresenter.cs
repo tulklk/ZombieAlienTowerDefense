@@ -230,7 +230,7 @@ namespace AlienDefense.UI.Profile
             _view.SetLevel(_services.PlayerLevels.Evaluate(profile.PlayerExperience).Level);
             _view.SetEnergyUnavailable();
 
-            int power = PlayerPowerCalculator.Compute(profile, _services.TowerCatalog);
+            int power = PlayerPowerCalculator.Compute(profile, _services.TowerCatalog, _services.BaseProgression);
             string campaign = ResolveCampaignLabel(profile);
             _view.SetStats(
                 CurrencyFormatter.Format(power),

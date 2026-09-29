@@ -85,7 +85,7 @@ namespace AlienDefense.UI.MainMenu
             string xpText = progress.IsMaxLevel
                 ? "MAX"
                 : CurrencyFormatter.Format(progress.XpIntoLevel) + "/" + CurrencyFormatter.Format(progress.XpForNextLevel);
-            int power = PlayerPowerCalculator.Compute(profile, _services.TowerCatalog);
+            int power = PlayerPowerCalculator.Compute(profile, _services.TowerCatalog, _services.BaseProgression);
             _playerProfileWidget.SetLevel(progress.Level, progress.Progress01, CurrencyFormatter.Format(power), xpText);
         }
 

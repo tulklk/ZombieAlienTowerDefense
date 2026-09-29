@@ -38,11 +38,11 @@ namespace AlienDefense.UI.Minimap
 
         [SerializeField, Range(0.01f, 0.6f)]
         [Tooltip("Half-height of the lit band, as a fraction of the minimap's height.")]
-        private float _scanWidth = 0.22f;
+        private float _scanWidth = 0.34f;
 
         [SerializeField, Range(0f, 1f)]
         [Tooltip("0 = hard-edged band, 1 = fully feathered.")]
-        private float _scanSoftness = 0.85f;
+        private float _scanSoftness = 1f;
 
         [SerializeField, Range(0.001f, 0.2f)]
         [Tooltip("Thickness of the bright core line at the head of the sweep.")]
@@ -52,26 +52,26 @@ namespace AlienDefense.UI.Minimap
         [SerializeField, Range(0f, 1f)]
         [Tooltip("How much the whole overlay tints the minimap when the sweep is nowhere near. Keep this low or " +
             "the path and markers underneath get muddy.")]
-        private float _baseAlpha = 0.10f;
+        private float _baseAlpha = 0.06f;
 
         [SerializeField, Range(0f, 1f)]
-        private float _scanIntensity = 0.38f;
+        private float _scanIntensity = 0.45f;
 
         [SerializeField, Range(0f, 1f)]
-        private float _scanLineIntensity = 0.55f;
+        private float _scanLineIntensity = 0f;
 
         [Header("Colour")]
         [SerializeField]
-        private Color _scanColor = new Color(0.35f, 0.85f, 1f, 1f);
+        private Color _scanColor = new Color(0.659f, 1f, 0.780f, 1f);   // #A8FFC7
 
         [SerializeField]
         [Tooltip("Colour of the thin core line - near white sells the 'sweep just passed' moment.")]
-        private Color _scanHotColor = new Color(0.85f, 0.98f, 1f, 1f);
+        private Color _scanHotColor = new Color(0.929f, 1f, 0.949f, 1f);   // #EDFFF2
 
         [SerializeField]
-        [Tooltip("Faint tint over the un-scanned part of the map. A slightly darker navy makes the sweep pop " +
-            "without hiding anything.")]
-        private Color _baseTint = new Color(0.04f, 0.22f, 0.42f, 1f);
+        [Tooltip("Faint tint over the un-scanned part of the map. A slightly darker shade of the panel colour makes " +
+            "the sweep pop without hiding anything.")]
+        private Color _baseTint = new Color(0.043f, 0.431f, 0.169f, 1f); // #0B6E2B
 
         [Header("CRT striping (optional, off by default)")]
         [SerializeField, Range(0f, 0.5f)]

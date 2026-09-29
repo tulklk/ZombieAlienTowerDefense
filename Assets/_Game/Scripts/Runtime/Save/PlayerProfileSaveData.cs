@@ -17,6 +17,16 @@ namespace AlienDefense.Save
         public List<string> UnlockedTowerIds = new List<string>();
         public List<PermanentTowerUpgradeSaveData> TowerUpgrades = new List<PermanentTowerUpgradeSaveData>();
         public List<MetaItemStackSaveData> Inventory = new List<MetaItemStackSaveData>();
+
+        /// <summary>Equipment pieces the player owns, at most one entry per piece. Added in save version 5.</summary>
+        public List<EquipmentSaveData> Equipment = new List<EquipmentSaveData>();
+
+        /// <summary>Artifact stacks, keyed by (item, rarity). Added in save version 5.</summary>
+        public List<ArtifactSaveData> Artifacts = new List<ArtifactSaveData>();
+
+        /// <summary>Base buildings the player has started or finished. Added in save version 6.</summary>
+        public List<BaseBuildingSaveData> BaseBuildings = new List<BaseBuildingSaveData>();
+
         public int MetaCurrency;
         public int Gems;
 

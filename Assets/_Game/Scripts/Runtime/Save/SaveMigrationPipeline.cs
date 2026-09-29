@@ -70,6 +70,12 @@ namespace AlienDefense.Save
                 case 3:
                     return MigrateV3ToV4(data);
 
+                case 4:
+                    return MigrateV4ToV5(data);
+
+                case 5:
+                    return MigrateV5ToV6(data);
+
                 default:
                     Debug.LogError($"[SaveMigrationPipeline] No migration step defined from version {data.SaveVersion}.");
                     data.SaveVersion = SaveConstants.CurrentSaveVersion;
@@ -145,6 +151,41 @@ namespace AlienDefense.Save
             }
 
             data.SaveVersion = 4;
+            return data;
+        }
+
+        /// <summary>Introduces the equipment and artifact inventories. Deliberately grants nothing: a save that
+        /// predates the feature has never owned a piece, and quietly handing out starter gear here would make an
+        /// existing player's inventory differ from a fresh one for no stated reason. Both lists simply start
+        /// empty, which is also what PlayerProfileDefaultsFactory produces for a brand-new profile.</summary>
+        private static PlayerProfileSaveData MigrateV4ToV5(PlayerProfileSaveData data)
+        {
+            if (data.Equipment == null)
+            {
+                data.Equipment = new System.Collections.Generic.List<EquipmentSaveData>();
+            }
+
+            if (data.Artifacts == null)
+            {
+                data.Artifacts = new System.Collections.Generic.List<ArtifactSaveData>();
+            }
+
+            data.SaveVersion = 5;
+            return data;
+        }
+
+        /// <summary>Introduces the base building list. Like V4-to-V5 it grants nothing: BaseProgressionService
+        /// treats an absent row as "never built", which is exactly right for a save from before the base existed.
+        /// Seeding a free Central Building here would hand existing players a head start that a new player does
+        /// not get, and would do it invisibly.</summary>
+        private static PlayerProfileSaveData MigrateV5ToV6(PlayerProfileSaveData data)
+        {
+            if (data.BaseBuildings == null)
+            {
+                data.BaseBuildings = new System.Collections.Generic.List<BaseBuildingSaveData>();
+            }
+
+            data.SaveVersion = 6;
             return data;
         }
     }

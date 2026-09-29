@@ -31,6 +31,8 @@ namespace AlienDefense.Core
         private SaveFileRepository _saveRepository;
         private LevelCatalog _levelCatalog;
         private TowerCatalog _towerCatalog;
+        private AlienDefense.Meta.MetaItemCatalog _metaItemCatalog;
+        private AlienDefense.Base.BaseBuildingCatalog _baseBuildingCatalog;
         private SceneTransitionService _sceneTransition;
 
         /// <summary>Lives as long as the app, like the profile: the services bundle is rebuilt on every scene load
@@ -44,7 +46,7 @@ namespace AlienDefense.Core
         /// <summary>Creates and initializes the one application root if it doesn't exist yet. Safe to call on
         /// every Bootstrap pass — BootstrapLoadContext.ShouldInitializeApplication already gates this to cold
         /// boot only, and this stays idempotent regardless so a live instance is always reused as-is.</summary>
-        public static ApplicationCompositionRoot EnsureInitialized(LevelCatalog levelCatalog, PlayerProfileDefaults playerProfileDefaults, TowerCatalog towerCatalog = null)
+        public static ApplicationCompositionRoot EnsureInitialized(LevelCatalog levelCatalog, PlayerProfileDefaults playerProfileDefaults, TowerCatalog towerCatalog = null, AlienDefense.Meta.MetaItemCatalog metaItemCatalog = null, AlienDefense.Base.BaseBuildingCatalog baseBuildingCatalog = null)
         {
             if (_instance != null)
             {
@@ -53,7 +55,7 @@ namespace AlienDefense.Core
 
             var rootObject = new GameObject(nameof(ApplicationCompositionRoot));
             var root = rootObject.AddComponent<ApplicationCompositionRoot>();
-            root.Initialize(levelCatalog, playerProfileDefaults, towerCatalog);
+            root.Initialize(levelCatalog, playerProfileDefaults, towerCatalog, metaItemCatalog, baseBuildingCatalog);
             return root;
         }
 
@@ -70,12 +72,14 @@ namespace AlienDefense.Core
             DontDestroyOnLoad(gameObject);
         }
 
-        private void Initialize(LevelCatalog levelCatalog, PlayerProfileDefaults playerProfileDefaults, TowerCatalog towerCatalog)
+        private void Initialize(LevelCatalog levelCatalog, PlayerProfileDefaults playerProfileDefaults, TowerCatalog towerCatalog, AlienDefense.Meta.MetaItemCatalog metaItemCatalog, AlienDefense.Base.BaseBuildingCatalog baseBuildingCatalog)
         {
             Time.timeScale = 1f;
 
             _levelCatalog = levelCatalog;
             _towerCatalog = towerCatalog;
+            _metaItemCatalog = metaItemCatalog;
+            _baseBuildingCatalog = baseBuildingCatalog;
             _levelLaunchContext = new LevelLaunchContext();
 
             _saveRepository = new SaveFileRepository();
@@ -135,7 +139,7 @@ namespace AlienDefense.Core
         private void RebuildServicesBundle()
         {
             Services = new ApplicationServices(_sceneTransition, _levelLaunchContext, _levelCatalog, _playerProfileService,
-                _settingsService, _towerCatalog, _pendingRewards, _playEnergy, _playerLevels);
+                _settingsService, _towerCatalog, _pendingRewards, _playEnergy, _playerLevels, _metaItemCatalog, _baseBuildingCatalog);
         }
 
         private void HandleFocusChanged(bool hasFocus)

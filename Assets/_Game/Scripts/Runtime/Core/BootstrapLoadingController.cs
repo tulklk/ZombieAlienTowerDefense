@@ -15,6 +15,8 @@ namespace AlienDefense.Core
         private const string LevelCatalogAssetPath = "Assets/_Game/Data/Levels/LevelCatalog.asset";
         private const string PlayerProfileDefaultsAssetPath = "Assets/_Game/Data/Save/PlayerProfileDefaults.asset";
         private const string TowerCatalogAssetPath = "Assets/_Game/Data/Towers/TowerCatalog.asset";
+        private const string MetaItemCatalogAssetPath = "Assets/_Game/Data/Meta/MetaItemCatalog.asset";
+        private const string BaseBuildingCatalogAssetPath = "Assets/_Game/Data/Base/BaseBuildingCatalog.asset";
 
         [SerializeField, Min(0f)]
         private float _minimumLoadDurationSeconds = 6f;
@@ -31,6 +33,14 @@ namespace AlienDefense.Core
         [SerializeField]
         [Tooltip("Optional. Needed only for screens that enumerate every tower (e.g. the Upgrade screen).")]
         private TowerCatalog _towerCatalog;
+
+        [SerializeField]
+        [Tooltip("Optional. Materials, equipment and artifacts for the Inventory screen.")]
+        private AlienDefense.Meta.MetaItemCatalog _metaItemCatalog;
+
+        [SerializeField]
+        [Tooltip("Optional. Base buildings for the Base tab.")]
+        private AlienDefense.Base.BaseBuildingCatalog _baseBuildingCatalog;
 
         [SerializeField]
         private Camera _bootstrapUICamera;
@@ -92,7 +102,7 @@ namespace AlienDefense.Core
             string targetSceneName = BootstrapLoadContext.TargetSceneName;
             if (BootstrapLoadContext.ShouldInitializeApplication)
             {
-                ApplicationCompositionRoot.EnsureInitialized(_levelCatalog, _playerProfileDefaults, _towerCatalog);
+                ApplicationCompositionRoot.EnsureInitialized(_levelCatalog, _playerProfileDefaults, _towerCatalog, _metaItemCatalog, _baseBuildingCatalog);
             }
 
             AsyncOperation operation;
@@ -177,6 +187,16 @@ namespace AlienDefense.Core
             if (_towerCatalog == null)
             {
                 _towerCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<TowerCatalog>(TowerCatalogAssetPath);
+            }
+
+            if (_metaItemCatalog == null)
+            {
+                _metaItemCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<AlienDefense.Meta.MetaItemCatalog>(MetaItemCatalogAssetPath);
+            }
+
+            if (_baseBuildingCatalog == null)
+            {
+                _baseBuildingCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<AlienDefense.Base.BaseBuildingCatalog>(BaseBuildingCatalogAssetPath);
             }
 #endif
 

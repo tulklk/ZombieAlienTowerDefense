@@ -10,7 +10,11 @@ namespace AlienDefense.Meta
         private const int BasePowerPerUnlockedTower = 120;
         private const int PowerPerUpgradeLevel = 85;
 
-        public static int Compute(PlayerProfileService profile, TowerCatalog catalog = null)
+        /// <param name="baseProgression">Optional. When given, Force earned from base buildings is added. The base is a
+        /// second Power source folded in here rather than kept as its own total, so the HUD, the Profile screen and
+        /// the base's completion banner can never show three different numbers.</param>
+        public static int Compute(PlayerProfileService profile, TowerCatalog catalog = null,
+            AlienDefense.Base.BaseProgressionService baseProgression = null)
         {
             if (profile == null)
             {
@@ -42,6 +46,11 @@ namespace AlienDefense.Meta
             {
                 // Catalog unavailable (tests): approximate from completed levels + unlocks already counted.
                 power += profile.GetCompletedLevelCount() * 40;
+            }
+
+            if (baseProgression != null)
+            {
+                power += baseProgression.ComputeBaseForce();
             }
 
             return power;

@@ -88,7 +88,7 @@ namespace AlienDefense.Settings
         private static void ApplyEngineSettings(GameSettings settings)
         {
             QualitySettings.SetQualityLevel(settings.QualityLevel, true);
-            Application.targetFrameRate = settings.TargetFrameRate;
+            Application.targetFrameRate = DisplayFrameRate.Resolve(settings.TargetFrameRate);
         }
 
         private void ApplyAudioSettings(GameSettings settings)

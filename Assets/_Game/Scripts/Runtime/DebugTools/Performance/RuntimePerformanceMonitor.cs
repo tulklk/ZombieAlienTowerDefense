@@ -299,11 +299,17 @@ namespace AlienDefense.DebugTools.Performance
 
         private void HandleHotkeys()
         {
-            if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.f9Key.wasPressedThisFrame)
             {
                 BeginInternal();
             }
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.F10))
+            else if (keyboard.f10Key.wasPressedThisFrame)
             {
                 EndInternal();
             }

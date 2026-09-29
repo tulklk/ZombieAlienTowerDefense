@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd8c417b518dea041a8de0a55e95b500, type: 3}
+  m_Name: RarityPalette
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Meta.RarityPalette
+  _entries:
+  - _rarity: 0
+    _frameColor: {r: 0.6039216, g: 0.6392157, b: 0.6784314, a: 1}
+    _labelColor: {r: 0.6039216, g: 0.6392157, b: 0.6784314, a: 1}
+    _frameSprite: {fileID: 0}
+    _displayName: Common
+  - _rarity: 1
+    _frameColor: {r: 0.29803923, g: 0.8509804, b: 0.39215687, a: 1}
+    _labelColor: {r: 0.29803923, g: 0.8509804, b: 0.39215687, a: 1}
+    _frameSprite: {fileID: 0}
+    _displayName: Uncommon
+  - _rarity: 2
+    _frameColor: {r: 0.22745098, g: 0.654902, b: 1, a: 1}
+    _labelColor: {r: 0.22745098, g: 0.654902, b: 1, a: 1}
+    _frameSprite: {fileID: 0}
+    _displayName: Rare
+  - _rarity: 3
+    _frameColor: {r: 0.7529412, g: 0.38039216, b: 1, a: 1}
+    _labelColor: {r: 0.7529412, g: 0.38039216, b: 1, a: 1}
+    _frameSprite: {fileID: 0}
+    _displayName: Epic
+  - _rarity: 4
+    _frameColor: {r: 1, g: 0.77254903, b: 0.22745098, a: 1}
+    _labelColor: {r: 1, g: 0.77254903, b: 0.22745098, a: 1}
+    _frameSprite: {fileID: 0}
+    _displayName: Legendary
+  _fallbackColor: {r: 0.6, g: 0.6, b: 0.65, a: 1}

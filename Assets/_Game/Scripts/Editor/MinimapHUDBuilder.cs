@@ -18,13 +18,15 @@ namespace AlienDefense.EditorTools
     {
         private const string SpriteDir = "Assets/_Game/Art/Sprite/Minimap";
         private const string UfoIconPath = "Assets/_Game/Art/Sprite/Play/ufoicon.png";
+        private const string GridMaterialPath = "Assets/_Game/Materials/UI/MAT_MinimapGrid.mat";
+        private const string ScanMaterialPath = "Assets/_Game/Materials/UI/MAT_MinimapRadarScan.mat";
 
         // Green theme (was cyan/blue) - see MinimapHUDBuilder's colour knobs in the report; change any of these
         // one place to re-theme the whole minimap.
         private static readonly Color PanelBorderColor = HexColor("#0B6E2B");
         private static readonly Color PanelBackgroundColor = HexColor("#22B14C");
         private static readonly Color PanelInnerColor = HexColor("#5EE88A");
-        private static readonly Color GridColor = new Color(0.918f, 1f, 0.941f, 0.15f); // #EAFFF0 @ 0.15
+        private static readonly Color GridColor = new Color(0.918f, 1f, 0.941f, 0.5f); // #EAFFF0 @ 0.5
         private static readonly Color PathColor = HexColor("#146B2E");
         private static readonly Color WaypointColor = HexColor("#0F4D22");
         private static readonly Color SpawnColor = HexColor("#FF7B29");
@@ -80,7 +82,6 @@ namespace AlienDefense.EditorTools
         {
             Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpriteDir + "/T_MinimapPanel.png");
             Sprite dotSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpriteDir + "/T_MinimapDot.png");
-            Sprite gridSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpriteDir + "/T_MinimapGrid.png");
             Sprite ufoSprite = AssetDatabase.LoadAssetAtPath<Sprite>(UfoIconPath);
 
             float rootHeight = TimerHeight + TimerSpacing + PanelSize;
@@ -182,10 +183,35 @@ namespace AlienDefense.EditorTools
             gridRect.offsetMin = Vector2.zero;
             gridRect.offsetMax = Vector2.zero;
             var gridImage = grid.GetComponent<Image>();
-            gridImage.sprite = gridSprite;
-            gridImage.type = Image.Type.Tiled;
-            gridImage.pixelsPerUnitMultiplier = 4f; // 32px source tile -> 8px on-screen grid cells
+
+            // Deliberately NO sprite: the grid is drawn procedurally by AlienDefense/UI/MinimapGrid, and that
+            // shader reads the quad's UV, which only spans the full rect when Image falls back to the (0,0,1,1)
+            // outer UVs it uses for a null sprite.
+            //
+            // It used to be T_MinimapGrid tiled at a pixelsPerUnitMultiplier. The cell COUNT was right, but the
+            // CanvasScaler's scaleFactor is not 1 (~1.09 on a 1080x2280 screen), so each cell landed on a
+            // fractional number of screen pixels and the 32px tile was resampled to a different sub-pixel offset
+            // every cell - some lines sharp, some blurred, which read as uneven cells. The shader measures line
+            // width in screen pixels via fwidth, so it stays even at any canvas scale.
+            gridImage.sprite = null;
+            gridImage.type = Image.Type.Simple;
+            gridImage.material = AssetDatabase.LoadAssetAtPath<Material>(GridMaterialPath);
+            gridImage.raycastTarget = false;
             gridImage.color = GridColor;
+
+            var scanOverlay = new GameObject("ScanOverlay", typeof(RectTransform), typeof(Image),
+                typeof(MinimapRadarScanOverlay));
+            scanOverlay.transform.SetParent(background.transform, false);
+            var scanRect = (RectTransform)scanOverlay.transform;
+            scanRect.anchorMin = Vector2.zero;
+            scanRect.anchorMax = Vector2.one;
+            scanRect.offsetMin = Vector2.zero;
+            scanRect.offsetMax = Vector2.zero;
+            var scanImage = scanOverlay.GetComponent<Image>();
+            scanImage.sprite = panelSprite;
+            scanImage.type = Image.Type.Sliced;
+            scanImage.material = AssetDatabase.LoadAssetAtPath<Material>(ScanMaterialPath);
+            scanImage.raycastTarget = false;
 
             var contentMaskObject = new GameObject("ContentMask", typeof(RectTransform), typeof(RectMask2D));
             contentMaskObject.transform.SetParent(background.transform, false);

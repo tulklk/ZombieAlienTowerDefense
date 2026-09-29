@@ -27,6 +27,16 @@ namespace AlienDefense.UI.MainMenu
         [SerializeField]
         private BaseScreenPresenter _basePresenter;
 
+        [SerializeField]
+        [Tooltip("The Inventory screen that now fills the Upgrade tab. The tower-upgrade presenter above is kept " +
+            "wired so its old content can be switched back on without re-scaffolding anything.")]
+        private AlienDefense.UI.Inventory.InventoryScreenPresenter _inventoryPresenter;
+
+        [SerializeField]
+        [Tooltip("The 3D base inside BasePanel. Switching to the Base tab activates the panel, which is what shows " +
+            "the world - this reference is only needed to hand it the services.")]
+        private AlienDefense.UI.BaseBuilding.BaseWorldPresenter _baseWorldPresenter;
+
         private MenuTab _activeTab = MenuTab.Play;
 
         public MenuTab ActiveTab => _activeTab;
@@ -37,6 +47,8 @@ namespace AlienDefense.UI.MainMenu
             _upgradePresenter?.ReceiveApplicationServices(services);
             _defensePresenter?.ReceiveApplicationServices(services);
             _basePresenter?.ReceiveApplicationServices(services);
+            _inventoryPresenter?.Initialize(services);
+            _baseWorldPresenter?.Initialize(services);
 
             SwitchTab(MenuTab.Play, force: true);
         }
@@ -110,6 +122,7 @@ namespace AlienDefense.UI.MainMenu
                     break;
                 case MenuTab.Upgrade:
                     _upgradePresenter?.Refresh();
+                    _inventoryPresenter?.ShowTab(_inventoryPresenter.ActiveTab);
                     break;
                 case MenuTab.Defense:
                     _defensePresenter?.Refresh();

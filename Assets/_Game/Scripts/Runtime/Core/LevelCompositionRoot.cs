@@ -15,6 +15,7 @@ using AlienDefense.Player;
 using AlienDefense.Progression;
 using AlienDefense.Meta;
 using AlienDefense.Save;
+using AlienDefense.Settings;
 using AlienDefense.Towers;
 using AlienDefense.UI;
 using AlienDefense.Vfx;
@@ -428,7 +429,8 @@ namespace AlienDefense.Core
             _victoryRewardsGranted = false;
             _careerStatistics = new CareerStatisticsTracker(_applicationServices?.PlayerProfileService);
 
-            Application.targetFrameRate = levelDefinition.TargetFrameRate;
+            int preferredFrameRate = _applicationServices?.SettingsService?.Current.TargetFrameRate ?? levelDefinition.TargetFrameRate;
+            Application.targetFrameRate = DisplayFrameRate.Resolve(preferredFrameRate);
 
             BaseHealth.Destroyed += HandleBaseDestroyed;
             GameFlow.GameStateChanged += HandleGameStateChanged;

@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d80bb804bbe8104c8911a3f9fff537c, type: 3}
+  m_Name: BaseBuilding_central_building
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Base.BaseBuildingDefinition
+  _id: central_building
+  _displayName: Central Building
+  _description: The heart of the base. Raising its level unlocks new structures and
+    higher upgrade caps.
+  _icon: {fileID: 0}
+  _type: 0
+  _plotId: plot_central
+  _levels:
+  - _level: 1
+    _constructionSeconds: 5
+    _forceReward: 100
+    _requirements: []
+    _bonuses:
+    - _displayName: Building power
+      _statId: building_power
+      _value: 100
+      _isPercent: 0
+      _icon: {fileID: 0}
+    _production:
+      _materialId: 
+      _amountPerInterval: 0
+      _intervalSeconds: 60
+      _storageCapacity: 0
+    _visualPrefab: {fileID: 4859340706887407328, guid: 8803ad3776fd5254dbf47b871edba96b,
+      type: 3}
+  - _level: 2
+    _constructionSeconds: 15
+    _forceReward: 200
+    _requirements:
+    - _type: 3
+      _targetId: wood
+      _requiredValue: 50
+    _bonuses:
+    - _displayName: Building power
+      _statId: building_power
+      _value: 200
+      _isPercent: 0
+      _icon: {fileID: 0}
+    _production:
+      _materialId: 
+      _amountPerInterval: 0
+      _intervalSeconds: 60
+      _storageCapacity: 0
+    _visualPrefab: {fileID: 4859340706887407328, guid: 8803ad3776fd5254dbf47b871edba96b,
+      type: 3}
+  - _level: 3
+    _constructionSeconds: 30
+    _forceReward: 300
+    _requirements:
+    - _type: 3
+      _targetId: wood
+      _requiredValue: 100
+    _bonuses:
+    - _displayName: Building power
+      _statId: building_power
+      _value: 300
+      _isPercent: 0
+      _icon: {fileID: 0}
+    _production:
+      _materialId: 
+      _amountPerInterval: 0
+      _intervalSeconds: 60
+      _storageCapacity: 0
+    _visualPrefab: {fileID: 4859340706887407328, guid: 8803ad3776fd5254dbf47b871edba96b,
+      type: 3}

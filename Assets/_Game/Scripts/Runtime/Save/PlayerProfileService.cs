@@ -633,6 +633,357 @@ namespace AlienDefense.Save
             _saveService.RequestSave(_data);
         }
 
+        // ------------------------------------------------------------------ Meta inventory (materials)
+
+        /// <summary>Every material/container stack the player holds, as immutable copies. Allocates a list per
+        /// call, so the inventory UI calls it on open and on change events - never per frame.</summary>
+        public System.Collections.Generic.List<MetaItemStackSnapshot> GetInventoryStacks()
+        {
+            var result = new System.Collections.Generic.List<MetaItemStackSnapshot>();
+            if (_data.Inventory == null)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < _data.Inventory.Count; i++)
+            {
+                MetaItemStackSaveData stack = _data.Inventory[i];
+                if (stack != null && !string.IsNullOrWhiteSpace(stack.ItemId) && stack.Amount > 0)
+                {
+                    result.Add(new MetaItemStackSnapshot(stack.ItemId, stack.Amount));
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>All-or-nothing: spends nothing and returns false unless the full amount is available, so a
+        /// craft that needs several materials can never half-charge the player.</summary>
+        public bool TrySpendItem(string itemId, int amount)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || amount <= 0 || _data.Inventory == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _data.Inventory.Count; i++)
+            {
+                MetaItemStackSaveData stack = _data.Inventory[i];
+                if (stack == null || stack.ItemId != itemId)
+                {
+                    continue;
+                }
+
+                if (stack.Amount < amount)
+                {
+                    return false;
+                }
+
+                stack.Amount -= amount;
+                RequestImmediateSave();
+                return true;
+            }
+
+            return false;
+        }
+
+        // ------------------------------------------------------------------ Equipment
+
+        public System.Collections.Generic.List<EquipmentSnapshot> GetEquipmentEntries()
+        {
+            var result = new System.Collections.Generic.List<EquipmentSnapshot>();
+            if (_data.Equipment == null)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < _data.Equipment.Count; i++)
+            {
+                EquipmentSaveData entry = _data.Equipment[i];
+                if (entry != null && !string.IsNullOrWhiteSpace(entry.ItemId))
+                {
+                    result.Add(ToSnapshot(entry));
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>The default struct (Exists == false) when the player does not own that piece.</summary>
+        public EquipmentSnapshot GetEquipment(string itemId)
+        {
+            EquipmentSaveData entry = FindEquipment(itemId);
+            return entry != null ? ToSnapshot(entry) : default;
+        }
+
+        /// <summary>Grants a piece, or adds a spare copy of one already owned. Spare copies are what the rarity
+        /// craft consumes, which is why a second grant does not silently do nothing.</summary>
+        public void GrantEquipment(string itemId, AlienDefense.Meta.MetaItemRarity rarity)
+        {
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                Debug.LogError("[PlayerProfileService] Ignored GrantEquipment with an empty item id.");
+                return;
+            }
+
+            if (_data.Equipment == null)
+            {
+                _data.Equipment = new System.Collections.Generic.List<EquipmentSaveData>();
+            }
+
+            EquipmentSaveData entry = FindEquipment(itemId);
+            if (entry != null)
+            {
+                entry.Duplicates = Mathf.Max(0, entry.Duplicates) + 1;
+            }
+            else
+            {
+                _data.Equipment.Add(new EquipmentSaveData
+                {
+                    ItemId = itemId,
+                    Rarity = (int)rarity,
+                    Level = 1,
+                    Duplicates = 0,
+                    Equipped = false
+                });
+            }
+
+            RequestImmediateSave();
+        }
+
+        /// <summary>Raises a piece one rung and pays for it in the same step. Returns false without touching
+        /// anything when the spare copies are not there, so the caller cannot end up charging a failed craft.</summary>
+        public bool TryUpgradeEquipmentRarity(string itemId, AlienDefense.Meta.MetaItemRarity newRarity, int duplicatesToSpend)
+        {
+            EquipmentSaveData entry = FindEquipment(itemId);
+            if (entry == null || duplicatesToSpend < 0 || entry.Duplicates < duplicatesToSpend)
+            {
+                return false;
+            }
+
+            entry.Duplicates -= duplicatesToSpend;
+            entry.Rarity = (int)newRarity;
+            RequestImmediateSave();
+            return true;
+        }
+
+        /// <summary>Sets the equipped flag on one piece only. Clearing the other piece in the same slot is the
+        /// caller's job - this layer does not know which slot a piece belongs to (that lives in the catalog).</summary>
+        public void SetEquipmentEquipped(string itemId, bool equipped)
+        {
+            EquipmentSaveData entry = FindEquipment(itemId);
+            if (entry == null || entry.Equipped == equipped)
+            {
+                return;
+            }
+
+            entry.Equipped = equipped;
+            RequestImmediateSave();
+        }
+
+        private EquipmentSaveData FindEquipment(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || _data.Equipment == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < _data.Equipment.Count; i++)
+            {
+                EquipmentSaveData entry = _data.Equipment[i];
+                if (entry != null && entry.ItemId == itemId)
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        private static EquipmentSnapshot ToSnapshot(EquipmentSaveData entry)
+        {
+            return new EquipmentSnapshot(
+                entry.ItemId,
+                (AlienDefense.Meta.MetaItemRarity)Mathf.Max(0, entry.Rarity),
+                Mathf.Max(1, entry.Level),
+                Mathf.Max(0, entry.Duplicates),
+                entry.Equipped);
+        }
+
+        // ------------------------------------------------------------------ Artifacts
+
+        public System.Collections.Generic.List<ArtifactSnapshot> GetArtifactEntries()
+        {
+            var result = new System.Collections.Generic.List<ArtifactSnapshot>();
+            if (_data.Artifacts == null)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < _data.Artifacts.Count; i++)
+            {
+                ArtifactSaveData entry = _data.Artifacts[i];
+                if (entry != null && !string.IsNullOrWhiteSpace(entry.ItemId) && entry.Amount > 0)
+                {
+                    result.Add(new ArtifactSnapshot(
+                        entry.ItemId,
+                        (AlienDefense.Meta.MetaItemRarity)Mathf.Max(0, entry.Rarity),
+                        entry.Amount));
+                }
+            }
+
+            return result;
+        }
+
+        public void AddArtifact(string itemId, AlienDefense.Meta.MetaItemRarity rarity, int amount)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || amount <= 0)
+            {
+                Debug.LogError($"[PlayerProfileService] Ignored AddArtifact('{itemId}', {amount}).");
+                return;
+            }
+
+            if (_data.Artifacts == null)
+            {
+                _data.Artifacts = new System.Collections.Generic.List<ArtifactSaveData>();
+            }
+
+            ArtifactSaveData entry = FindArtifact(itemId, rarity);
+            if (entry != null)
+            {
+                entry.Amount = Mathf.Max(0, entry.Amount) + amount;
+            }
+            else
+            {
+                _data.Artifacts.Add(new ArtifactSaveData { ItemId = itemId, Rarity = (int)rarity, Amount = amount });
+            }
+
+            RequestImmediateSave();
+        }
+
+        public bool TrySpendArtifact(string itemId, AlienDefense.Meta.MetaItemRarity rarity, int amount)
+        {
+            ArtifactSaveData entry = FindArtifact(itemId, rarity);
+            if (entry == null || amount <= 0 || entry.Amount < amount)
+            {
+                return false;
+            }
+
+            entry.Amount -= amount;
+            RequestImmediateSave();
+            return true;
+        }
+
+        private ArtifactSaveData FindArtifact(string itemId, AlienDefense.Meta.MetaItemRarity rarity)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || _data.Artifacts == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < _data.Artifacts.Count; i++)
+            {
+                ArtifactSaveData entry = _data.Artifacts[i];
+                if (entry != null && entry.ItemId == itemId && entry.Rarity == (int)rarity)
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        // ------------------------------------------------------------------ Base buildings
+
+        public System.Collections.Generic.List<BaseBuildingSnapshot> GetBaseBuildings()
+        {
+            var result = new System.Collections.Generic.List<BaseBuildingSnapshot>();
+            if (_data.BaseBuildings == null)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < _data.BaseBuildings.Count; i++)
+            {
+                BaseBuildingSaveData entry = _data.BaseBuildings[i];
+                if (entry != null && !string.IsNullOrWhiteSpace(entry.BuildingId))
+                {
+                    result.Add(ToSnapshot(entry));
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>The default struct (Exists == false) for a building the player has never touched, which the
+        /// base treats as an empty plot at level 0.</summary>
+        public BaseBuildingSnapshot GetBaseBuilding(string buildingId)
+        {
+            BaseBuildingSaveData entry = FindBaseBuilding(buildingId);
+            return entry != null ? ToSnapshot(entry) : default;
+        }
+
+        /// <summary>Writes the whole row in one call. Construction is a state machine with four fields that must
+        /// agree with each other, so exposing them one setter at a time would invite half-applied transitions.</summary>
+        public void SetBaseBuilding(string buildingId, int level, AlienDefense.Base.BaseBuildingState state,
+            long constructionStartUtcTicks, long constructionCompleteUtcTicks, long lastCollectUtcTicks)
+        {
+            if (string.IsNullOrWhiteSpace(buildingId))
+            {
+                Debug.LogError("[PlayerProfileService] Ignored SetBaseBuilding with an empty building id.");
+                return;
+            }
+
+            if (_data.BaseBuildings == null)
+            {
+                _data.BaseBuildings = new System.Collections.Generic.List<BaseBuildingSaveData>();
+            }
+
+            BaseBuildingSaveData entry = FindBaseBuilding(buildingId);
+            if (entry == null)
+            {
+                entry = new BaseBuildingSaveData { BuildingId = buildingId };
+                _data.BaseBuildings.Add(entry);
+            }
+
+            entry.Level = Mathf.Max(0, level);
+            entry.State = (int)state;
+            entry.ConstructionStartUtcTicks = Math.Max(0L, constructionStartUtcTicks);
+            entry.ConstructionCompleteUtcTicks = Math.Max(0L, constructionCompleteUtcTicks);
+            entry.LastCollectUtcTicks = Math.Max(0L, lastCollectUtcTicks);
+            RequestImmediateSave();
+        }
+
+        private BaseBuildingSaveData FindBaseBuilding(string buildingId)
+        {
+            if (string.IsNullOrWhiteSpace(buildingId) || _data.BaseBuildings == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < _data.BaseBuildings.Count; i++)
+            {
+                BaseBuildingSaveData entry = _data.BaseBuildings[i];
+                if (entry != null && entry.BuildingId == buildingId)
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        private static BaseBuildingSnapshot ToSnapshot(BaseBuildingSaveData entry)
+        {
+            return new BaseBuildingSnapshot(
+                entry.BuildingId,
+                Mathf.Max(0, entry.Level),
+                (AlienDefense.Base.BaseBuildingState)Mathf.Max(0, entry.State),
+                entry.ConstructionStartUtcTicks,
+                entry.ConstructionCompleteUtcTicks,
+                entry.LastCollectUtcTicks);
+        }
+
         private void RequestImmediateSave()
         {
             if (_batchDepth > 0)
