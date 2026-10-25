@@ -467,16 +467,11 @@ namespace AlienDefense.EditorTools
             float world = GroundHalfSize * 2f;
             var pixels = new Color32[size * size];
 
-            // Rectangles that are roads or driveways (centre XZ, half size XZ).
+            // Road rectangles (centre XZ, half size XZ).
             var roads = new List<(Vector2 c, Vector2 h)>();
             foreach ((Vector3 center, Vector2 s) in Roads)
             {
                 roads.Add((new Vector2(center.x, center.z), s * 0.5f));
-            }
-
-            foreach ((string _, Vector3 p) in Plots)
-            {
-                roads.Add((new Vector2(p.x, Mathf.Sign(p.z) * 3.8f), new Vector2(1.5f, 1.9f)));
             }
 
             var plotSquares = new List<(Vector2 c, float h)>();
@@ -817,7 +812,6 @@ namespace AlienDefense.EditorTools
 
             foreach ((string _, Vector3 plot) in Plots)
             {
-                if (RectDistance(q, new Vector2(plot.x, Mathf.Sign(plot.z) * 3.8f), new Vector2(1.5f, 1.9f)) < 1f + radius) return true;
                 if (RectDistance(q, new Vector2(plot.x, plot.z), new Vector2(BuildingPlotClear, BuildingPlotClear)) < radius) return true;
             }
 
@@ -1118,7 +1112,6 @@ namespace AlienDefense.EditorTools
 
             foreach ((string _, Vector3 plot) in Plots)
             {
-                if (RectDistance(q, new Vector2(plot.x, Mathf.Sign(plot.z) * 3.8f), new Vector2(1.5f, 1.9f)) < 0.8f) return true;
                 if (RectDistance(q, new Vector2(plot.x, plot.z), new Vector2(BuildingPlotClear, BuildingPlotClear)) < radius) return true;
             }
 

@@ -72,6 +72,11 @@ namespace AlienDefense.Pickups
         [Tooltip("Height above the ground surface a ball is placed at.")]
         private float _groundOffset = 0.35f;
 
+        [SerializeField]
+        [Tooltip("Ground lower than this (world Y) is skipped - a sea bed under the water surface. Leave very low " +
+            "for maps without water.")]
+        private float _minGroundY = -1000f;
+
         [Header("Reward")]
         [SerializeField, Min(1)]
         [Tooltip("Energy per ball. The wallet caps at its Max Energy and discards any overflow, so this wants to " +
@@ -94,6 +99,7 @@ namespace AlienDefense.Pickups
         public float RoadLateralSpread => _roadLateralSpread;
         public float BoundsPadding => _boundsPadding;
         public float GroundOffset => _groundOffset;
+        public float MinGroundY => _minGroundY;
         public int EnergyPerPickup => _energyPerPickup;
         public int ExperienceReward => _experienceReward;
 

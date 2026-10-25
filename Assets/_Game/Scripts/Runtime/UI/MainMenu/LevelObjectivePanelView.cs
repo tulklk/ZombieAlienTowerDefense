@@ -1,5 +1,6 @@
 using System;
 using AlienDefense.Meta;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +13,20 @@ namespace AlienDefense.UI.MainMenu
         private LevelObjectiveView[] _objectiveSlots = Array.Empty<LevelObjectiveView>();
 
         [SerializeField]
+        [Tooltip("Green progress fills lying over the board's dark pipes, left to right: element i joins chest i and " +
+            "chest i+1. Image Type Filled / Horizontal / Left - only fillAmount is driven.")]
         private Image[] _connectors = Array.Empty<Image>();
+
+        [Header("Reveal of newly achieved chests")]
+        [SerializeField, Min(0f)]
+        private float _revealStartDelay = 0.2f;
+
+        [SerializeField, Min(0.05f)]
+        private float _connectorFillDuration = 0.28f;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("Pause after a chest has settled, before the green starts running to the next one.")]
+        private float _revealStepDelay = 0.1f;
 
         [SerializeField]
         private Button _dismissBlocker;
@@ -20,15 +34,11 @@ namespace AlienDefense.UI.MainMenu
         [SerializeField]
         private ObjectiveRewardOverlayView _detailOverlay;
 
-        [SerializeField]
-        private Color _connectorIncompleteColor = new Color(0.25f, 0.25f, 0.3f, 1f);
-
-        [SerializeField]
-        private Color _connectorCompletedColor = new Color(0.4f, 0.85f, 0.5f, 1f);
-
         private LevelObjectivePresentation[] _current;
         private LevelObjectiveKind _openKind;
         private bool _hasOpen;
+        private Sequence _revealSequence;
+        private int _preparedRevealFrom = -1;
 
         public event Action<LevelObjectiveKind> ClaimClicked;
 
@@ -64,6 +74,13 @@ namespace AlienDefense.UI.MainMenu
             }
 
             HideAllBubbles();
+            CancelReveal(); // hidden mid-reveal: come back showing the saved state, never a half-run animation
+        }
+
+        private void OnDestroy()
+        {
+            _revealSequence?.Kill();
+            _revealSequence = null;
         }
 
         public void SetDetailOverlay(ObjectiveRewardOverlayView overlay)
@@ -76,35 +93,154 @@ namespace AlienDefense.UI.MainMenu
             _dismissBlocker = dismiss;
         }
 
+        /// <summary>Shows the chests exactly as given - no animation. Also ends any reveal in progress.</summary>
         public void SetObjectives(LevelObjectivePresentation[] objectives)
         {
             HideAllBubbles();
+            _revealSequence?.Kill();
+            _revealSequence = null;
+            _preparedRevealFrom = -1;
 
             bool hasObjectives = objectives != null && objectives.Length > 0;
-            gameObject.SetActive(hasObjectives);
             _current = objectives;
+            gameObject.SetActive(hasObjectives);
 
             if (!hasObjectives)
             {
                 return;
             }
 
-            int slotCount = Mathf.Min(_objectiveSlots.Length, objectives.Length);
-            for (int i = 0; i < slotCount; i++)
+            ApplyFinalState();
+        }
+
+        /// <summary>Shows the chests as they were BEFORE the level was just won - the first
+        /// <paramref name="previouslyAchieved"/> already open with their pipes green, the newly achieved ones still
+        /// closed - and arms the reveal. Nothing moves until PlayPreparedReveal. With nothing new to reveal this is
+        /// the same as SetObjectives.</summary>
+        public void PrepareReveal(LevelObjectivePresentation[] objectives, int previouslyAchieved)
+        {
+            SetObjectives(objectives);
+            if (objectives == null || !gameObject.activeInHierarchy)
             {
-                _objectiveSlots[i]?.Configure(objectives[i]);
+                return;
             }
 
-            int connectorCount = Mathf.Min(_connectors.Length, slotCount - 1);
-            for (int i = 0; i < connectorCount; i++)
+            int achieved = CountAchieved();
+            int from = Mathf.Clamp(previouslyAchieved, 0, achieved);
+            if (from >= achieved)
             {
-                if (_connectors[i] == null)
+                return;
+            }
+
+            for (int i = from; i < achieved; i++)
+            {
+                _objectiveSlots[i]?.ShowAsNotYetRevealed();
+                SetConnectorFill(i - 1, 0f);
+            }
+
+            _preparedRevealFrom = from;
+        }
+
+        /// <summary>Runs the armed reveal once, left to right: for each newly achieved chest the green runs along the
+        /// pipe leading to it (not for the first chest - nothing leads to it), then the chest pops and opens. One
+        /// sequence, unscaled time, linked to this object; however it ends, the chests land on the saved state.</summary>
+        public void PlayPreparedReveal()
+        {
+            if (_preparedRevealFrom < 0 || _current == null || !gameObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            int from = _preparedRevealFrom;
+            int achieved = CountAchieved();
+            _preparedRevealFrom = -1;
+
+            _revealSequence?.Kill();
+            _revealSequence = DOTween.Sequence().SetUpdate(true).SetLink(gameObject);
+            _revealSequence.AppendInterval(_revealStartDelay);
+
+            for (int i = from; i < achieved; i++)
+            {
+                Image connector = GetConnector(i - 1);
+                if (connector != null)
                 {
-                    continue;
+                    // DOTween.To rather than DOFillAmount: DOTween's UI module lives outside this assembly.
+                    _revealSequence.Append(DOTween
+                        .To(() => connector.fillAmount, value => connector.fillAmount = value, 1f, _connectorFillDuration)
+                        .SetEase(Ease.InOutSine));
                 }
 
-                bool achieved = objectives[i].RewardState != ObjectiveRewardUiState.Locked;
-                _connectors[i].color = achieved ? _connectorCompletedColor : _connectorIncompleteColor;
+                if (_objectiveSlots[i] != null)
+                {
+                    _revealSequence.Append(_objectiveSlots[i].CreateUnlockTween());
+                }
+
+                _revealSequence.AppendInterval(_revealStepDelay);
+            }
+
+            _revealSequence.OnComplete(HandleRevealCompleted);
+        }
+
+        private void HandleRevealCompleted()
+        {
+            _revealSequence = null;
+            ApplyFinalState();
+        }
+
+        /// <summary>Stops an armed or running reveal and snaps everything to the saved state.</summary>
+        private void CancelReveal()
+        {
+            bool wasRevealing = _revealSequence != null || _preparedRevealFrom >= 0;
+            _revealSequence?.Kill();
+            _revealSequence = null;
+            _preparedRevealFrom = -1;
+
+            if (wasRevealing && _current != null)
+            {
+                ApplyFinalState();
+            }
+        }
+
+        private void ApplyFinalState()
+        {
+            int slotCount = Mathf.Min(_objectiveSlots.Length, _current.Length);
+            for (int i = 0; i < slotCount; i++)
+            {
+                _objectiveSlots[i]?.Configure(_current[i]);
+            }
+
+            // Pipe i leads to chest i+1, so it is green exactly when that chest's objective is achieved.
+            for (int i = 0; i < _connectors.Length; i++)
+            {
+                bool reached = i + 1 < slotCount && _current[i + 1].RewardState != ObjectiveRewardUiState.Locked;
+                SetConnectorFill(i, reached ? 1f : 0f);
+            }
+        }
+
+        /// <summary>Achieved objectives counted from the left (each one implies those before it).</summary>
+        private int CountAchieved()
+        {
+            int slotCount = Mathf.Min(_objectiveSlots.Length, _current.Length);
+            int count = 0;
+            while (count < slotCount && _current[count].RewardState != ObjectiveRewardUiState.Locked)
+            {
+                count++;
+            }
+
+            return count;
+        }
+
+        private Image GetConnector(int index)
+        {
+            return index >= 0 && index < _connectors.Length ? _connectors[index] : null;
+        }
+
+        private void SetConnectorFill(int index, float amount)
+        {
+            Image connector = GetConnector(index);
+            if (connector != null)
+            {
+                connector.fillAmount = amount;
             }
         }
 

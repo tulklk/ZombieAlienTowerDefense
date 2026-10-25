@@ -1,0 +1,109 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30050ce8beabf0a4eb18c26fae02fb17, type: 3}
+  m_Name: Level02_Invasion
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Waves.ContinuousInvasionDefinition
+  _bossCountdown: 240
+  _spawnIntervalStart: 1.15
+  _spawnIntervalEnd: 0.78
+  _enemies:
+  - Enemy: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+    StartWeight: 65
+    EndWeight: 30
+    UnlockTime: 0
+    MaxConsecutive: 4
+    BaseDamage: 1
+  - Enemy: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
+    StartWeight: 30
+    EndWeight: 25
+    UnlockTime: 0
+    MaxConsecutive: 3
+    BaseDamage: 1
+  - Enemy: {fileID: 11400000, guid: 43cdf1b094682e5498489602d5005976, type: 2}
+    StartWeight: 5
+    EndWeight: 25
+    UnlockTime: 30
+    MaxConsecutive: 2
+    BaseDamage: 2
+  - Enemy: {fileID: 11400000, guid: aff01f1bf4fef2940ad14e6a4dbf6391, type: 2}
+    StartWeight: 0
+    EndWeight: 20
+    UnlockTime: 60
+    MaxConsecutive: 2
+    BaseDamage: 2
+  _lanes: []
+  _maxAlivePerLane: 0
+  _packSizeMin: 1
+  _packSizeMax: 1
+  _packStagger: 0.8
+  _miniBosses:
+  - Time: 35
+    Enemy: {fileID: 11400000, guid: bbc3efc6a54f27c459a7b30a6a056d63, type: 2}
+    Scale: 2
+    HealthMultiplier: 3
+    SpeedMultiplier: 0.95
+    BaseDamage: 2
+    PathIndex: -1
+    Count: 1
+    Spacing: 2
+    HealthLayers: 5
+  - Time: 70
+    Enemy: {fileID: 11400000, guid: 3be98f892cf71594d976d5cba914508e, type: 2}
+    Scale: 2
+    HealthMultiplier: 4
+    SpeedMultiplier: 0.9
+    BaseDamage: 2
+    PathIndex: -1
+    Count: 1
+    Spacing: 2
+    HealthLayers: 5
+  - Time: 105
+    Enemy: {fileID: 11400000, guid: 43cdf1b094682e5498489602d5005976, type: 2}
+    Scale: 2
+    HealthMultiplier: 1.9230769
+    SpeedMultiplier: 0.9
+    BaseDamage: 3
+    PathIndex: -1
+    Count: 1
+    Spacing: 2
+    HealthLayers: 5
+  - Time: 140
+    Enemy: {fileID: 11400000, guid: aff01f1bf4fef2940ad14e6a4dbf6391, type: 2}
+    Scale: 2
+    HealthMultiplier: 3.5714285
+    SpeedMultiplier: 0.9
+    BaseDamage: 3
+    PathIndex: -1
+    Count: 1
+    Spacing: 2
+    HealthLayers: 5
+  - Time: 175
+    Enemy: {fileID: 11400000, guid: 43cdf1b094682e5498489602d5005976, type: 2}
+    Scale: 2
+    HealthMultiplier: 1.9230769
+    SpeedMultiplier: 0.9
+    BaseDamage: 4
+    PathIndex: -1
+    Count: 1
+    Spacing: 2
+    HealthLayers: 5
+  - Time: 210
+    Enemy: {fileID: 11400000, guid: aff01f1bf4fef2940ad14e6a4dbf6391, type: 2}
+    Scale: 2
+    HealthMultiplier: 3.5714285
+    SpeedMultiplier: 0.85
+    BaseDamage: 4
+    PathIndex: -1
+    Count: 1
+    Spacing: 2
+    HealthLayers: 5
+  _debugLogs: 1

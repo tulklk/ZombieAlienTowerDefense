@@ -50,14 +50,6 @@ namespace AlienDefense.Enemies
             "seen (see its own Duration). Enemies without one release to the pool immediately, unchanged.")]
         private EnemyDeathVisual _deathVisual;
 
-        [SerializeField]
-        [Tooltip("Optional. On reaching PlayerBase, plays a looping Attack animation and deals BaseDamage " +
-            "repeatedly - once per its own Duration - instead of vanishing after a single hit. Stays alive and " +
-            "fully targetable the whole time, so a Tower can still kill it mid-attack; otherwise it keeps " +
-            "attacking until BaseHealthService.IsDestroyed. Enemies without one keep resolving ReachedBase " +
-            "instantly with a single hit, unchanged.")]
-        private EnemyBaseAttackVisual _baseAttackVisual;
-
         private EnemyDefinition _definition;
         private EconomyService _economy;
         private BaseHealthService _baseHealth;
@@ -71,10 +63,15 @@ namespace AlienDefense.Enemies
         private bool _releaseDeferredByHold;
         private bool _isCombatActive = true;
         private Animator _animator;
+        private EnemyShieldBarView _shieldBarView;
         private float _animatorSpeedBeforeFreeze = 1f;
         private int _generation;
+        private Vector3 _baseLocalScale = Vector3.one;
 
         public EnemyDefinition Definition => _definition;
+
+        /// <summary>Normal, MiniBoss or FinalBoss for this spawn (see SetRank). Reset to Normal on every spawn.</summary>
+        public EnemyRank Rank { get; private set; }
         public Transform TargetPoint => _targetPoint;
         public EnemyHealth Health => _health;
         public EnemyMovement Movement => _movement;
@@ -91,9 +88,10 @@ namespace AlienDefense.Enemies
         public IStatusApplicable StatusController => _statusController;
         public BossController BossController => _bossController;
 
-        /// <summary>True only while this enemy is eligible to start a fresh tractor beam capture.</summary>
+        /// <summary>True only while this enemy is eligible to start a fresh tractor beam capture. Types whose
+        /// definition says so (heavy ones, bosses) and every mini boss can only be brought down by the towers.</summary>
         public bool IsCapturable =>
-            !_isResolved && !_isCaptured && _isCombatActive &&
+            !_isResolved && !_isCaptured && _isCombatActive && Rank != EnemyRank.MiniBoss &&
             _definition != null && _definition.CanBeTractorCaptured &&
             _health != null && _health.IsDamageable;
 
@@ -116,6 +114,29 @@ namespace AlienDefense.Enemies
             _health.Died += HandleDied;
             _movement.DestinationReached += HandleReachedBase;
             _animator = GetComponentInChildren<Animator>();
+            // The shield bar is not a serialized reference on the Enemy_* prefabs; look it up once (pooled enemies
+            // keep it for life) so its billboard gets the camera like the health bar does.
+            _shieldBarView = GetComponentInChildren<EnemyShieldBarView>(true);
+            _baseLocalScale = transform.localScale;
+        }
+
+        /// <summary>Marks this spawn as a mini boss / final boss (WaveController, right after spawning it).</summary>
+        public void SetRank(EnemyRank rank)
+        {
+            Rank = rank;
+            if (_healthBarView != null)
+            {
+                _healthBarView.SetBossStyle(rank == EnemyRank.MiniBoss);
+            }
+        }
+
+        /// <summary>Splits a mini boss's health bar into this many layers ("x5"). Call after SetRank.</summary>
+        public void SetHealthBarLayers(int layers)
+        {
+            if (_healthBarView != null)
+            {
+                _healthBarView.SetBossStyle(Rank == EnemyRank.MiniBoss, layers);
+            }
         }
 
         /// <summary>Holds (false) or releases (true) this enemy for a boss intro: while held it keeps its place and
@@ -174,6 +195,15 @@ namespace AlienDefense.Enemies
             _cinematicHold = false;
             _releaseDeferredByHold = false;
             _generation++;
+            Rank = EnemyRank.Normal;
+            if (_healthBarView != null)
+            {
+                _healthBarView.SetBossStyle(false);
+            }
+
+            // Set on every spawn (not only when != 1) so a pooled instance never keeps a previous mini-boss size.
+            float scale = modifiers.ScaleMultiplier > 0f ? modifiers.ScaleMultiplier : 1f;
+            transform.localScale = _baseLocalScale * scale;
 
             float health = definition.MaxHealth * modifiers.HealthMultiplier;
             float moveSpeed = definition.MoveSpeed * modifiers.SpeedMultiplier;
@@ -192,6 +222,11 @@ namespace AlienDefense.Enemies
             if (_healthBarView != null)
             {
                 _healthBarView.Initialize(cameraTransform);
+            }
+
+            if (_shieldBarView != null)
+            {
+                _shieldBarView.Initialize(cameraTransform);
             }
 
             _registry.Register(this);
@@ -294,6 +329,10 @@ namespace AlienDefense.Enemies
             Resolve(EnemyResolveReason.Defeated);
         }
 
+        /// <summary>Walking -> reached the base -> one hit of BaseDamage -> straight back to the pool. No attack
+        /// animation and no standing at the base: Resolve(ReachedBase) deals the damage exactly once (its
+        /// _isResolved guard makes a second arrival a no-op) and fires Resolved, which is what frees this enemy's
+        /// slot in the wave's alive count so the spawner can continue.</summary>
         private void HandleReachedBase()
         {
             if (_isResolved)
@@ -301,54 +340,7 @@ namespace AlienDefense.Enemies
                 return;
             }
 
-            if (_baseAttackVisual != null)
-            {
-                // Deliberately NOT Resolve(ReachedBase) here: this enemy is meant to stay alive, registered and
-                // fully targetable, parked at the base attacking it over and over, until either a Tower kills it
-                // (the normal Defeated path still applies at any point, via HandleDied -> Resolve) or the level
-                // cleans it up (LevelEnded, via LevelCompositionRoot.DespawnAllEnemies -> ForceResolve). Resolved
-                // is intentionally NOT fired early either: this zombie is still a live threat sitting on the
-                // base, so it should keep counting against its wave's ActiveEnemyCount (see WaveRuntimeTracker)
-                // for as long as it's parked there - a wave with an unresolved base-attacker at the end of it is
-                // not actually "done", and neither is the level (HandleAllWavesCompleted/ReportVictory), until a
-                // Tower kills it. That's intended pressure, not a bug: leaving a zombie alive at the base is what
-                // keeps damaging PlayerBase, so the player has to clear it out to progress.
-                _baseAttackVisual.PlayAttack();
-                StartCoroutine(AttackBaseRepeatedly());
-            }
-            else
-            {
-                Resolve(EnemyResolveReason.ReachedBase);
-            }
-        }
-
-        /// <summary>Deals BaseDamage on a loop, once per EnemyBaseAttackVisual.Duration (one Attack clip cycle),
-        /// for as long as this enemy is still alive and the base still has health. Captures _generation up front
-        /// so a stale coroutine from a PREVIOUS life of this pooled instance can never damage the base on behalf
-        /// of a instance that's since been re-initialized for a different spawn (same safety pattern as
-        /// CaptureHandle/EnergyHandle/PropHandle elsewhere in this project) - and stops immediately once this
-        /// instance actually resolves (Tower kill mid-attack) or the base is destroyed.</summary>
-        private IEnumerator AttackBaseRepeatedly()
-        {
-            int generationAtStart = _generation;
-            var wait = new WaitForSeconds(_baseAttackVisual.Duration);
-
-            while (true)
-            {
-                yield return wait;
-
-                if (_generation != generationAtStart || _isResolved)
-                {
-                    yield break;
-                }
-
-                if (_baseHealth != null && _baseHealth.IsDestroyed)
-                {
-                    yield break;
-                }
-
-                _baseHealth?.TakeDamage(_scaledBaseDamage);
-            }
+            Resolve(EnemyResolveReason.ReachedBase);
         }
 
         private void HandleCaptureCompleted()

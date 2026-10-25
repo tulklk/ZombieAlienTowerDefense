@@ -23,6 +23,10 @@ namespace AlienDefense.Towers
         private Sprite _statsIcon;
 
         [SerializeField]
+        [Tooltip("Optional. Small damage-type badge shown before the name on the damage statistics (fire, lightning...).")]
+        private Sprite _statsTypeIcon;
+
+        [SerializeField]
         [Tooltip("Optional. Full card artwork for the 'Choose Tower' panel (name, art and description are painted " +
             "into the sprite); falls back to Icon.")]
         private Sprite _choiceCardSprite;
@@ -30,6 +34,15 @@ namespace AlienDefense.Towers
         [SerializeField, TextArea]
         [Tooltip("Short flavor text shown on the 'Choose Tower' card - see TowerChoiceView.")]
         private string _description = "";
+
+        [Header("Defense tab")]
+        [SerializeField]
+        [Tooltip("MetaItem id of the upgrade card a permanent level-up of this tower consumes (see TowerLevelData.MetaCardCost).")]
+        private string _upgradeCardItemId = "";
+
+        [SerializeField]
+        [Tooltip("Damage type name shown on the Defense tab (Fire, Ice, Physical...). The badge itself is Stats Type Icon.")]
+        private string _damageTypeLabel = "Physical";
 
         [SerializeField]
         private TowerController _prefab;
@@ -78,8 +91,11 @@ namespace AlienDefense.Towers
         public string DisplayName => _displayName;
         public Sprite Icon => _icon;
         public Sprite StatsIcon => _statsIcon != null ? _statsIcon : _icon;
+        public Sprite StatsTypeIcon => _statsTypeIcon;
         public Sprite ChoiceCardSprite => _choiceCardSprite != null ? _choiceCardSprite : _icon;
         public string Description => _description;
+        public string UpgradeCardItemId => _upgradeCardItemId;
+        public string DamageTypeLabel => _damageTypeLabel;
         public TowerController Prefab => _prefab;
         public int BuildCost => _buildCost;
         public float SellPercentage => _sellPercentage;

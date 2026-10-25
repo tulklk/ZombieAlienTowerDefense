@@ -94,6 +94,13 @@ namespace AlienDefense.Player
 
         public float AttractionRadius => _definition != null ? _definition.AttractionRadius * _radiusMultiplier : 0f;
 
+        /// <summary>Biggest Environment Prop (TractorAbsorbableProp.AbsorbSize) the beam can take right now. Grows
+        /// with AttractionRadius, so the Radius/Magnet skills are what unlock trees, animals and vehicles.</summary>
+        public float MaxAbsorbablePropSize =>
+            _definition != null && _definition.MaxPropSizePerRadius > 0f
+                ? AttractionRadius * _definition.MaxPropSizePerRadius
+                : float.MaxValue;
+
         /// <summary>IPullSpeedBoostSource implementation — read live every frame by every currently Pulling/
         /// Lifting object (see TractorCaptureRequest/TractorEnergyAbsorptionRequest/TractorPropAbsorptionRequest's
         /// SpeedBoost field), not just the ones admitted while the Player happened to already be moving.</summary>
@@ -481,6 +488,7 @@ namespace AlienDefense.Player
 
             Vector3 beamPosition = _beamGroundAnchor.position;
             float radiusSquared = AttractionRadius * AttractionRadius;
+            float maxPropSize = MaxAbsorbablePropSize;
 
             for (int i = 0; i < _propRegistry.Count; i++)
             {
@@ -500,6 +508,13 @@ namespace AlienDefense.Player
                 float dz = position.z - beamPosition.z;
                 if (dx * dx + dz * dz > radiusSquared)
                 {
+                    continue;
+                }
+
+                // Too big for the beam at its current size: tugged at, not taken (and no slot used).
+                if (candidate.AbsorbSize > maxPropSize)
+                {
+                    candidate.NudgeTooBig();
                     continue;
                 }
 

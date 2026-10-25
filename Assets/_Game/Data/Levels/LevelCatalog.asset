@@ -26,7 +26,7 @@ MonoBehaviour:
     _perfectRewards:
       _rewards: []
   - _levelDefinition: {fileID: 11400000, guid: 88c9dbff2f460a24486edce65cf085da, type: 2}
-    _sceneName: Level_01
+    _sceneName: Level_02
     _menuPreviewSprite: {fileID: 21300000, guid: 2db5515b8e5c8f24abbe330772250423,
       type: 3}
     _menuPreviewSpriteLocked: {fileID: 21300000, guid: 2792ebf14ad782647bdb80534749999c,
@@ -54,8 +54,8 @@ MonoBehaviour:
         Amount: 1
         HideUntilUnlocked: 0
   - _levelDefinition: {fileID: 11400000, guid: 4858ffa2f5d2ee448a1c051f1cdd05a6, type: 2}
-    _sceneName: Level_01
-    _menuPreviewSprite: {fileID: 21300000, guid: d3caec237eda94b4b8eb0626927b07ca,
+    _sceneName: Level_03
+    _menuPreviewSprite: {fileID: 21300000, guid: 0322d9a4221c49d4ebf5d75c2a8b395a,
       type: 3}
     _menuPreviewSpriteLocked: {fileID: 21300000, guid: b055738a4f065da4cb292c1319ff0c5d,
       type: 3}

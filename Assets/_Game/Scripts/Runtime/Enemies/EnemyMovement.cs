@@ -47,6 +47,9 @@ namespace AlienDefense.Enemies
         public Vector2 CurrentMoveDirection { get; private set; }
         public float PathProgress { get; private set; }
 
+        /// <summary>The route this enemy walks (levels may have several).</summary>
+        public EnemyPath3D Path => _path;
+
         public event Action DestinationReached;
 
         public void Initialize(EnemyPath3D path, float moveSpeed, float rotationSpeed, float arrivalThreshold)

@@ -16,8 +16,11 @@ MonoBehaviour:
   _displayName: Frost Tower
   _icon: {fileID: 0}
   _statsIcon: {fileID: 21300000, guid: 89616168562419746914e74a2ade2aa3, type: 3}
+  _statsTypeIcon: {fileID: 21300000, guid: cc723ab04a8b2154f98a5d1cd39914be, type: 3}
   _choiceCardSprite: {fileID: 21300000, guid: a8750f2a32e295642aac2de34f17d354, type: 3}
   _description: Icy strike with a freeze chance
+  _upgradeCardItemId: card_ice_dagger
+  _damageTypeLabel: Ice
   _prefab: {fileID: 3891672731294487376, guid: 8cbf3f40d8aeb3e4c8bf6f6513640253, type: 3}
   _buildCost: 120
   _sellPercentage: 0.5
@@ -32,19 +35,25 @@ MonoBehaviour:
   _levels:
   - _upgradeCost: 0
     _energyCost: 10
+    _metaCardCost: 0
     _damage: 6
     _range: 8.4
     _attacksPerSecond: 1.1
     _turretRotationSpeed: 720
+    _activeMuzzles: 1
   - _upgradeCost: 130
     _energyCost: 15
+    _metaCardCost: 10
     _damage: 9
     _range: 9
     _attacksPerSecond: 1.2
     _turretRotationSpeed: 720
+    _activeMuzzles: 1
   - _upgradeCost: 210
     _energyCost: 45
+    _metaCardCost: 25
     _damage: 13
     _range: 9.6
     _attacksPerSecond: 1.35
     _turretRotationSpeed: 720
+    _activeMuzzles: 2

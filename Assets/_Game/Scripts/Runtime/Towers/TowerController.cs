@@ -92,10 +92,42 @@ namespace AlienDefense.Towers
             _attack.SetMuzzleVfx(vfxService, muzzleVfx);
         }
 
-        /// <summary>Applies the next level in sequence. Intended caller: TowerUpgradeService only.</summary>
+        private float _permanentDamageMultiplier = 1f;
+
+        /// <summary>Optional. Shot damage multiplier from the tower type's permanent (Defense tab) level; applied on
+        /// top of whatever in-level level the tower has. CurrentStats keeps the in-level numbers.</summary>
+        public void SetPermanentDamageMultiplier(float multiplier)
+        {
+            _permanentDamageMultiplier = Mathf.Max(0.01f, multiplier);
+            if (_isInitialized)
+            {
+                _attack.ApplyStats(CurrentStats.Damage * _permanentDamageMultiplier, CurrentStats.AttacksPerSecond);
+            }
+        }
+
+        /// <summary>Optional. Critical-hit chance and damage multiplier for this tower (see DefenseMetaConfig).</summary>
+        public void SetCritical(float chance, float damageMultiplier)
+        {
+            _attack.SetCritical(chance, damageMultiplier);
+        }
+
+        /// <summary>Applies the next level in sequence. Intended callers: TowerUpgradeService and
+        /// EnergyTowerTransactionService (the in-level upgrade paths).</summary>
         public bool TryApplyNextLevel()
         {
-            return ApplyLevel(CurrentLevelIndex + 1);
+            if (!ApplyLevel(CurrentLevelIndex + 1))
+            {
+                return false;
+            }
+
+            // Same bottom-up reveal as when the tower is bought. Visual only - the new level's stats are already
+            // live and the tower keeps targeting and firing through it.
+            if (TryGetComponent(out TowerConstructionVFX construction))
+            {
+                construction.PlayConstruction();
+            }
+
+            return true;
         }
 
         /// <summary>Adds to the running total spent on this tower (build cost + paid upgrades). Intended callers: BuildService, TowerUpgradeService.</summary>
@@ -150,7 +182,8 @@ namespace AlienDefense.Towers
             CurrentStats = TowerStats.FromLevel(level);
 
             _targeting.SetRange(CurrentStats.Range);
-            _attack.ApplyStats(CurrentStats.Damage, CurrentStats.AttacksPerSecond);
+            _attack.ApplyStats(CurrentStats.Damage * _permanentDamageMultiplier, CurrentStats.AttacksPerSecond);
+            _attack.SetActiveMuzzleCount(level.ActiveMuzzles);
             _visual.SetRotationSpeed(CurrentStats.TurretRotationSpeed);
 
             if (_rangeIndicator != null)

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MAT_Level03_StylizedWater
+  m_Shader: {fileID: 4800000, guid: 21ad458b93df39444b1190963e72d24f, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _NoiseTex:
+        m_Texture: {fileID: 2800000, guid: 9097abc630defca4bb1cf51f4d3f7889, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _FoamWidth: 0.16
+    - _HighlightStrength: 0.3
+    - _NoiseScale: 0.11
+    - _Speed: 1
+    m_Colors:
+    - _DeepColor: {r: 0.04, g: 0.73, b: 0.82, a: 1}
+    - _FoamColor: {r: 1, g: 1, b: 1, a: 1}
+    - _HighlightColor: {r: 0.85, g: 1, b: 1, a: 1}
+    - _ShallowColor: {r: 0.45, g: 0.96, b: 0.9, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -22,14 +22,15 @@ namespace AlienDefense.EditorTools
         private const string PrefabFolder = "Assets/_Game/Prefabs/Base/Buildings";
         private const string LogPath = "Temp/BaseBuildingModelSetup.log";
 
-        /// <summary>Building id -> model folder, triangle budget, footprint width on the plot (m), yaw.</summary>
+        /// <summary>Building id -> model folder, minimum triangle count (the coarsest Mesh LOD level at or above it is
+        /// used), footprint width on the plot (m), yaw.</summary>
         private static readonly (string buildingId, string model, int budget, float width, float yaw)[] Mappings =
         {
-            ("central_building", "centralbuilding", 20000, 9.5f, 0f),
-            ("research_center", "geneticsearchcenter", 20000, 10f, 0f),
-            ("weapon_workshop", "weaponworkshop", 20000, 10.5f, 0f),
-            ("patrol_post", "pastrolpost", 16000, 9f, 0f),
-            ("sawmill", "engineerhouse", 16000, 8f, 0f)
+            ("central_building", "centralbuilding", 30000, 9.5f, 0f),
+            ("research_center", "geneticsearchcenter", 30000, 10f, 0f),
+            ("weapon_workshop", "weaponworkshop", 30000, 10.5f, 0f),
+            ("patrol_post", "pastrolpost", 30000, 9f, 0f),
+            ("sawmill", "engineerhouse", 30000, 8f, 0f)
         };
 
         [MenuItem("Tools/Tower Defense/Base/Import Building Models")]
@@ -50,6 +51,37 @@ namespace AlienDefense.EditorTools
             Mesh mesh = MeshDecimator.Decimate(source, budget);
             report = MeshDecimator.LastReport;
             return mesh;
+        }
+
+        /// <summary>Seam-preserving simplification (UnityMeshSimplifier): edges on a UV seam are never collapsed, so
+        /// every triangle keeps sampling its own texture island. MeshDecimator re-projects UVs across seams, which on
+        /// these AI-generated atlases (thousands of tiny islands) mixes texels from neighbouring islands into the dark
+        /// and bright speckles seen on the buildings. Works on a copy scaled to ~10 units (see Simplify).</summary>
+        public static Mesh SimplifyPreservingSeams(Mesh source, int budget)
+        {
+            float extent = Mathf.Max(source.bounds.size.x, source.bounds.size.y, source.bounds.size.z);
+            float scale = extent > 0f ? 10f / extent : 1f;
+            Mesh working = ReadableCopy(source);
+            ScaleVertices(working, scale);
+
+            UnityMeshSimplifier.SimplificationOptions options = UnityMeshSimplifier.SimplificationOptions.Default;
+            options.PreserveUVSeamEdges = true;
+            options.PreserveUVFoldoverEdges = true;
+            options.PreserveBorderEdges = false;
+            options.PreserveSurfaceCurvature = false;
+            options.EnableSmartLink = true;
+            options.VertexLinkDistance = 0.0001;
+
+            var simplifier = new UnityMeshSimplifier.MeshSimplifier { SimplificationOptions = options };
+            simplifier.Initialize(working);
+            simplifier.SimplifyMesh(Mathf.Clamp01(budget / (float)(source.triangles.Length / 3)));
+            Mesh result = simplifier.ToMesh();
+            Object.DestroyImmediate(working);
+
+            ScaleVertices(result, 1f / scale);
+            result.RecalculateNormals();
+            result.RecalculateTangents();
+            return result;
         }
 
         /// <summary>Re-wraps only (no decimation) - for tuning width/yaw after the optimised meshes exist.</summary>
@@ -99,13 +131,9 @@ namespace AlienDefense.EditorTools
             // These FBX meshes are authored at centimetre scale (~0.009 units across, scaled x100 by the importer).
             // At that size the quadric errors underflow and the decimator shreds the surface; working on a copy
             // brought to ~10 units and scaling the result back keeps it faithful to the original.
-            float extent = Mathf.Max(source.bounds.size.x, source.bounds.size.y, source.bounds.size.z);
-            float scale = extent > 0f ? 10f / extent : 1f;
-            Mesh working = Object.Instantiate(source);
-            ScaleVertices(working, scale);
-            Mesh simplified = MeshDecimator.Decimate(working, budget);
-            Object.DestroyImmediate(working);
-            ScaleVertices(simplified, 1f / scale);
+            // Unity's Mesh LOD generator (meshoptimizer) keeps UV islands intact. The project's MeshDecimator was used
+            // first and re-projected UVs across seams, which on these AI atlases produced speckled, smeared textures.
+            Mesh simplified = SimplifyWithMeshLod(source, budget, out string lodReport);
             simplified.name = model + "_Mobile";
 
             if (existing != null)
@@ -123,7 +151,7 @@ namespace AlienDefense.EditorTools
             }
 
             Log($"{model}: {source.triangles.Length / 3} -> {simplified.triangles.Length / 3} tris in " +
-                $"{(System.DateTime.Now - started).TotalSeconds:0}s | {MeshDecimator.LastReport}");
+                $"{(System.DateTime.Now - started).TotalSeconds:0}s | {lodReport}");
             return simplified;
         }
 
@@ -194,6 +222,114 @@ namespace AlienDefense.EditorTools
                 importer.maxTextureSize = 1024;
                 importer.SaveAndReimport();
                 Log("texture max size 1024: " + path);
+            }
+        }
+
+        /// <summary>A CPU-readable copy of an imported mesh whose Read/Write flag is off (the source FBX import
+        /// settings are left alone). Positions, normals, UV0 and every submesh's indices are carried over.</summary>
+        /// <summary>Unity's own Mesh LOD generator (meshoptimizer). Its simplifier moves seam vertices only together
+        /// with their twins on the other side of the seam, so UV islands stay intact while the mesh still reduces far
+        /// below what fully-locked seams allow. Returns the coarsest generated level at or above the budget.</summary>
+        public static Mesh SimplifyWithMeshLod(Mesh source, int budget, out string report)
+        {
+            Mesh working = ReadableCopy(source);
+            MeshLodUtility.GenerateMeshLods(working, 12);
+
+            var levels = new System.Text.StringBuilder();
+            int chosen = 0;
+            for (int lod = 0; lod < working.lodCount; lod++)
+            {
+                int tris = (int)working.GetLod(0, lod).indexCount / 3;
+                levels.Append(lod).Append(':').Append(tris).Append(' ');
+                if (tris >= budget)
+                {
+                    chosen = lod;
+                }
+            }
+
+            // GetIndices only returns LOD 0; the coarser levels live further along the raw index buffer.
+            MeshLodRange range = working.GetLod(0, chosen);
+            var indices = new int[range.indexCount];
+            using (Mesh.MeshDataArray data = Mesh.AcquireReadOnlyMeshData(working))
+            {
+                Mesh.MeshData md = data[0];
+                if (md.indexFormat == UnityEngine.Rendering.IndexFormat.UInt32)
+                {
+                    var raw = md.GetIndexData<uint>();
+                    for (int i = 0; i < indices.Length; i++) indices[i] = (int)raw[(int)range.indexStart + i];
+                }
+                else
+                {
+                    var raw = md.GetIndexData<ushort>();
+                    for (int i = 0; i < indices.Length; i++) indices[i] = raw[(int)range.indexStart + i];
+                }
+            }
+
+            // Compact: keep only the vertices this level uses.
+            Vector3[] positions = working.vertices;
+            Vector3[] normals = working.normals;
+            Vector2[] uvs = working.uv;
+            var remap = new System.Collections.Generic.Dictionary<int, int>();
+            var newPositions = new System.Collections.Generic.List<Vector3>();
+            var newNormals = new System.Collections.Generic.List<Vector3>();
+            var newUvs = new System.Collections.Generic.List<Vector2>();
+            for (int i = 0; i < indices.Length; i++)
+            {
+                if (!remap.TryGetValue(indices[i], out int mapped))
+                {
+                    mapped = newPositions.Count;
+                    remap[indices[i]] = mapped;
+                    newPositions.Add(positions[indices[i]]);
+                    newNormals.Add(normals[indices[i]]);
+                    newUvs.Add(uvs[indices[i]]);
+                }
+
+                indices[i] = mapped;
+            }
+
+            Object.DestroyImmediate(working);
+            var result = new Mesh { indexFormat = newPositions.Count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
+            result.SetVertices(newPositions);
+            result.SetNormals(newNormals);
+            result.SetUVs(0, newUvs);
+            result.SetTriangles(indices, 0);
+            result.RecalculateBounds();
+            result.RecalculateTangents();
+            report = "levels " + levels + "-> chose " + chosen;
+            return result;
+        }
+
+        private static Mesh ReadableCopy(Mesh source)
+        {
+            using (Mesh.MeshDataArray data = Mesh.AcquireReadOnlyMeshData(source))
+            {
+                Mesh.MeshData md = data[0];
+                int count = md.vertexCount;
+                var positions = new Unity.Collections.NativeArray<Vector3>(count, Unity.Collections.Allocator.Temp);
+                var normals = new Unity.Collections.NativeArray<Vector3>(count, Unity.Collections.Allocator.Temp);
+                var uvs = new Unity.Collections.NativeArray<Vector2>(count, Unity.Collections.Allocator.Temp);
+                md.GetVertices(positions);
+                md.GetNormals(normals);
+                md.GetUVs(0, uvs);
+
+                var copy = new Mesh { indexFormat = count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
+                copy.SetVertices(positions);
+                copy.SetNormals(normals);
+                copy.SetUVs(0, uvs);
+                copy.subMeshCount = md.subMeshCount;
+                for (int s = 0; s < md.subMeshCount; s++)
+                {
+                    var indices = new Unity.Collections.NativeArray<int>(md.GetSubMesh(s).indexCount, Unity.Collections.Allocator.Temp);
+                    md.GetIndices(indices, s);
+                    copy.SetIndices(indices, MeshTopology.Triangles, s);
+                    indices.Dispose();
+                }
+
+                positions.Dispose();
+                normals.Dispose();
+                uvs.Dispose();
+                copy.RecalculateBounds();
+                return copy;
             }
         }
 

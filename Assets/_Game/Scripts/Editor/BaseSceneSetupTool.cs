@@ -47,7 +47,7 @@ namespace AlienDefense.EditorTools
         private const float CameraDistance = 132f;
         private const float CameraFov = 35f;
         private const float GroundHalfSize = 110f;
-        private const float RoadWidth = 4f;
+        private const float RoadWidth = 4.8f;
         private const float RiverZ = -44f;
         private const float RiverWidth = 9f;
 
@@ -68,14 +68,25 @@ namespace AlienDefense.EditorTools
             new Vector3(-37f, 0f, -11f)
         };
 
-        // Roads: (center, size) on the ground plane.
+        // Road grid: every block is ringed by road, one plot per block (plots sit at ±11 / ±37, blocks at ±12 / ±36).
+        private static readonly float[] RoadGridX = { -48f, -24f, 0f, 24f, 48f };
+        private static readonly float[] RoadGridZ = { -24f, 0f, 24f };
+        private const float RoadToBridgeZ = -37.2f;
+
+        /// <summary>The road grid as rectangles (centre, size) - what the ground paint, scenery placement and roadside
+        /// grass keep clear of. The visible roads are Low Poly Road Pack pieces laid on these lines.</summary>
         private static readonly (Vector3 center, Vector2 size)[] Roads =
         {
-            (new Vector3(4f, 0f, 0f), new Vector2(92f, RoadWidth)),        // east-west main road, x -42..50
-            (new Vector3(0f, 0f, -8f), new Vector2(RoadWidth, 64f)),       // north-south main road, z -40..24
+            (new Vector3(0f, 0f, -24f), new Vector2(96f + RoadWidth, RoadWidth)),
+            (new Vector3(0f, 0f, 0f), new Vector2(96f + RoadWidth, RoadWidth)),
+            (new Vector3(0f, 0f, 24f), new Vector2(96f + RoadWidth, RoadWidth)),
+            (new Vector3(-48f, 0f, 0f), new Vector2(RoadWidth, 48f + RoadWidth)),
+            (new Vector3(-24f, 0f, 0f), new Vector2(RoadWidth, 48f + RoadWidth)),
+            (new Vector3(0f, 0f, 0f), new Vector2(RoadWidth, 48f + RoadWidth)),
+            (new Vector3(24f, 0f, 0f), new Vector2(RoadWidth, 48f + RoadWidth)),
+            (new Vector3(48f, 0f, 0f), new Vector2(RoadWidth, 48f + RoadWidth)),
+            (new Vector3(0f, 0f, (-24f + RoadToBridgeZ) * 0.5f), new Vector2(RoadWidth, -24f - RoadToBridgeZ))
         };
-
-        private static readonly Color RoadColor = Hex("#D8BC84");
         private static readonly Color SkyColor = Hex("#9FD8F5");
 
         private static readonly Color PanelWhite = Hex("#F2F6FC");
@@ -353,7 +364,6 @@ namespace AlienDefense.EditorTools
 
         private static GameObject BuildWorld(Scene scene, BaseBuildingCatalog catalog)
         {
-            Material road = EnsureMaterial("MAT_Base_Road", RoadColor, 0.05f);
 
 
 
@@ -379,22 +389,8 @@ namespace AlienDefense.EditorTools
             environment.SetParent(root.transform, false);
 
 
-            Transform roads = new GameObject("Roads").transform;
-            roads.SetParent(environment, false);
-            for (int i = 0; i < Roads.Length; i++)
-            {
-                CreateSlab("Road_" + i, roads, Roads[i].center + new Vector3(0f, 0.02f, 0f),
-                    new Vector3(Roads[i].size.x, 0.04f, Roads[i].size.y), road);
-            }
-
-            // Short driveways from the main roads to each plot.
-            // Every plot sits beside the east-west road, so the driveway runs along Z from the road edge to the plot.
-            foreach ((string id, Vector3 position) in Plots)
-            {
-                float side = Mathf.Sign(position.z);
-                var center = new Vector3(position.x, 0.021f, side * 3.8f);
-                CreateSlab("Driveway_" + id, roads, center, new Vector3(3f, 0.04f, 3.8f), road);
-            }
+            // Road grid (Low Poly Road Pack pieces) and street lights around every block (BaseRoadNetwork.cs).
+            BuildRoadNetwork(environment);
 
             // The bridge where the main road crosses the river (the river itself is BaseRiverSystem, outside
             // Environment because its boats and ducks move).
@@ -475,8 +471,8 @@ namespace AlienDefense.EditorTools
             so.FindProperty("_minZ").floatValue = -30f;
             so.FindProperty("_maxZ").floatValue = 30f;
             so.FindProperty("_allowPinchZoom").boolValue = true;
-            so.FindProperty("_minZoom").floatValue = 22f;
-            so.FindProperty("_maxZoom").floatValue = 45f;
+            so.FindProperty("_closestZoom").floatValue = 0.35f; // camera slides up to ~3x closer
+            so.FindProperty("_farthestZoom").floatValue = 1.1f;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -567,11 +563,11 @@ namespace AlienDefense.EditorTools
             Transform props = new GameObject("ZoneProps").transform;
             props.SetParent(parent, false);
 
-            PlaceProp(props, "PT_Pine_Tree_03_logs", new Vector3(44f, 0f, 3f), 30f, 1f);
-            PlaceProp(props, "PT_Pine_Tree_03_logs", new Vector3(47f, 0f, 7f), -20f, 1f);
-            PlaceProp(props, "PT_Pine_Tree_03_stump", new Vector3(46f, 0f, 19f), 0f, 1f);
-            PlaceProp(props, "PT_Pine_Tree_03_stump", new Vector3(30f, 0f, 20f), 60f, 1f);
-            PlaceProp(props, "PT_Pine_Tree_03_green_cut", new Vector3(49f, 0f, 14f), 10f, 0.6f);
+            PlaceProp(props, "PT_Pine_Tree_03_logs", new Vector3(36.5f, 0f, 19.6f), 0f, 1f);
+            PlaceProp(props, "PT_Pine_Tree_03_logs", new Vector3(39.9f, 0f, 20.1f), 8f, 1f);
+            PlaceProp(props, "PT_Pine_Tree_03_stump", new Vector3(30.6f, 0f, 21.2f), 0f, 1f);
+            PlaceProp(props, "PT_Pine_Tree_03_stump", new Vector3(29f, 0f, 4.5f), 60f, 1f);
+            PlaceProp(props, "PT_Pine_Tree_03_green_cut", new Vector3(32.8f, 0f, 20.4f), 10f, 0.6f);
 
             PlaceProp(props, "Prop_WoodenCrates_01", new Vector3(18f, 0f, -4f), 20f, 1f);
             PlaceProp(props, "Prop_WoodenBox_02", new Vector3(20f, 0f, -5f), -15f, 1f);

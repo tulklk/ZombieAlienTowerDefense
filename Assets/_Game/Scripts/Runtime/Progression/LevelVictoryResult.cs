@@ -48,8 +48,12 @@ namespace AlienDefense.Progression
         public readonly int Stars;
         public readonly int MaxStars;
 
-        public DamageResultEntry(string name, Sprite icon, float damage, int stars = 0, int maxStars = 0)
+        /// <summary>Optional damage-type badge (fire, lightning...) shown before the name; null = none.</summary>
+        public readonly Sprite TypeIcon;
+
+        public DamageResultEntry(string name, Sprite icon, float damage, int stars = 0, int maxStars = 0, Sprite typeIcon = null)
         {
+            TypeIcon = typeIcon;
             Name = name;
             Icon = icon;
             Damage = damage;

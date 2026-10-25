@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f25b3bb296ed45439a3aa7b77aeb7cf, type: 3}
+  m_Name: OcclusionSettings
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Occlusion.OcclusionSettings
+  _fadeShader: {fileID: 4800000, guid: 337f878ab3632d94aa2c1b208f3451ad, type: 3}
+  _occludedAlpha: 0.38
+  _tintColor: {r: 0.224, g: 1, b: 0.447, a: 1}
+  _tintStrength: 0.85
+  _hideTractorBeam: 0
+  _fadeInDuration: 0.18
+  _fadeOutDuration: 0.22
+  _minimumHiddenTime: 0.1
+  _restoreDelay: 0.12
+  _checkInterval: 0.04
+  _castRadius: 0.55
+  _insideCheckRadius: 1.1

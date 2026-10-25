@@ -47,6 +47,14 @@ namespace AlienDefense.Core
         private UFOFlightIntro _ufoFlightIntro;
 
         [SerializeField]
+        [Tooltip("Optional. The big 3-2-1 played after the UFO intro (or right away when the intro is skipped). " +
+            "Combat - the first spawn and the boss timer - starts only when it finishes, and it replaces the first " +
+            "wave's preparation delay. Without it the level starts as before.")]
+        private LevelStartCountdown _levelStartCountdown;
+
+        private bool _startSequenceTriggered;
+
+        [SerializeField]
         [Tooltip("Optional.")]
         private UFOTractorBeamVisual _tractorBeamVisual;
 
@@ -145,6 +153,10 @@ namespace AlienDefense.Core
         private BossHealthBarPresenter _bossHealthBarPresenter;
 
         [SerializeField]
+        [Tooltip("Optional. \"Base under attack!\" text + red screen-edge pulse while enemies are near the base.")]
+        private BaseThreatWarningPresenter _baseThreatWarningPresenter;
+
+        [SerializeField]
         [Tooltip("Optional. Plays the boss introduction cinematic for a LevelDefinition with a Boss Encounter. " +
             "Without it the boss group is released the moment it spawns.")]
         private BossIntroController _bossIntroController;
@@ -181,6 +193,9 @@ namespace AlienDefense.Core
         [SerializeField]
         [Tooltip("Optional. The 'Choose Tower' popup opened by _playerBuildNodeProximity after a successful build channel.")]
         private TowerChoicePresenter _towerChoicePresenter;
+
+        /// <summary>The permanent (Defense tab) tower levels - read by the tower factory and the Choose Tower cards.</summary>
+        private TowerMetaUpgradeService _towerMetaUpgrades;
 
         [SerializeField]
         [Tooltip("Optional. Every buildable TowerDefinition - offered by _towerChoicePresenter.")]
@@ -352,12 +367,23 @@ namespace AlienDefense.Core
             else
             {
                 GameFlow.BeginPreparingWave();
+                if (_levelStartCountdown != null)
+                {
+                    BeginStartSequence(); // intro skipped: straight to 3-2-1
+                }
             }
         }
 
         private bool ShouldDeferGameplayForIntro()
         {
             return _ufoFlightIntro != null && !_ufoFlightIntro.SkipIntro;
+        }
+
+        /// <summary>With a countdown, nothing spawns (and no boss timer runs) until it has finished, so the waves
+        /// never auto-start on their own.</summary>
+        private bool ShouldAutoStartFirstWave()
+        {
+            return !ShouldDeferGameplayForIntro() && _levelStartCountdown == null;
         }
 
         private void HandleUfoIntroCompleted()
@@ -367,17 +393,87 @@ namespace AlienDefense.Core
                 _ufoFlightIntro.IntroCompleted -= HandleUfoIntroCompleted;
             }
 
-            if (_waveController != null && _waveController.CurrentWaveIndex < 0)
-            {
-                _waveController.StartFirstWave();
-            }
-
             if (GameFlow != null && GameFlow.CurrentState == GameState.Initializing)
             {
                 GameFlow.BeginPreparingWave();
             }
 
             _ufoFlightIntro?.NotifyGameplaySystemsReady();
+            BeginStartSequence();
+        }
+
+        /// <summary>UFO intro finished (or skipped) -> 3-2-1 -> combat. Guarded so the countdown can never run twice
+        /// (an intro completion arriving after a skip, a duplicate event...).</summary>
+        private void BeginStartSequence()
+        {
+            if (_startSequenceTriggered)
+            {
+                return;
+            }
+
+            _startSequenceTriggered = true;
+            LogStart("UFO Intro Finished");
+            if (_levelStartCountdown == null)
+            {
+                StartCombat(skipPreparation: false);
+                return;
+            }
+
+            // Nothing can be steered or tapped while 3-2-1 plays; control comes back with combat.
+            SetCountdownLock(true);
+            _levelStartCountdown.Play(() =>
+            {
+                SetCountdownLock(false);
+                StartCombat(skipPreparation: true);
+            });
+        }
+
+        private bool _countdownLock;
+
+        /// <summary>While the start countdown plays: no UFO movement, no tractor beam, no building. (The countdown
+        /// itself blocks every screen tap - see LevelStartCountdown.)</summary>
+        private void SetCountdownLock(bool locked)
+        {
+            _countdownLock = locked;
+            if (_player != null)
+            {
+                _player.SetMovementEnabled(!locked);
+            }
+
+            if (_tractorBeamController != null)
+            {
+                _tractorBeamController.SetEnabled(!locked);
+            }
+
+            if (_worldSelectionController != null)
+            {
+                _worldSelectionController.SetInputEnabled(!locked);
+            }
+
+            if (_playerBuildNodeProximity != null)
+            {
+                _playerBuildNodeProximity.SetInputEnabled(!locked);
+            }
+        }
+
+        private void StartCombat(bool skipPreparation)
+        {
+            if (GameFlow == null || GameFlow.CurrentState == GameState.Victory || GameFlow.CurrentState == GameState.Defeat)
+            {
+                return;
+            }
+
+            if (_waveController != null && _waveController.CurrentWaveIndex < 0)
+            {
+                LogStart("Combat Started");
+                _waveController.StartFirstWave(skipPreparation);
+            }
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogStart(string message)
+        {
+            Debug.Log("[LevelStart] " + message, this);
         }
 
         private LevelDefinition ResolveLevelDefinition()
@@ -414,7 +510,16 @@ namespace AlienDefense.Core
             GameFlow = new GameFlowController();
             GameSpeed = new GameSpeedController(new UnityTimeScaleTarget());
             Economy = new EconomyService(levelDefinition.StartingResource);
-            BaseHealth = new BaseHealthService(levelDefinition.BaseMaxHealth);
+            // Permanent UFO Base level (Defense tab) raises the level's base health; without a profile or config it is
+            // the LevelDefinition value unchanged.
+            int baseMaxHealth = levelDefinition.BaseMaxHealth;
+            DefenseMetaConfig defenseConfig = _applicationServices?.TowerCatalog != null ? _applicationServices.TowerCatalog.DefenseConfig : null;
+            if (_applicationServices?.PlayerProfileService != null && defenseConfig != null)
+            {
+                baseMaxHealth = new BaseDefenseUpgradeService(_applicationServices.PlayerProfileService, defenseConfig).ApplyTo(baseMaxHealth);
+            }
+
+            BaseHealth = new BaseHealthService(baseMaxHealth);
 
             // Separate currency/progression from Economy — see EnergyWalletService's doc comment. Constructed
             // here (not inside InitializeEnergyEconomySystem) so they exist even if the EnergyPickup prefab/
@@ -486,6 +591,7 @@ namespace AlienDefense.Core
                 _waveController.WaveCompleted -= HandleWaveCompletedForFlow;
                 _waveController.AllWavesCompleted -= HandleAllWavesCompleted;
                 _waveController.BossSpawned -= HandleBossSpawned;
+                _waveController.BossReachedBase -= HandleBossReachedBase;
             }
 
             if (_ufoFlightIntro != null)
@@ -673,10 +779,19 @@ namespace AlienDefense.Core
             AreaDamage = new AreaDamageResolver(new EnemyRegistrySplashProvider(Enemies));
 
             TowerMetaUpgradeService metaUpgradeService = _applicationServices?.PlayerProfileService != null
-                ? new TowerMetaUpgradeService(_applicationServices.PlayerProfileService)
+                ? new TowerMetaUpgradeService(_applicationServices.PlayerProfileService, _applicationServices.TowerCatalog != null ? _applicationServices.TowerCatalog.DefenseConfig : null)
                 : null;
+            _towerMetaUpgrades = metaUpgradeService;
 
             TowerSpawner = new TowerFactory(_towerRuntimeParent, Enemies, ProjectileSpawner, AreaDamage, GameFlow, Vfx, metaUpgradeService);
+
+            // Tower critical hits (Defense tab): chance from the config, damage from the config plus the collection's
+            // permanent upgrade levels. No config or no profile = no crits, exactly as before.
+            DefenseMetaConfig critConfig = _applicationServices?.TowerCatalog != null ? _applicationServices.TowerCatalog.DefenseConfig : null;
+            if (critConfig != null && metaUpgradeService != null)
+            {
+                TowerSpawner.SetCritical(critConfig.CritChance, critConfig.GetCritDamage(metaUpgradeService.GetTotalUpgradeLevels(_applicationServices.TowerCatalog)));
+            }
 
             if (_towerDebugSpawner != null)
             {
@@ -726,7 +841,7 @@ namespace AlienDefense.Core
             if (_towerChoicePresenter != null)
             {
                 _towerChoicePresenter.Initialize(EnergyTransactions, _towerCatalog, GameSpeed,
-                    _applicationServices?.PlayerProfileService);
+                    _applicationServices?.PlayerProfileService, _towerMetaUpgrades);
             }
 
             if (_playerBuildNodeProximity != null && _player != null)
@@ -782,7 +897,8 @@ namespace AlienDefense.Core
                 return;
             }
 
-            if (_resolvedLevelDefinition.WaveCount == 0)
+            bool continuousInvasion = _resolvedLevelDefinition.HasContinuousInvasion;
+            if (_resolvedLevelDefinition.WaveCount == 0 && !continuousInvasion)
             {
                 Debug.LogError("[LevelCompositionRoot] LevelDefinition has no waves; Wave system will not start.", this);
                 return;
@@ -790,16 +906,18 @@ namespace AlienDefense.Core
 
             PrewarmPoolsForWaves();
 
-            var waves = new WaveDefinition[_resolvedLevelDefinition.WaveCount];
+            // A continuous-invasion level ignores its wave list (WaveController plays the invasion instead).
+            var waves = new WaveDefinition[continuousInvasion ? 0 : _resolvedLevelDefinition.WaveCount];
             for (int i = 0; i < waves.Length; i++)
             {
                 waves[i] = _resolvedLevelDefinition.GetWave(i);
             }
 
+            _waveController.ConfigureContinuousInvasion(continuousInvasion ? _resolvedLevelDefinition.ContinuousInvasion : null);
             _waveController.ConfigureBossEncounter(_resolvedLevelDefinition.BossEncounter);
             if (_bossIntroController != null)
             {
-                _bossIntroController.Initialize(_waveController);
+                _bossIntroController.Initialize(_waveController, Enemies);
             }
 
             _waveController.Initialize(
@@ -807,16 +925,25 @@ namespace AlienDefense.Core
                 waves,
                 _resolvedLevelDefinition.PreparationDuration,
                 _resolvedLevelDefinition.CreateWaveSpawnSettings(),
-                autoStartFirstWave: !ShouldDeferGameplayForIntro());
+                autoStartFirstWave: ShouldAutoStartFirstWave());
 
             _waveController.WaveStarted += HandleWaveStarted;
             _waveController.WaveCompleted += HandleWaveCompletedForFlow;
             _waveController.AllWavesCompleted += HandleAllWavesCompleted;
             _waveController.BossSpawned += HandleBossSpawned;
+            _waveController.BossReachedBase += HandleBossReachedBase;
 
             if (_bossHealthBarPresenter != null)
             {
                 _bossHealthBarPresenter.Initialize(_waveController);
+            }
+
+            if (_baseThreatWarningPresenter != null)
+            {
+                // The base target is where every route ends.
+                EnemyPath3D route = _waveController.GetPath(0);
+                Vector3 basePoint = route != null && route.Count > 0 ? route.GetPoint(route.Count - 1) : Vector3.zero;
+                _baseThreatWarningPresenter.Initialize(Enemies, basePoint, BaseHealth);
             }
 
             if (_waveDebugControls != null)
@@ -867,6 +994,12 @@ namespace AlienDefense.Core
                 }
             }
 
+            int maxAliveForInvasion = _resolvedLevelDefinition.CreateWaveSpawnSettings().MaxAliveEnemies;
+            if (_resolvedLevelDefinition.HasContinuousInvasion)
+            {
+                AddContinuousInvasionDemand(_resolvedLevelDefinition.ContinuousInvasion, maxAliveForInvasion > 0 ? maxAliveForInvasion : 30, demand);
+            }
+
             int escortTotal = 0;
             BossEncounterDefinition encounter = _resolvedLevelDefinition.BossEncounter;
             if (encounter != null && encounter.IsValid)
@@ -900,6 +1033,45 @@ namespace AlienDefense.Core
                 }
 
                 pool.Prewarm(target); // tops up to at least this many; instances already created are reused
+            }
+        }
+
+        /// <summary>A continuous invasion never has more than Max Alive regular enemies at once, split by its weights:
+        /// each type gets its peak share of that cap (whichever of its start/end weight share is larger) plus a small
+        /// margin, plus one per mini boss of that type - instead of prewarming the whole cap for every type.</summary>
+        private static void AddContinuousInvasionDemand(ContinuousInvasionDefinition invasion, int maxAlive, Dictionary<EnemyDefinition, int> demand)
+        {
+            float startTotal = 0f, endTotal = 0f;
+            for (int i = 0; i < invasion.EnemyCount; i++)
+            {
+                ContinuousInvasionDefinition.EnemyEntry entry = invasion.GetEnemy(i);
+                if (entry != null && entry.IsValid)
+                {
+                    startTotal += entry.StartWeight;
+                    endTotal += entry.EndWeight;
+                }
+            }
+
+            for (int i = 0; i < invasion.EnemyCount; i++)
+            {
+                ContinuousInvasionDefinition.EnemyEntry entry = invasion.GetEnemy(i);
+                if (entry == null || !entry.IsValid)
+                {
+                    continue;
+                }
+
+                float share = Mathf.Max(startTotal > 0f ? entry.StartWeight / startTotal : 0f, endTotal > 0f ? entry.EndWeight / endTotal : 0f);
+                int count = Mathf.CeilToInt(maxAlive * share) + 2;
+                demand[entry.Enemy] = Mathf.Max(Count(demand, entry.Enemy), count);
+            }
+
+            for (int i = 0; i < invasion.MiniBossCount; i++)
+            {
+                ContinuousInvasionDefinition.MiniBossEntry entry = invasion.GetMiniBoss(i);
+                if (entry != null && entry.IsValid)
+                {
+                    demand[entry.Enemy] = Count(demand, entry.Enemy) + 1;
+                }
             }
         }
 
@@ -972,7 +1144,7 @@ namespace AlienDefense.Core
 
             // The boss intro owns player input while it plays and hands it back itself when it ends - a pause /
             // resume in the middle must not re-enable movement or build input underneath the cinematic.
-            bool bossIntroOwnsInput = _bossIntroController != null && _bossIntroController.IsPlaying
+            bool bossIntroOwnsInput = (_countdownLock || (_bossIntroController != null && _bossIntroController.IsPlaying))
                 && current != GameState.Victory && current != GameState.Defeat;
 
             if (_player != null && !bossIntroOwnsInput)
@@ -983,7 +1155,7 @@ namespace AlienDefense.Core
                 _player.SetMovementEnabled(movementEnabled);
             }
 
-            if (_worldSelectionController != null)
+            if (_worldSelectionController != null && !bossIntroOwnsInput)
             {
                 bool buildInputEnabled = current != GameState.Paused
                     && current != GameState.Victory
@@ -1021,7 +1193,8 @@ namespace AlienDefense.Core
 
             if (profile != null)
             {
-                bool isFirstCompletion = !profile.GetLevelProgress(completionResult.LevelId).IsCompleted;
+                LevelProgressSnapshot progressBefore = profile.GetLevelProgress(completionResult.LevelId);
+                bool isFirstCompletion = !progressBefore.IsCompleted;
                 var context = new LevelRewardContext(completionResult.LevelId, _runId, completionResult.Stars,
                     completionResult.RemainingHpPercent, isFirstCompletion);
 
@@ -1038,6 +1211,13 @@ namespace AlienDefense.Core
                 {
                     profile.EndBatch(); // one write for the whole win
                 }
+
+                // Presentation only: tells MainMenu which objective chests this win newly achieved, so it reveals
+                // just those. Both counts come from the saved progress through the existing objective rule.
+                _applicationServices.PendingObjectiveReveal.Set(
+                    completionResult.LevelId,
+                    AlienDefense.Meta.ObjectiveRewardService.CountAchieved(progressBefore),
+                    AlienDefense.Meta.ObjectiveRewardService.CountAchieved(profile.GetLevelProgress(completionResult.LevelId)));
             }
             else
             {
@@ -1075,7 +1255,9 @@ namespace AlienDefense.Core
                 ? CombatStats.GetLeaders(0)
                 : System.Array.Empty<CombatStatsService.Contributor>();
 
-            TowerMetaUpgradeService metaUpgrades = profile != null ? new TowerMetaUpgradeService(profile) : null;
+            TowerMetaUpgradeService metaUpgrades = profile != null
+                ? new TowerMetaUpgradeService(profile, _applicationServices?.TowerCatalog != null ? _applicationServices.TowerCatalog.DefenseConfig : null)
+                : null;
             var damage = new List<DamageResultEntry>(sources.Count);
             for (int i = 0; i < sources.Count; i++)
             {
@@ -1087,9 +1269,9 @@ namespace AlienDefense.Core
 
                 TowerDefinition tower = source.Tower;
                 int maxStars = tower != null && metaUpgrades != null ? tower.LevelCount : 0;
-                int stars = maxStars > 0 ? metaUpgrades.GetCurrentLevelIndex(tower) + 1 : 0;
+                int stars = maxStars > 0 ? Mathf.Min(maxStars, metaUpgrades.GetCurrentLevelIndex(tower) + 1) : 0;
                 Sprite icon = tower != null ? tower.StatsIcon : source.Icon;
-                damage.Add(new DamageResultEntry(source.Name, icon, source.Damage, stars, maxStars));
+                damage.Add(new DamageResultEntry(source.Name, icon, source.Damage, stars, maxStars, tower != null ? tower.StatsTypeIcon : null));
             }
 
             bool hasNext = _applicationServices?.LevelCatalog != null
@@ -1230,6 +1412,12 @@ namespace AlienDefense.Core
         private void HandleBossSpawned(EnemyController boss, BossController bossController)
         {
             bossController.Initialize(_waveController);
+        }
+
+        /// <summary>The final boss got through: that is a loss, never the "encounter cleared" victory.</summary>
+        private void HandleBossReachedBase()
+        {
+            GameFlow.ReportDefeat();
         }
     }
 }

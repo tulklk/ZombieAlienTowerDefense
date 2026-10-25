@@ -50,6 +50,16 @@ namespace AlienDefense.Base
         private Vector3 _siteBaseScale;
         private bool _siteBaseScaleCached;
 
+        private bool _builtReported;
+
+        /// <summary>True while the plot shows a finished building (level 1+, model spawned) - also during an upgrade,
+        /// when the existing model stands inside the scaffolding.</summary>
+        public bool HasBuilding => _spawnedModel != null;
+
+        /// <summary>Raised when HasBuilding flips (first build completes, or the model goes away). Decoration that
+        /// belongs to a finished building - a resident working there - listens to this instead of polling.</summary>
+        public event System.Action<BaseBuildingView> BuildingChanged;
+
         public BaseBuildingDefinition Definition => _definition;
         public Transform IndicatorAnchor => _indicatorAnchor != null ? _indicatorAnchor : transform;
 
@@ -96,6 +106,12 @@ namespace AlienDefense.Base
                 Destroy(_spawnedModel);
                 _spawnedModel = null;
                 _spawnedLevel = -1;
+            }
+
+            if (HasBuilding != _builtReported)
+            {
+                _builtReported = HasBuilding;
+                BuildingChanged?.Invoke(this);
             }
         }
 

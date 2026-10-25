@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 569886274718003463}
   - component: {fileID: 9092635281107955659}
   - component: {fileID: 4652684404423856396}
+  - component: {fileID: 3482330965180991928}
   m_Layer: 9
   m_Name: UFO_Player
   m_TagString: Untagged
@@ -41,6 +42,7 @@ Transform:
   - {fileID: 4454933139282648759}
   - {fileID: 259773921135560973}
   - {fileID: 4046936397913314067}
+  - {fileID: 3532325711988912404}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!143 &1155457173398174696
@@ -113,6 +115,20 @@ MonoBehaviour:
   _levelBounds: {fileID: 0}
   _cameraTransform: {fileID: 0}
   _inputSource: {fileID: 569886274718003463}
+--- !u!114 &3482330965180991928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 408938682600080512}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db59642c57b1e604a892ab7d3bd9e2d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Occlusion.UFOOcclusionFade
+  _visualRoot: {fileID: 4745138718592600247}
+  _settings: {fileID: 11400000, guid: 91aceb5be9893de4ab3cbd4fa5523de4, type: 2}
 --- !u!1 &560938528966842920
 GameObject:
   m_ObjectHideFlags: 0
@@ -442,6 +458,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &2199225205387686570
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3532325711988912404}
+  m_Layer: 0
+  m_Name: OcclusionTarget
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3532325711988912404
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2199225205387686570}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.020115018, y: 2.2586918, z: 0.059615493}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2148193779838503829}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2570584446186354152
 GameObject:
   m_ObjectHideFlags: 0
@@ -15894,7 +15941,7 @@ PrefabInstance:
     - target: {fileID: 7051861598886037960, guid: 29e366239f1bb894d90b2012b5bc8546,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.06
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7051861598886037960, guid: 29e366239f1bb894d90b2012b5bc8546,
         type: 3}
@@ -15904,7 +15951,7 @@ PrefabInstance:
     - target: {fileID: 7051861598886037960, guid: 29e366239f1bb894d90b2012b5bc8546,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.07
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7051861598886037960, guid: 29e366239f1bb894d90b2012b5bc8546,
         type: 3}

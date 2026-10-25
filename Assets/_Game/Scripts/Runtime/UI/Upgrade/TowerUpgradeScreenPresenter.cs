@@ -31,7 +31,7 @@ namespace AlienDefense.UI.Upgrade
         {
             _services = services;
             _upgradeService = services.PlayerProfileService != null
-                ? new TowerMetaUpgradeService(services.PlayerProfileService)
+                ? new TowerMetaUpgradeService(services.PlayerProfileService, services.TowerCatalog != null ? services.TowerCatalog.DefenseConfig : null)
                 : null;
 
             if (!_isInitialized)

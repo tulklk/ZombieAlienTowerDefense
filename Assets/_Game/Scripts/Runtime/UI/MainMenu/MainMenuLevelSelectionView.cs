@@ -92,6 +92,18 @@ namespace AlienDefense.UI.MainMenu
             _objectivesPanel?.SetObjectives(objectives);
         }
 
+        /// <summary>Shows the chests as they were before the level just won and arms the reveal of the newly
+        /// achieved ones (see LevelObjectivePanelView.PrepareReveal).</summary>
+        public void PrepareObjectiveReveal(LevelObjectivePresentation[] objectives, int previouslyAchieved)
+        {
+            _objectivesPanel?.PrepareReveal(objectives, previouslyAchieved);
+        }
+
+        public void PlayPreparedObjectiveReveal()
+        {
+            _objectivesPanel?.PlayPreparedReveal();
+        }
+
         private void HandlePreviousClicked()
         {
             PreviousClicked?.Invoke();

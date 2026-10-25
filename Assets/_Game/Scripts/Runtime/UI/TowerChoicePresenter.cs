@@ -20,6 +20,7 @@ namespace AlienDefense.UI
         private TowerDefinition[] _catalog;
         private GameSpeedController _gameSpeed;
         private PlayerProfileService _profile;
+        private TowerMetaUpgradeService _metaUpgrades;
         private BuildNode _pendingNode;
 
         public bool IsShowing => _pendingNode != null;
@@ -80,8 +81,10 @@ namespace AlienDefense.UI
         }
 
         /// <param name="profile">Optional - only read to print the player's saved Gem total on the panel.</param>
+        /// <param name="metaUpgrades">Optional - each card shows the tower's permanent (Defense tab) level from it. That level
+        /// only raises damage; the tower is still built at its lowest in-level level.</param>
         public void Initialize(EnergyTowerTransactionService transactionService, TowerDefinition[] catalog,
-            GameSpeedController gameSpeed, PlayerProfileService profile = null)
+            GameSpeedController gameSpeed, PlayerProfileService profile = null, TowerMetaUpgradeService metaUpgrades = null)
         {
             Unsubscribe();
 
@@ -89,6 +92,7 @@ namespace AlienDefense.UI
             _catalog = catalog;
             _gameSpeed = gameSpeed;
             _profile = profile;
+            _metaUpgrades = metaUpgrades;
 
             if (_view != null)
             {
@@ -134,11 +138,24 @@ namespace AlienDefense.UI
                 int cost = _transactionService != null ? _transactionService.GetBuildCost(definition) : 0;
                 bool affordable = _transactionService != null && _transactionService.CanAffordBuild(node, definition);
                 cards[i] = new TowerCardData(definition.DisplayName, definition.Description, cost + " Energy",
-                    definition.Icon, affordable, definition.ChoiceCardSprite);
+                    definition.Icon, affordable, definition.ChoiceCardSprite, LevelLabel(definition));
             }
 
             _view.Show(cards);
             _view.SetGems(CurrencyFormatter.Format(_profile != null ? _profile.Gems : 0));
+        }
+
+        /// <summary>"Lvl. 3" / "MAX" - the same label the Defense tab's Tower Collection prints.</summary>
+        private string LevelLabel(TowerDefinition definition)
+        {
+            if (_metaUpgrades == null)
+            {
+                return null;
+            }
+
+            return _metaUpgrades.IsMaxLevel(definition)
+                ? Defense.DefenseStrings.Max
+                : string.Format(Defense.DefenseStrings.LevelFormat, _metaUpgrades.GetCurrentLevelIndex(definition) + 1);
         }
 
         /// <summary>The Free button. This project's catalog is its whole choice, so there is no other set of towers

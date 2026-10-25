@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1978180293549174998
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8789333499604486450}
+  - component: {fileID: 290350615341454399}
+  - component: {fileID: 19746324047784194}
+  m_Layer: 0
+  m_Name: PF_Tree_Fruit_01
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8789333499604486450
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1978180293549174998}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2713032023560148565}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &290350615341454399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1978180293549174998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b966fb3e5dca731489c26d58bef0d223, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Environment.TractorAbsorbableProp
+  _canBeAbsorbed: 1
+  _tractorResistance: 1
+  _visualRoot: {fileID: 2713032023560148565}
+  _experienceReward: 1
+  _absorbSizeOverride: 0
+  _pullSpeedMultiplier: 1
+  _liftSpeedMultiplier: 1
+  _captureStartScale: 1
+  _captureShrinkDuration: 0.35
+  _captureTiltDegrees: 30
+  _absorbStartSpeedFactor: 0.35
+  _absorbAccelerationTime: 0.5
+  _shrinkDuringLift: 1
+  _minimumVisualScale: 0.15
+--- !u!114 &19746324047784194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1978180293549174998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11383035922b2cb478c343be243c2828, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Occlusion.OcclusionObject
+  _localBounds:
+    m_Center: {x: -0.029583573, y: 1.7300346, z: -0.29074812}
+    m_Extent: {x: 1.957654, y: 1.8907299, z: 2.151029}
+  _hasLocalBounds: 1
+--- !u!1001 &8985570247653815188
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8789333499604486450}
+    m_Modifications:
+    - target: {fileID: 5935278547815300987, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_Name
+      value: PT_Fruit_Tree_01_apples
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.55
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.55
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.55
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: e05ae677c7b3bc546bd36b488586fb0c, type: 3}
+--- !u!4 &2713032023560148565 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6419187236850804161, guid: e05ae677c7b3bc546bd36b488586fb0c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8985570247653815188}
+  m_PrefabAsset: {fileID: 0}

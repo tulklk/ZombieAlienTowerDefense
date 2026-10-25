@@ -566,6 +566,21 @@ namespace AlienDefense.Save
             }
         }
 
+        /// <summary>Permanent UFO Base level index (0 = level 1) - see BaseDefenseUpgradeService.</summary>
+        public int BaseDefenseLevel => Mathf.Max(0, _data.BaseDefenseLevel);
+
+        public void SetBaseDefenseLevel(int level)
+        {
+            if (level < 0)
+            {
+                Debug.LogError($"[PlayerProfileService] Ignored SetBaseDefenseLevel({level}); negative level.");
+                return;
+            }
+
+            _data.BaseDefenseLevel = level;
+            RequestImmediateSave();
+        }
+
         public void SetTowerUpgradeLevel(string towerId, int level)
         {
             if (string.IsNullOrWhiteSpace(towerId) || level < 0)

@@ -37,6 +37,13 @@ namespace AlienDefense.Meta
 
         public bool IsReady => _profile != null && _catalog != null;
 
+        /// <summary>Catalog lookup by id, owned or not (e.g. the art of an upgrade card a cost row names).</summary>
+        public bool TryGetDefinition(string itemId, out MetaItemDefinition definition)
+        {
+            definition = null;
+            return _catalog != null && !string.IsNullOrEmpty(itemId) && _catalog.TryGet(itemId, out definition);
+        }
+
         // ------------------------------------------------------------------ Materials and containers
 
         public List<MaterialEntry> GetMaterials()

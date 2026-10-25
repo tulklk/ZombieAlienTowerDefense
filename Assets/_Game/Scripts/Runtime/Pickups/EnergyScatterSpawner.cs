@@ -163,7 +163,8 @@ namespace AlienDefense.Pickups
             bool useRoad = HasRoad && Random.value < _definition.RoadShare;
             Vector3 candidate = useRoad ? SampleRoadPoint() : SampleOpenPoint();
 
-            if (!TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY) ||
+            if (!IsReachable(candidate, _definition.ClusterRadius) ||
+                !TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY) ||
                 IsWithinOfExistingPickup(candidate, _definition.ClusterSpacing))
             {
                 centre = default;
@@ -196,7 +197,7 @@ namespace AlienDefense.Pickups
                     var candidate = new Vector3(centre.x + direction.x * distance, 0f, centre.z + direction.y * distance);
 
                     // Never drop balls where the player is not allowed to fly (river, waterfall).
-                    if (!TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY)
+                    if (!IsReachable(candidate, 0.3f) || !TryResolveGroundHeight(candidate, out float groundY) || IsBlocked(candidate, groundY)
                         || AlienDefense.Player.PlayerNoFlyZone.IsInside(candidate, 0.5f))
                     {
                         continue;
@@ -213,6 +214,21 @@ namespace AlienDefense.Pickups
                     break;
                 }
             }
+        }
+
+        /// <summary>False outside the rectangle the UFO can fly over (LevelBounds, minus a margin): the road starts
+        /// inside the spawn barns, and Energy dropped in there could never be collected.</summary>
+        private bool IsReachable(Vector3 point, float margin)
+        {
+            if (_levelBounds == null)
+            {
+                return true;
+            }
+
+            Vector3 clamped = _levelBounds.ClampXZ(point, margin);
+            float dx = clamped.x - point.x;
+            float dz = clamped.z - point.z;
+            return dx * dx + dz * dz < 0.0001f;
         }
 
         /// <summary>A uniformly random point along the road's polyline, pushed sideways by up to the definition's
@@ -279,7 +295,7 @@ namespace AlienDefense.Pickups
                     }
 
                     groundY = origin.y + terrain.SampleHeight(worldPosition);
-                    return true;
+                    return _definition == null || groundY >= _definition.MinGroundY; // under water: no ground to drop on
                 }
             }
 

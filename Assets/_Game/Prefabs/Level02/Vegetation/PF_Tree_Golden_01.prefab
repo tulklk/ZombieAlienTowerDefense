@@ -1,0 +1,173 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7293813867527299094
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8594257696128472651}
+  - component: {fileID: 3066915829026270267}
+  - component: {fileID: 5687912545439818250}
+  m_Layer: 0
+  m_Name: PF_Tree_Golden_01
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8594257696128472651
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7293813867527299094}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8776218205397359356}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3066915829026270267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7293813867527299094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b966fb3e5dca731489c26d58bef0d223, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Environment.TractorAbsorbableProp
+  _canBeAbsorbed: 1
+  _tractorResistance: 1
+  _visualRoot: {fileID: 8776218205397359356}
+  _experienceReward: 1
+  _absorbSizeOverride: 0
+  _pullSpeedMultiplier: 1
+  _liftSpeedMultiplier: 1
+  _captureStartScale: 1
+  _captureShrinkDuration: 0.35
+  _captureTiltDegrees: 30
+  _absorbStartSpeedFactor: 0.35
+  _absorbAccelerationTime: 0.5
+  _shrinkDuringLift: 1
+  _minimumVisualScale: 0.15
+--- !u!114 &5687912545439818250
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7293813867527299094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11383035922b2cb478c343be243c2828, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Occlusion.OcclusionObject
+  _localBounds:
+    m_Center: {x: -0.11735487, y: 2.9962165, z: -0.03864336}
+    m_Extent: {x: 0.83350253, y: 3.0594163, z: 0.795419}
+  _hasLocalBounds: 1
+--- !u!1001 &1493915275041088998
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8594257696128472651}
+    m_Modifications:
+    - target: {fileID: 7366700822235473312, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_Name
+      value: Env_Tree_05
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.05
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.05
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.05
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9023871348149306485, guid: d534d873f81082e4aa9f93a03e577725,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 58644a91724eace45ae8b11269d0787d, type: 2}
+    m_RemovedComponents:
+    - {fileID: 3643105093074297416, guid: d534d873f81082e4aa9f93a03e577725, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d534d873f81082e4aa9f93a03e577725, type: 3}
+--- !u!4 &8776218205397359356 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7885829278114004762, guid: d534d873f81082e4aa9f93a03e577725,
+    type: 3}
+  m_PrefabInstance: {fileID: 1493915275041088998}
+  m_PrefabAsset: {fileID: 0}

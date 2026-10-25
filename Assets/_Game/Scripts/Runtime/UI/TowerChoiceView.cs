@@ -21,7 +21,12 @@ namespace AlienDefense.UI
         public readonly Sprite CardSprite;
         public readonly bool Affordable;
 
-        public TowerCardData(string name, string description, string costLabel, Sprite icon, bool affordable, Sprite cardSprite = null)
+        /// <summary>The tower's permanent level from the Defense tab ("Lvl. 3"), printed on the card's empty bar.
+        /// Null = left blank.</summary>
+        public readonly string LevelLabel;
+
+        public TowerCardData(string name, string description, string costLabel, Sprite icon, bool affordable, Sprite cardSprite = null,
+            string levelLabel = null)
         {
             Name = name;
             Description = description;
@@ -29,6 +34,7 @@ namespace AlienDefense.UI
             Icon = icon;
             Affordable = affordable;
             CardSprite = cardSprite;
+            LevelLabel = levelLabel;
         }
     }
 
@@ -64,6 +70,10 @@ namespace AlienDefense.UI
         [SerializeField]
         [Tooltip("Optional.")]
         private Image[] _iconImages = new Image[3];
+
+        [SerializeField]
+        [Tooltip("Optional. The permanent (Defense tab) level printed on each card's bar.")]
+        private TMP_Text[] _levelTexts = new TMP_Text[3];
 
         [SerializeField]
         private Button[] _cardButtons = new Button[3];
@@ -161,6 +171,12 @@ namespace AlienDefense.UI
                 SetText(Element(_nameTexts, i), card.Name);
                 SetText(Element(_descriptionTexts, i), card.Description);
                 SetText(Element(_costTexts, i), card.CostLabel);
+                TMP_Text level = Element(_levelTexts, i);
+                if (level != null)
+                {
+                    level.text = card.LevelLabel;
+                    level.gameObject.SetActive(!string.IsNullOrEmpty(card.LevelLabel));
+                }
 
                 // An unaffordable tower reads as greyed out rather than simply dead.
                 Image art = Element(_cardImages, i);

@@ -116,6 +116,19 @@ namespace AlienDefense.Tests.EditMode
         }
 
         [Test]
+        public void IsCapturable_False_ForMiniBoss_EvenWhenDefinitionAllows()
+        {
+            var registry = new EnemyRegistry();
+            (EnemyController enemy, _) = CreateEnemy(registry, canCapture: true);
+
+            enemy.SetRank(EnemyRank.MiniBoss);
+            Assert.IsFalse(enemy.IsCapturable, "Mini bosses must be brought down by the towers.");
+
+            enemy.SetRank(EnemyRank.Normal);
+            Assert.IsTrue(enemy.IsCapturable);
+        }
+
+        [Test]
         public void TryBeginTractorCapture_Succeeds_MakesEnemyNonTargetableAndNonDamageable()
         {
             var registry = new EnemyRegistry();

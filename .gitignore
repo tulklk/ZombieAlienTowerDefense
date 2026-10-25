@@ -83,6 +83,28 @@ crashlytics-build.properties
 /[Aa]ssets/_Game/[Ss]haders/[Bb]ackup.meta
 
 ## ================================
+## Unity Android / local editor leftovers
+## ================================
+/.utmp/
+/EditorTemp/
+*.unity.broken
+*.unity.broken.meta
+
+## Unused Asset Store leftovers (not referenced by the game)
+/Assets/Scenes/DemoScene.unity
+/Assets/Scenes/DemoScene.unity.meta
+/Assets/Scenes/ShowcaseScene.unity
+/Assets/Scenes/ShowcaseScene.unity.meta
+/Assets/Scenes/New Material.mat
+/Assets/Scenes/New Material.mat.meta
+/Assets/Scenes/Sand.mat
+/Assets/Scenes/Sand.mat.meta
+/Assets/Scenes/Water.mat
+/Assets/Scenes/Water.mat.meta
+/Assets/SkySeries Freebie/
+/Assets/SkySeries Freebie.meta
+
+## ================================
 ## OS generated
 ## ================================
 .DS_Store

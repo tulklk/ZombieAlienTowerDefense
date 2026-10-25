@@ -38,6 +38,9 @@ namespace AlienDefense.Core
         /// <summary>Lives as long as the app, like the profile: the services bundle is rebuilt on every scene load
         /// (BindSceneTransition), and a fresh queue there would drop the rewards a level hands to MainMenu.</summary>
         private readonly PendingRewardPresentation _pendingRewards = new PendingRewardPresentation();
+
+        /// <summary>Same lifetime, same reason: the note a won level leaves for MainMenu's chest reveal.</summary>
+        private readonly PendingObjectiveReveal _pendingObjectiveReveal = new PendingObjectiveReveal();
         private AlienDefense.Economy.PlayEnergyService _playEnergy;
         private AlienDefense.Progression.PlayerLevelCurve _playerLevels = new AlienDefense.Progression.PlayerLevelCurve();
 
@@ -139,7 +142,8 @@ namespace AlienDefense.Core
         private void RebuildServicesBundle()
         {
             Services = new ApplicationServices(_sceneTransition, _levelLaunchContext, _levelCatalog, _playerProfileService,
-                _settingsService, _towerCatalog, _pendingRewards, _playEnergy, _playerLevels, _metaItemCatalog, _baseBuildingCatalog);
+                _settingsService, _towerCatalog, _pendingRewards, _playEnergy, _playerLevels, _metaItemCatalog, _baseBuildingCatalog,
+                _pendingObjectiveReveal);
         }
 
         private void HandleFocusChanged(bool hasFocus)

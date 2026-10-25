@@ -735,7 +735,7 @@ namespace AlienDefense.EditorTools
 
         /// <summary>Merges every mesh under root into one mesh asset (one submesh per material), replaces the
         /// children with a single MeshFilter/MeshRenderer on root, and saves the mesh so the prefab can reference it.</summary>
-        private static void BakeToSingleRenderer(GameObject root, string meshPath, bool castShadows)
+        internal static void BakeToSingleRenderer(GameObject root, string meshPath, bool castShadows)
         {
             var byMaterial = new Dictionary<Material, List<CombineInstance>>();
             var order = new List<Material>();

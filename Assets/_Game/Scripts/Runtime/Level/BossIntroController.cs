@@ -105,6 +105,24 @@ namespace AlienDefense.Level
         [SerializeField, Min(2f)]
         private float _minCameraDistance = 6f;
 
+        [Header("Clear view")]
+        [SerializeField, Range(0, 90)]
+        [Tooltip("Other yaw angles (either side of the preferred three-quarter view) tried when scenery blocks the shot; " +
+                 "the angle with the least in the way wins.")]
+        private int _alternativeYawStep = 30;
+
+        [SerializeField, Min(1f)]
+        [Tooltip("Renderers bigger than this (metres, any side) are never hidden - ground, terrain, water.")]
+        private float _maxHiddenOccluderSize = 18f;
+
+        [SerializeField, Min(2f)]
+        [Tooltip("How far behind the boss a tall prop still counts as filling the background of the shot.")]
+        private float _backdropDepth = 14f;
+
+        private readonly List<Renderer> _sceneRenderers = new List<Renderer>(512);
+        private readonly List<Renderer> _hiddenOccluders = new List<Renderer>(32);
+        private readonly Vector3[] _shotTargets = new Vector3[3];
+
         private WaveController _waves;
         private Sequence _sequence;
         private Tween _cameraTween;
@@ -115,6 +133,9 @@ namespace AlienDefense.Level
         private bool _tractorBeamWasEnabled;
         private bool _locked;
         private bool _playIntro;
+        private EnemyRegistry _enemies;
+        private readonly List<EnemyController> _frozen = new List<EnemyController>(64);
+        private readonly List<int> _frozenGenerations = new List<int>(64);
 
         public bool IsPlaying { get; private set; }
 
@@ -125,7 +146,15 @@ namespace AlienDefense.Level
 
         public void Initialize(WaveController waves)
         {
+            Initialize(waves, null);
+        }
+
+        /// <param name="enemies">Optional. When given, every other enemy still walking is frozen for the whole
+        /// intro and released with the boss, so nothing advances on the base while the camera is away.</param>
+        public void Initialize(WaveController waves, EnemyRegistry enemies)
+        {
             Unsubscribe();
+            _enemies = enemies;
             _waves = waves;
             if (_waves == null)
             {
@@ -165,6 +194,8 @@ namespace AlienDefense.Level
             Vector3 startPosition = _cameraTransform.position;
             Quaternion startRotation = _cameraTransform.rotation;
             ComputeBossShot(boss, out Vector3 shotPosition, out Quaternion shotRotation);
+            HideOccluders(shotPosition, shotRotation, boss.transform.position);
+            _sceneRenderers.Clear();
 
             _sequence?.Kill();
             _sequence = DOTween.Sequence().SetLink(gameObject);
@@ -212,7 +243,12 @@ namespace AlienDefense.Level
         }
 
         /// <summary>Low three-quarter shot framed from the boss's own anchors: looks at BossFocusPoint (chest/head),
-        /// sized so the boss (root to HealthBarAnchor) fills about _screenHeightFill of the screen height.</summary>
+        /// sized so the boss (root to HealthBarAnchor) fills about _screenHeightFill of the screen height.
+        ///
+        /// Scenery props have no colliders, so the physics check alone let a tree or a barn fill the frame (user,
+        /// 2026-10-15). The shot therefore tries the preferred angle and a few alternatives either side, keeps the one
+        /// with the fewest renderers between the camera and the boss, and HideOccluders then hides what is still in
+        /// the way until the camera is back.</summary>
         private void ComputeBossShot(EnemyController boss, out Vector3 position, out Quaternion rotation)
         {
             Transform root = boss.transform;
@@ -221,20 +257,47 @@ namespace AlienDefense.Level
             float height = MeasureBossHeight(boss);
             Transform focusAnchor = root.Find("BossFocusPoint");
             Vector3 focus = focusAnchor != null ? focusAnchor.position : basePoint + Vector3.up * height * 0.62f;
+            _shotTargets[0] = focus;
+            _shotTargets[1] = basePoint + Vector3.up * height * 0.25f;
+            _shotTargets[2] = basePoint + Vector3.up * height * 0.95f;
 
             Vector3 forward = root.forward;
             forward.y = 0f;
             forward = forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
-            Vector3 toCamera = Quaternion.AngleAxis(_cameraYawOffset, Vector3.up) * forward;
 
             Camera cam = _cameraTransform.GetComponent<Camera>();
             float fov = cam != null ? cam.fieldOfView : 40f;
             float visibleHeight = height / Mathf.Max(0.1f, _screenHeightFill);
             float distance = Mathf.Max(_minCameraDistance, visibleHeight * 0.5f / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad));
 
-            position = basePoint + toCamera * distance + Vector3.up * (height * _cameraHeightFactor);
+            CollectSceneRenderers(cam);
+            position = default;
+            int bestScore = int.MaxValue;
+            int tries = _alternativeYawStep > 0 ? 5 : 1;
+            for (int i = 0; i < tries && bestScore > 0; i++)
+            {
+                // Preferred angle first, then +step, -step, +2 step, -2 step. Something in front of the boss weighs far
+                // more than something right behind it (a barn wall filling the background), but both count.
+                int ring = (i + 1) / 2;
+                float yaw = _cameraYawOffset + (i % 2 == 1 ? 1 : -1) * ring * _alternativeYawStep;
+                Vector3 toCamera = Quaternion.AngleAxis(yaw, Vector3.up) * forward;
+                Vector3 candidate = LiftAboveColliders(basePoint + toCamera * distance + Vector3.up * (height * _cameraHeightFactor), focus);
+                int score = CountOccluders(candidate, null) * 100 + CountBackdropClutter(candidate, focus);
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    position = candidate;
+                }
+            }
 
-            // Keep terrain / props from blocking the shot: lift the camera until the line to the focus is clear.
+            // Pitch down a little so the focus sits above centre (the boss reads in the upper-middle of the frame).
+            float liftPitch = Mathf.Atan(Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * _focusScreenLift * 2f) * Mathf.Rad2Deg;
+            rotation = Quaternion.LookRotation(focus - position, Vector3.up) * Quaternion.Euler(liftPitch, 0f, 0f);
+        }
+
+        /// <summary>Terrain / anything with a collider: lift the camera until the line to the focus is clear.</summary>
+        private static Vector3 LiftAboveColliders(Vector3 position, Vector3 focus)
+        {
             for (int i = 0; i < 8; i++)
             {
                 Vector3 toFocus = focus - position;
@@ -248,9 +311,158 @@ namespace AlienDefense.Level
                 position += Vector3.up * 0.75f;
             }
 
-            // Pitch down a little so the focus sits above centre (the boss reads in the upper-middle of the frame).
-            float liftPitch = Mathf.Atan(Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * _focusScreenLift * 2f) * Mathf.Rad2Deg;
-            rotation = Quaternion.LookRotation(focus - position, Vector3.up) * Quaternion.Euler(liftPitch, 0f, 0f);
+            return position;
+        }
+
+        /// <summary>Once per intro: every visible, prop-sized renderer the gameplay camera draws, except the enemies'
+        /// own (the boss group stays in the picture).</summary>
+        private void CollectSceneRenderers(Camera cam)
+        {
+            _sceneRenderers.Clear();
+            int mask = cam != null ? cam.cullingMask : ~0;
+            foreach (Renderer renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || (mask & (1 << renderer.gameObject.layer)) == 0
+                    || renderer is ParticleSystemRenderer || renderer is TrailRenderer || renderer is LineRenderer)
+                {
+                    continue;
+                }
+
+                Vector3 size = renderer.bounds.size;
+                if (Mathf.Max(size.x, Mathf.Max(size.y, size.z)) > _maxHiddenOccluderSize
+                    || renderer.GetComponentInParent<EnemyController>() != null || renderer.GetComponentInParent<Canvas>() != null)
+                {
+                    continue;
+                }
+
+                _sceneRenderers.Add(renderer);
+            }
+        }
+
+        /// <summary>How many collected renderers sit between <paramref name="cameraPosition"/> and the boss (its
+        /// focus, lower body and head). With a list, they are added to it.</summary>
+        private int CountOccluders(Vector3 cameraPosition, List<Renderer> into)
+        {
+            int count = 0;
+            for (int r = 0; r < _sceneRenderers.Count; r++)
+            {
+                Renderer renderer = _sceneRenderers[r];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Bounds bounds = renderer.bounds;
+                for (int t = 0; t < _shotTargets.Length; t++)
+                {
+                    Vector3 toTarget = _shotTargets[t] - cameraPosition;
+                    float length = toTarget.magnitude;
+                    if (length > 0.01f && bounds.IntersectRay(new Ray(cameraPosition, toTarget / length), out float hitDistance)
+                        && hitDistance < length - 0.3f)
+                    {
+                        count++;
+                        into?.Add(renderer);
+                        break;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>Big things just behind the boss along the line of sight (within _backdropDepth metres) - a wall
+        /// there fills the whole picture behind it.</summary>
+        private int CountBackdropClutter(Vector3 cameraPosition, Vector3 focus)
+        {
+            Vector3 toFocus = focus - cameraPosition;
+            float length = toFocus.magnitude;
+            if (length < 0.01f)
+            {
+                return 0;
+            }
+
+            var ray = new Ray(cameraPosition, toFocus / length);
+            int count = 0;
+            for (int r = 0; r < _sceneRenderers.Count; r++)
+            {
+                Renderer renderer = _sceneRenderers[r];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Bounds bounds = renderer.bounds;
+                if (bounds.size.y > 1.5f && bounds.IntersectRay(ray, out float hitDistance)
+                    && hitDistance > length + 0.5f && hitDistance < length + _backdropDepth)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>Whatever still stands between the shot and the boss is switched off until the camera is back.</summary>
+        private void HideOccluders(Vector3 shotPosition, Quaternion shotRotation, Vector3 bossPosition)
+        {
+            RestoreOccluders();
+            CountOccluders(shotPosition, _hiddenOccluders);
+            CollectForeground(shotPosition, shotRotation, Vector3.Distance(shotPosition, bossPosition) * 0.75f);
+            for (int i = 0; i < _hiddenOccluders.Count; i++)
+            {
+                _hiddenOccluders[i].enabled = false;
+            }
+        }
+
+        /// <summary>A bush or crate right under the camera fills the bottom of the frame even when it hides nothing of
+        /// the boss: rays through the lower half of the picture pick up anything nearer than <paramref name="maxDistance"/>.</summary>
+        private void CollectForeground(Vector3 shotPosition, Quaternion shotRotation, float maxDistance)
+        {
+            Camera cam = _cameraTransform.GetComponent<Camera>();
+            float tanV = Mathf.Tan((cam != null ? cam.fieldOfView : 40f) * 0.5f * Mathf.Deg2Rad);
+            float tanH = tanV * (cam != null ? cam.aspect : 0.5f);
+            for (int r = 0; r < _sceneRenderers.Count; r++)
+            {
+                Renderer renderer = _sceneRenderers[r];
+                if (renderer == null || _hiddenOccluders.Contains(renderer))
+                {
+                    continue;
+                }
+
+                Bounds bounds = renderer.bounds;
+                if (bounds.size.y < 0.6f)
+                {
+                    continue; // ground tiles, paths, flat beds: hiding them would punch holes in the ground
+                }
+
+                bool hit = false;
+                for (float vy = -0.95f; vy <= -0.15f && !hit; vy += 0.2f)
+                {
+                    for (float vx = -0.9f; vx <= 0.91f && !hit; vx += 0.3f)
+                    {
+                        Vector3 direction = shotRotation * new Vector3(vx * tanH, vy * tanV, 1f);
+                        hit = bounds.IntersectRay(new Ray(shotPosition, direction.normalized), out float distance) && distance < maxDistance;
+                    }
+                }
+
+                if (hit)
+                {
+                    _hiddenOccluders.Add(renderer);
+                }
+            }
+        }
+
+        private void RestoreOccluders()
+        {
+            for (int i = 0; i < _hiddenOccluders.Count; i++)
+            {
+                if (_hiddenOccluders[i] != null)
+                {
+                    _hiddenOccluders[i].enabled = true;
+                }
+            }
+
+            _hiddenOccluders.Clear();
         }
 
         private static float MeasureBossHeight(EnemyController boss)
@@ -293,6 +505,7 @@ namespace AlienDefense.Level
             }
 
             _locked = true;
+            FreezeOtherEnemies();
             if (_player != null)
             {
                 _player.SetMovementEnabled(false);
@@ -316,6 +529,47 @@ namespace AlienDefense.Level
             }
 
             FadeHud(0f, blocksRaycasts: false);
+        }
+
+        /// <summary>The whole battlefield stops while the boss is introduced: every enemy still in play (except the
+        /// boss group, which WaveController already holds) stands still, untargetable and with its animation stopped.</summary>
+        private void FreezeOtherEnemies()
+        {
+            _frozen.Clear();
+            _frozenGenerations.Clear();
+            if (_enemies == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _enemies.Count; i++)
+            {
+                EnemyController enemy = _enemies.GetAt(i);
+                if (enemy == null || !enemy.IsCombatActive || !enemy.IsTargetable)
+                {
+                    continue; // the held boss group, or an enemy already being carried off by the beam
+                }
+
+                enemy.SetCombatActive(false, 0f);
+                _frozen.Add(enemy);
+                _frozenGenerations.Add(enemy.Generation);
+            }
+        }
+
+        private void ReleaseOtherEnemies()
+        {
+            for (int i = 0; i < _frozen.Count; i++)
+            {
+                EnemyController enemy = _frozen[i];
+                // Same spawn only: a pooled enemy reused since then is not ours to release.
+                if (enemy != null && enemy.Generation == _frozenGenerations[i])
+                {
+                    enemy.SetCombatActive(true);
+                }
+            }
+
+            _frozen.Clear();
+            _frozenGenerations.Clear();
         }
 
         private void UnlockGameplay()
@@ -398,6 +652,7 @@ namespace AlienDefense.Level
 
         private void RestoreGameplayCamera()
         {
+            RestoreOccluders();
             _cameraTransform.rotation = _gameplayCameraRotation;
             _cameraController.ResumeFollow();
         }
@@ -409,6 +664,7 @@ namespace AlienDefense.Level
                 _bossAnimator.CrossFadeInFixedTime(WalkStateHash, 0.2f, 0);
             }
 
+            ReleaseOtherEnemies();
             UnlockGameplay();
             IsPlaying = false;
             _sequence = null;
@@ -430,6 +686,7 @@ namespace AlienDefense.Level
         private void OnDestroy()
         {
             _sequence?.Kill();
+            RestoreOccluders();
             Unsubscribe();
         }
     }

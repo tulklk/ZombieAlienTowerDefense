@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fd4435732717254fb8f150ef0ddc47f, type: 3}
+  m_Name: DefenseMetaConfig
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Towers.DefenseMetaConfig
+  _critChance: 0.1
+  _baseCritDamage: 1.5
+  _critDamagePerUpgradeLevel: 0.02
+  _towerDamageBonusPerLevel: 0.1
+  _towerLevelCosts:
+  - Coins: 200
+    Cards: 25
+  - Coins: 1000
+    Cards: 50
+  - Coins: 2000
+    Cards: 100
+  - Coins: 4000
+    Cards: 150
+  - Coins: 8000
+    Cards: 200
+  - Coins: 12000
+    Cards: 250
+  - Coins: 16000
+    Cards: 300
+  - Coins: 24000
+    Cards: 400
+  - Coins: 32000
+    Cards: 500
+  _baseDisplayName: UFO Base
+  _baseDescription: 'UFO Base is the central hub of your alien fleet. Protect it
+    at all costs: when its health runs out, the level is lost. Every Base level raises
+    its health in every level.'
+  _baseIcon: {fileID: 5280109439331579606, guid: 6930a5a1fa6121a458c4b445d23e6f29,
+    type: 3}
+  _baseTypeIcon: {fileID: 21300000, guid: 01c4adb718f71c14ebd8a4acb21a16ef, type: 3}
+  _basePreviewModel: {fileID: 919132149155446097, guid: 98c64a4a8d0f21543bf9aa69d5c25346,
+    type: 3}
+  _baseCardItemId: card_ufo
+  _baseHealthBonusPerLevel: 0.1
+  _baseLevelCosts:
+  - Coins: 500
+    Cards: 20
+  - Coins: 1000
+    Cards: 40
+  - Coins: 2000
+    Cards: 80
+  - Coins: 4000
+    Cards: 150
+  - Coins: 8000
+    Cards: 250
+  _comingSoonCards:
+  - Label: 'Event
+
+      activity'
+    Icon: {fileID: 21300000, guid: 89616168562419746914e74a2ade2aa3, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 82ccf7aeb1ee12641af30ea8304239ad, type: 3}
+    IsEvent: 1
+  - Label: 'Event
+
+      activity'
+    Icon: {fileID: 21300000, guid: ca64ad7e57207e240b8398ddc4aa4703, type: 3}
+    TypeIcon: {fileID: 21300000, guid: cc723ab04a8b2154f98a5d1cd39914be, type: 3}
+    IsEvent: 1
+  - Label: 'Event
+
+      activity'
+    Icon: {fileID: 21300000, guid: c4f2ce2d00e9bfc4a99338fda520e6bf, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 9d37aa1ed4007104cb137708e5829e61, type: 3}
+    IsEvent: 1
+  - Label: 'Event
+
+      activity'
+    Icon: {fileID: 21300000, guid: 89616168562419746914e74a2ade2aa3, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 82ccf7aeb1ee12641af30ea8304239ad, type: 3}
+    IsEvent: 1
+  - Label: 'Event
+
+      activity'
+    Icon: {fileID: 21300000, guid: ca64ad7e57207e240b8398ddc4aa4703, type: 3}
+    TypeIcon: {fileID: 21300000, guid: cc723ab04a8b2154f98a5d1cd39914be, type: 3}
+    IsEvent: 1
+  - Label: 'Event
+
+      activity'
+    Icon: {fileID: 21300000, guid: c4f2ce2d00e9bfc4a99338fda520e6bf, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 9d37aa1ed4007104cb137708e5829e61, type: 3}
+    IsEvent: 1
+  - Label: 'Unlock in
+
+      Engineer''s
+
+      House'
+    Icon: {fileID: 21300000, guid: 89616168562419746914e74a2ade2aa3, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 82ccf7aeb1ee12641af30ea8304239ad, type: 3}
+    IsEvent: 0
+  - Label: 'Unlock in
+
+      Engineer''s
+
+      House'
+    Icon: {fileID: 21300000, guid: ca64ad7e57207e240b8398ddc4aa4703, type: 3}
+    TypeIcon: {fileID: 21300000, guid: cc723ab04a8b2154f98a5d1cd39914be, type: 3}
+    IsEvent: 0
+  - Label: 'Unlock in
+
+      Engineer''s
+
+      House'
+    Icon: {fileID: 21300000, guid: c4f2ce2d00e9bfc4a99338fda520e6bf, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 9d37aa1ed4007104cb137708e5829e61, type: 3}
+    IsEvent: 0
+  - Label: 'Unlock in
+
+      Engineer''s
+
+      House'
+    Icon: {fileID: 21300000, guid: 89616168562419746914e74a2ade2aa3, type: 3}
+    TypeIcon: {fileID: 21300000, guid: 82ccf7aeb1ee12641af30ea8304239ad, type: 3}
+    IsEvent: 0

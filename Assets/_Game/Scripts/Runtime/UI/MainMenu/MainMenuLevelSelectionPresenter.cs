@@ -30,6 +30,19 @@ namespace AlienDefense.UI.MainMenu
         private ObjectiveRewardService _rewardService;
         private int _selectedIndex;
         private int _navigationDirection;
+        private Coroutine _revealRoutine;
+        private LevelObjectivePresentation[] _shownObjectives;
+
+        private void OnDisable()
+        {
+            // Disabled while the reveal was still waiting for the transition: the coroutine is gone, so drop the
+            // armed "before" look and show the saved state.
+            if (_revealRoutine != null)
+            {
+                _revealRoutine = null;
+                _view?.SetObjectives(_shownObjectives);
+            }
+        }
 
         public void Initialize(ApplicationServices services)
         {
@@ -68,9 +81,35 @@ namespace AlienDefense.UI.MainMenu
                 return 0;
             }
 
+            // Just won a level that newly achieved objective chests: open on that level so their reveal is seen.
+            // (Index 0 shows no chests, so it never takes over the selection.)
+            PendingObjectiveReveal reveal = _services.PendingObjectiveReveal;
+            if (reveal != null && reveal.HasPending)
+            {
+                int revealIndex = catalog.IndexOf(reveal.LevelId);
+                if (revealIndex > 0)
+                {
+                    return revealIndex;
+                }
+
+                reveal.Clear(); // nothing to show it on
+            }
+
             string highestUnlocked = _services.PlayerProfileService?.HighestUnlockedLevelId;
             int index = catalog.IndexOf(highestUnlocked);
             return index >= 0 ? index : 0;
+        }
+
+        /// <summary>The reveal waits for the scene transition to finish, so it is not played behind the fade.</summary>
+        private System.Collections.IEnumerator PlayObjectiveRevealWhenVisible()
+        {
+            while (_services?.SceneTransition != null && _services.SceneTransition.IsTransitioning)
+            {
+                yield return null;
+            }
+
+            _revealRoutine = null;
+            _view?.PlayPreparedObjectiveReveal();
         }
 
         private void HandlePreviousClicked()
@@ -192,8 +231,29 @@ namespace AlienDefense.UI.MainMenu
             _view.SetStatus(status);
             _view.SetNavigationAvailable(_selectedIndex > 0, _selectedIndex < catalog.Count - 1);
             // Level 1 (index 0): hide objectives; Level 2+ shows claimable chests + preview bubble.
-            _view.SetObjectives(
-                _selectedIndex == 0 ? null : BuildObjectives(entry.LevelId, progress, isUnlocked));
+            LevelObjectivePresentation[] objectives =
+                _selectedIndex == 0 ? null : BuildObjectives(entry.LevelId, progress, isUnlocked);
+
+            if (_revealRoutine != null)
+            {
+                StopCoroutine(_revealRoutine);
+                _revealRoutine = null;
+            }
+
+            // Only right after a win, only for the level that was won, only once: the note is consumed here, so any
+            // later refresh (navigation, claim, menu reload) shows the saved state with no animation.
+            _shownObjectives = objectives;
+            if (objectives != null && _services.PendingObjectiveReveal != null &&
+                _services.PendingObjectiveReveal.TryConsume(entry.LevelId, out int previouslyAchieved, out _) &&
+                isActiveAndEnabled)
+            {
+                _view.PrepareObjectiveReveal(objectives, previouslyAchieved);
+                _revealRoutine = StartCoroutine(PlayObjectiveRevealWhenVisible());
+            }
+            else
+            {
+                _view.SetObjectives(objectives);
+            }
 
             Sprite previewSprite = isUnlocked ? entry.MenuPreviewSprite : entry.MenuPreviewSpriteLocked;
             _previewView?.ShowPreview(previewSprite, isUnlocked, _navigationDirection);

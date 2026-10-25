@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Alien6Walk
+  m_Controller: {fileID: 9100000, guid: f97a15e803326bd41841b24343c2c5d8, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -203655887218126122, guid: 0c6eb2c45d78e704d9f65e7b09f1eaba,
+      type: 3}
+    m_OverrideClip: {fileID: -203655887218126122, guid: 37000a145a505d8438aee156832f122b,
+      type: 3}

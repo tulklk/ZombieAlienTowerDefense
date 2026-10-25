@@ -80,15 +80,18 @@ namespace AlienDefense.EditorTools
 
             var images = new Image[3];
             var buttons = new Button[3];
+            var levels = new TMP_Text[3];
             for (int i = 0; i < 3; i++)
             {
                 BuildCard(cardsRow, i, out buttons[i], out images[i]);
+                levels[i] = BuildLevelLabel(images[i].rectTransform);
             }
 
             var so = new SerializedObject(view);
             so.FindProperty("_root").objectReferenceValue = view.gameObject;
             AssignArray(so, "_cardImages", images);
             AssignArray(so, "_cardButtons", buttons);
+            AssignArray(so, "_levelTexts", levels);
             ClearArray(so, "_nameTexts");       // the card sprite carries the name...
             ClearArray(so, "_descriptionTexts"); // ...and the description
             ClearArray(so, "_costTexts");
@@ -304,6 +307,63 @@ namespace AlienDefense.EditorTools
             var fitter = image.AddComponent<AspectRatioFitter>();
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = 1024f / 1536f; // the card sprites' own ratio; kept in sync below
+        }
+
+        /// <summary>The permanent (Defense tab) level, printed on the empty bar at the foot of the card artwork. Anchored
+        /// in the artwork's own proportions (the bar of the 1024x1536 card sprites spans x 205-875, y 1330-1450 from the
+        /// top), so it stays on the bar at any card size.</summary>
+        private static TMP_Text BuildLevelLabel(RectTransform cardImage)
+        {
+            TMP_Text label = NewText(cardImage, "LevelText", "Lvl. 1", 34f, TextAlignmentOptions.Center, ButtonMaterialPath);
+            var rect = (RectTransform)label.transform;
+            rect.anchorMin = new Vector2(0.215f, 0.06f);
+            rect.anchorMax = new Vector2(0.85f, 0.13f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 14f;
+            label.fontSizeMax = 34f;
+            return label;
+        }
+
+        /// <summary>Adds (or replaces) only the level labels on the open scene's existing cards - no full rebuild, so
+        /// nothing else of a hand-tuned panel changes.</summary>
+        [MenuItem("AlienDefense/Setup/HUD/Add Tower Card Level Labels (Open Scene)")]
+        public static string AddLevelLabelsToOpenScene()
+        {
+            var view = Object.FindFirstObjectByType<TowerChoiceView>(FindObjectsInactive.Include);
+            if (view == null)
+            {
+                return "[TowerChoicePanelBuilder] No TowerChoiceView in the open scene.";
+            }
+
+            var so = new SerializedObject(view);
+            SerializedProperty images = so.FindProperty("_cardImages");
+            var levels = new TMP_Text[3];
+            int added = 0;
+            for (int i = 0; i < 3 && i < images.arraySize; i++)
+            {
+                var image = images.GetArrayElementAtIndex(i).objectReferenceValue as Image;
+                if (image == null)
+                {
+                    continue;
+                }
+
+                Transform old = image.transform.Find("LevelText");
+                if (old != null)
+                {
+                    Undo.DestroyObjectImmediate(old.gameObject);
+                }
+
+                levels[i] = BuildLevelLabel(image.rectTransform);
+                added++;
+            }
+
+            AssignArray(so, "_levelTexts", levels);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(view);
+            EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+            return "[TowerChoicePanelBuilder] " + added + " level labels on " + view.gameObject.scene.name + ".";
         }
 
         /// <summary>Gives each TowerDefinition its card artwork, matched by the tower's own name.</summary>

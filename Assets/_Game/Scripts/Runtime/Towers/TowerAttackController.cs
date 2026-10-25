@@ -34,6 +34,9 @@ namespace AlienDefense.Towers
         private VfxService _vfxService;
         private VfxDefinition _muzzleVfx;
         private int _alternateMuzzleIndex;
+        private int _activeMuzzleCount = int.MaxValue;
+        private float _critChance;
+        private float _critDamage = 1f;
 
         /// <summary>Raised after a successful shot from a specific muzzle (visuals only — recoil, etc.).</summary>
         public event Action<Transform> FiredFromMuzzle;
@@ -53,10 +56,38 @@ namespace AlienDefense.Towers
             _muzzleVfx = muzzleVfx;
         }
 
+        /// <summary>Optional. Chance (0-1) that an attack is a critical hit and the multiplier it then deals (see
+        /// DefenseMetaConfig). One roll per attack: every barrel of a volley shares it. Off (0) by default.</summary>
+        public void SetCritical(float chance, float damageMultiplier)
+        {
+            _critChance = Mathf.Clamp01(chance);
+            _critDamage = Mathf.Max(1f, damageMultiplier);
+        }
+
+        private float RollDamage()
+        {
+            return _critChance > 0f && UnityEngine.Random.value < _critChance ? _damage * _critDamage : _damage;
+        }
+
         public void ApplyStats(float damage, float attacksPerSecond)
         {
             _damage = damage;
             _attacksPerSecond = Mathf.Max(0.01f, attacksPerSecond);
+        }
+
+        /// <summary>How many of the tower's muzzles (fire point first, then the extras in order) may fire at its
+        /// current level - see TowerLevelData.ActiveMuzzles. 1 = only the fire point's barrel; the others stay
+        /// silent until a level that unlocks them.</summary>
+        public void SetActiveMuzzleCount(int count)
+        {
+            count = Mathf.Max(1, count);
+            if (_activeMuzzleCount == count)
+            {
+                return;
+            }
+
+            _activeMuzzleCount = count;
+            _alternateMuzzleIndex = 0;
         }
 
         public void SetAttackEnabled(bool value)
@@ -94,7 +125,7 @@ namespace AlienDefense.Towers
             }
 
             int muzzleCount = 1 + CountExtraFirePoints();
-            var damageInfo = new DamageInfo(_damage / muzzleCount, _sourceObject, target.AimPoint.position);
+            var damageInfo = new DamageInfo(RollDamage() / muzzleCount, _sourceObject, target.AimPoint.position);
             if (!_attackStrategy.TryAttack(target, damageInfo, _firePoint))
             {
                 return;
@@ -103,10 +134,17 @@ namespace AlienDefense.Towers
             _cooldownTimer = 1f / _attacksPerSecond;
             PlayMuzzleFeedback(_firePoint);
 
-            for (int i = 0; i < _extraFirePoints.Length; i++)
+            int extrasLeft = muzzleCount - 1;
+            for (int i = 0; i < _extraFirePoints.Length && extrasLeft > 0; i++)
             {
                 Transform muzzle = _extraFirePoints[i];
-                if (muzzle != null && _attackStrategy.TryAttack(target, damageInfo, muzzle, isFollowUpShot: true))
+                if (muzzle == null)
+                {
+                    continue;
+                }
+
+                extrasLeft--;
+                if (_attackStrategy.TryAttack(target, damageInfo, muzzle, isFollowUpShot: true))
                 {
                     PlayMuzzleFeedback(muzzle);
                 }
@@ -121,7 +159,7 @@ namespace AlienDefense.Towers
                 return;
             }
 
-            var damageInfo = new DamageInfo(_damage, _sourceObject, target.AimPoint.position);
+            var damageInfo = new DamageInfo(RollDamage(), _sourceObject, target.AimPoint.position);
             if (!_attackStrategy.TryAttack(target, damageInfo, muzzle))
             {
                 return;
@@ -186,8 +224,15 @@ namespace AlienDefense.Towers
             _alternateMuzzleIndex = (_alternateMuzzleIndex + 1) % total;
         }
 
+        /// <summary>Extra muzzles allowed to fire at the current level (never more than exist).</summary>
         private int CountExtraFirePoints()
         {
+            int allowed = _activeMuzzleCount - 1;
+            if (allowed <= 0)
+            {
+                return 0;
+            }
+
             int count = 0;
             for (int i = 0; i < _extraFirePoints.Length; i++)
             {
@@ -197,7 +242,7 @@ namespace AlienDefense.Towers
                 }
             }
 
-            return count;
+            return Mathf.Min(count, allowed);
         }
     }
 }

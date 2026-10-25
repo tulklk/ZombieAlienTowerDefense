@@ -22,6 +22,10 @@ namespace AlienDefense.Core
         /// Never null, so callers do not have to guard it.</summary>
         public PendingRewardPresentation PendingRewards { get; }
 
+        /// <summary>Which objective chests the level just won newly achieved, waiting for MainMenu to play their
+        /// reveal once. Never null.</summary>
+        public PendingObjectiveReveal PendingObjectiveReveal { get; }
+
         /// <summary>Lobby energy spent to start a level. Null only when a caller built services without it (tests).</summary>
         public PlayEnergyService PlayEnergy { get; }
 
@@ -47,8 +51,10 @@ namespace AlienDefense.Core
             PlayEnergyService playEnergy = null,
             PlayerLevelCurve playerLevels = null,
             MetaItemCatalog metaItemCatalog = null,
-            AlienDefense.Base.BaseBuildingCatalog baseBuildingCatalog = null)
+            AlienDefense.Base.BaseBuildingCatalog baseBuildingCatalog = null,
+            PendingObjectiveReveal pendingObjectiveReveal = null)
         {
+            PendingObjectiveReveal = pendingObjectiveReveal ?? new PendingObjectiveReveal();
             SceneTransition = sceneTransition;
             LevelLaunchContext = levelLaunchContext;
             LevelCatalog = levelCatalog;

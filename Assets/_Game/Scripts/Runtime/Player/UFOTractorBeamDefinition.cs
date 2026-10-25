@@ -33,6 +33,13 @@ namespace AlienDefense.Player
         [Tooltip("0 = unlimited concurrent Environment Prop absorptions. Independent from Enemy/Energy limits.")]
         private int _maxConcurrentPropAbsorptions = 8;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("Size gate for Environment Props: a prop is only taken while its size (TractorAbsorbableProp." +
+            "AbsorbSize, metres) is no bigger than the beam's CURRENT radius times this. 1 = it has to fit inside " +
+            "the ground ring, so the default beam takes small things and the Radius/Magnet skills unlock bigger " +
+            "ones. 0 = no size limit. Enemies and Energy Pickups are never size-gated.")]
+        private float _maxPropSizePerRadius = 1f;
+
         [Header("Movement")]
         [SerializeField, Min(0.01f)]
         private float _pullSpeed = 8f;
@@ -67,6 +74,7 @@ namespace AlienDefense.Player
         public int MaxConcurrentCaptures => _maxConcurrentCaptures;
         public int MaxConcurrentEnergyAbsorptions => _maxConcurrentEnergyAbsorptions;
         public int MaxConcurrentPropAbsorptions => _maxConcurrentPropAbsorptions;
+        public float MaxPropSizePerRadius => _maxPropSizePerRadius;
         public float PullSpeed => _pullSpeed;
         public float LiftSpeed => _liftSpeed;
         public float BeamCenterThreshold => _beamCenterThreshold;

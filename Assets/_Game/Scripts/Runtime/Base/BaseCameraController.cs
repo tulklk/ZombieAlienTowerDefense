@@ -5,7 +5,8 @@ using UnityEngine.InputSystem.Controls;
 
 namespace AlienDefense.Base
 {
-    /// <summary>Drag-to-pan camera for the base, clamped to the map.
+    /// <summary>Drag-to-pan camera for the base, clamped to the map, with pinch / mouse-wheel zoom that slides the
+    /// camera along its own line of sight (user, 2026-10-25: up to ~3x closer, to see the residents).
     ///
     /// Pans the RIG, not the camera: the camera keeps its authored isometric tilt, and panning is a pure
     /// translation on the ground plane. Rotating or moving the camera itself would make the clamp depend on the
@@ -41,14 +42,24 @@ namespace AlienDefense.Base
 
         [Header("Zoom")]
         [SerializeField]
-        [Tooltip("Off until the base is big enough to need it - one less thing to fight with a drag.")]
-        private bool _allowPinchZoom;
+        [Tooltip("Two-finger pinch on a phone, mouse wheel in the Editor / on desktop.")]
+        private bool _allowPinchZoom = true;
 
-        [SerializeField, Min(1f)]
-        private float _minZoom = 12f;
+        [SerializeField, Range(0.15f, 1f)]
+        [Tooltip("Closest zoom, as a share of the authored camera distance (0.35 = the camera goes ~3x closer).")]
+        private float _closestZoom = 0.35f;
 
-        [SerializeField, Min(1f)]
-        private float _maxZoom = 30f;
+        [SerializeField, Range(1f, 2f)]
+        [Tooltip("Farthest zoom, as a share of the authored camera distance.")]
+        private float _farthestZoom = 1.1f;
+
+        [SerializeField, Range(0.02f, 0.4f)]
+        [Tooltip("Zoom change per mouse-wheel notch.")]
+        private float _wheelStep = 0.12f;
+
+        [SerializeField, Range(0f, 30f)]
+        [Tooltip("How fast the camera catches up with the zoom. 0 = instant.")]
+        private float _zoomSharpness = 14f;
 
         [Header("Feel")]
         [SerializeField, Range(0f, 30f)]
@@ -66,6 +77,16 @@ namespace AlienDefense.Base
         private bool _dragging;
         private bool _pressActive;
         private Vector2 _pressScreenPosition;
+
+        /// <summary>The camera's authored offset from the rig, and the ground point (rig space) it looks at. Zooming
+        /// slides the camera along that line - same angle, same centre of the screen - instead of narrowing the
+        /// field of view, so close up still looks like the authored isometric view.</summary>
+        private Vector3 _cameraBaseLocal;
+        private Vector3 _focusLocal;
+        private bool _zoomReady;
+        private float _zoom = 1f;
+        private float _zoomTarget = 1f;
+        private bool _pinching;
 
         /// <summary>Where on the ground the finger grabbed. The rig moves so that this point stays under it.</summary>
         private Vector3 _grabWorldPoint;
@@ -92,6 +113,7 @@ namespace AlienDefense.Base
 
             _groundPlane = new Plane(Vector3.up, Vector3.zero);
             _targetPosition = _rig.position;
+            CacheZoomFrame();
         }
 
         private void OnEnable()
@@ -100,6 +122,7 @@ namespace AlienDefense.Base
             _dragging = false;
             _pressActive = false;
             _targetPosition = _rig != null ? _rig.position : Vector3.zero;
+            _pinching = false;
         }
 
         private void Update()
@@ -109,14 +132,19 @@ namespace AlienDefense.Base
                 return;
             }
 
-            HandlePointer();
-
             if (_allowPinchZoom)
             {
                 HandlePinch();
+                HandleWheel();
+            }
+
+            if (!_pinching)
+            {
+                HandlePointer();
             }
 
             ApplyMovement();
+            ApplyZoom();
         }
 
         private void HandlePointer()
@@ -193,11 +221,15 @@ namespace AlienDefense.Base
             }
         }
 
+        /// <summary>Two fingers: the camera distance follows the finger spread (spread apart = closer). While two
+        /// fingers are down the one-finger drag is suspended and the press is dropped, so lifting them never pans
+        /// the map or registers as a tap on a building.</summary>
         private void HandlePinch()
         {
             Touchscreen touchscreen = Touchscreen.current;
             if (touchscreen == null || touchscreen.touches.Count < 2)
             {
+                _pinching = false;
                 return;
             }
 
@@ -205,7 +237,15 @@ namespace AlienDefense.Base
             TouchControl b = touchscreen.touches[1];
             if (!a.press.isPressed || !b.press.isPressed)
             {
+                _pinching = false;
                 return;
+            }
+
+            if (!_pinching)
+            {
+                _pinching = true;
+                _dragging = false;
+                _pressActive = false;
             }
 
             Vector2 currentA = a.position.ReadValue();
@@ -215,16 +255,67 @@ namespace AlienDefense.Base
 
             float previousDistance = Vector2.Distance(previousA, previousB);
             float currentDistance = Vector2.Distance(currentA, currentB);
-            float delta = previousDistance - currentDistance;
+            if (previousDistance > 1f && currentDistance > 1f)
+            {
+                SetZoomTarget(_zoomTarget * previousDistance / currentDistance);
+            }
+        }
 
-            if (_camera.orthographic)
+        /// <summary>Mouse wheel (Editor, desktop): one notch = Wheel Step closer or farther. Ignored over UI.</summary>
+        private void HandleWheel()
+        {
+            Mouse mouse = Mouse.current;
+            if (mouse == null)
             {
-                _camera.orthographicSize = Mathf.Clamp(_camera.orthographicSize + delta * 0.02f, _minZoom, _maxZoom);
+                return;
             }
-            else
+
+            float scroll = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) < 0.01f || IsPointerOverUI())
             {
-                _camera.fieldOfView = Mathf.Clamp(_camera.fieldOfView + delta * 0.05f, _minZoom, _maxZoom);
+                return;
             }
+
+            SetZoomTarget(_zoomTarget * (scroll > 0f ? 1f - _wheelStep : 1f + _wheelStep));
+        }
+
+        private void SetZoomTarget(float zoom)
+        {
+            _zoomTarget = Mathf.Clamp(zoom, _closestZoom, Mathf.Max(_closestZoom, _farthestZoom));
+        }
+
+        /// <summary>The camera's authored offset and the ground point it looks at, in rig space.</summary>
+        private void CacheZoomFrame()
+        {
+            if (transform == _rig)
+            {
+                return; // no separate rig: nothing to slide the camera along
+            }
+
+            _cameraBaseLocal = _rig.InverseTransformPoint(transform.position);
+            var ray = new Ray(transform.position, transform.forward);
+            _focusLocal = _groundPlane.Raycast(ray, out float distance)
+                ? _rig.InverseTransformPoint(ray.GetPoint(distance))
+                : _cameraBaseLocal + _rig.InverseTransformDirection(transform.forward) * 50f;
+            _zoomReady = true;
+        }
+
+        private void ApplyZoom()
+        {
+            if (!_zoomReady || Mathf.Approximately(_zoom, _zoomTarget))
+            {
+                return;
+            }
+
+            _zoom = _zoomSharpness <= 0f
+                ? _zoomTarget
+                : Mathf.Lerp(_zoom, _zoomTarget, 1f - Mathf.Exp(-_zoomSharpness * Time.unscaledDeltaTime));
+            if (Mathf.Abs(_zoom - _zoomTarget) < 0.0005f)
+            {
+                _zoom = _zoomTarget;
+            }
+
+            transform.position = _rig.TransformPoint(_focusLocal + (_cameraBaseLocal - _focusLocal) * _zoom);
         }
 
         private void ApplyMovement()

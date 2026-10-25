@@ -28,6 +28,12 @@ namespace AlienDefense.Towers
         [SerializeField, Min(0f)]
         private float _turretRotationSpeed = 360f;
 
+        [SerializeField, Min(1)]
+        [Tooltip("How many of the tower's barrels fire at this level (1 = only the main barrel, 2 = both barrels " +
+            "of a twin gun). Damage above is per attack: barrels that fire together share it.")]
+        private int _activeMuzzles = 1;
+
+        public int ActiveMuzzles => _activeMuzzles;
         public int UpgradeCost => _upgradeCost;
         public int EnergyCost => _energyCost;
         public float Damage => _damage;

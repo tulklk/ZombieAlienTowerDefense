@@ -54,6 +54,9 @@ namespace AlienDefense.UI
 
             [Tooltip("Optional. The tower's upgrade tier; hidden for sources without one.")]
             public Image[] Stars;
+
+            [Tooltip("Optional. Damage-type badge before the name (fire, lightning...); hidden when the source has none.")]
+            public Image TypeIcon;
         }
 
         private const float CountUpDuration = 0.7f;
@@ -163,6 +166,10 @@ namespace AlienDefense.UI
         [SerializeField]
         [Tooltip("Empty star of a statistics row.")]
         private Sprite _noStarSprite;
+
+        [SerializeField]
+        [Tooltip("Damage-type badge for sources that are not a tower (the UFO and its rocket): plain hits.")]
+        private Sprite _untieredTypeIcon;
 
         [Header("Data")]
         [SerializeField]
@@ -563,7 +570,7 @@ namespace AlienDefense.UI
 
                 if (row.NameText != null)
                 {
-                    row.NameText.text = source.Name;
+                    row.NameText.text = ShortName(source.Name);
                 }
 
                 if (row.PercentText != null)
@@ -578,13 +585,39 @@ namespace AlienDefense.UI
 
                 SetIcon(row.Icon, source.Icon);
 
-                if (row.Bar != null)
-                {
-                    row.Bar.fillAmount = share;
-                }
-
+                SetBar(row.Bar, share);
+                SetIcon(row.TypeIcon, source.TypeIcon != null ? source.TypeIcon : (source.MaxStars == 0 ? _untieredTypeIcon : null));
                 PopulateStars(row.Stars, source);
             }
+        }
+
+        /// <summary>A Filled image takes fillAmount; a Sliced one (rounded bar) is stretched by its right anchor so the
+        /// rounded ends stay intact, with a small minimum so a 1-2% source still shows a sliver of colour.</summary>
+        /// <summary>"Mortar Tower" -> "Mortar": the row has the tower's picture next to it, the word only crowds the name.</summary>
+        private static string ShortName(string name)
+        {
+            const string suffix = " Tower";
+            return name != null && name.EndsWith(suffix) ? name.Substring(0, name.Length - suffix.Length) : name;
+        }
+
+        private static void SetBar(Image bar, float share)
+        {
+            if (bar == null)
+            {
+                return;
+            }
+
+            share = Mathf.Clamp01(share);
+            if (bar.type == Image.Type.Filled)
+            {
+                bar.fillAmount = share;
+                return;
+            }
+
+            RectTransform rect = bar.rectTransform;
+            bar.enabled = share > 0f;
+            rect.anchorMin = new Vector2(0f, rect.anchorMin.y);
+            rect.anchorMax = new Vector2(share > 0f ? Mathf.Max(share, 0.04f) : 0f, rect.anchorMax.y);
         }
 
         /// <summary>Stars mean the tower's permanent upgrade tier - the only star-like rating the game has. A
@@ -606,7 +639,7 @@ namespace AlienDefense.UI
                     continue;
                 }
 
-                bool visible = show && i < source.MaxStars;
+                bool visible = show; // every slot, like the reference: filled = tier, the rest empty
                 star.gameObject.SetActive(visible);
                 if (!visible)
                 {

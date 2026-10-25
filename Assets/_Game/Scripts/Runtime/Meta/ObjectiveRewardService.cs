@@ -57,6 +57,23 @@ namespace AlienDefense.Meta
             }
         }
 
+        /// <summary>How many of the three objectives (Clear, 50%+ HP, Perfect - each implies the one before) this
+        /// progress has achieved: 0..3. Same rule as IsObjectiveAchieved, just counted left to right.</summary>
+        public static int CountAchieved(LevelProgressSnapshot progress)
+        {
+            if (!IsObjectiveAchieved(progress, LevelObjectiveKind.Clear))
+            {
+                return 0;
+            }
+
+            if (!IsObjectiveAchieved(progress, LevelObjectiveKind.Hp50))
+            {
+                return 1;
+            }
+
+            return IsObjectiveAchieved(progress, LevelObjectiveKind.Perfect) ? 3 : 2;
+        }
+
         public ObjectiveRewardUiState GetUiState(string levelId, LevelObjectiveKind kind)
         {
             LevelProgressSnapshot progress = _profile != null

@@ -17,7 +17,7 @@ namespace AlienDefense.Data
         private int _startingResource = 250;
 
         [SerializeField, Min(1)]
-        private int _baseMaxHealth = 20;
+        private int _baseMaxHealth = 100;
 
         [SerializeField, Min(0f)]
         private float _preparationDuration = 5f;
@@ -68,6 +68,12 @@ namespace AlienDefense.Data
             "cinematic. The level is only won when this encounter is cleared too. Leave empty for a normal level.")]
         private BossEncounterDefinition _bossEncounter;
 
+        [SerializeField]
+        [Tooltip("Optional. When set, this level is ONE continuous attack (no separate waves): enemies keep coming " +
+            "for the invasion's Boss Countdown, then the Boss Encounter above arrives. Waves above are ignored and " +
+            "may be left empty.")]
+        private ContinuousInvasionDefinition _continuousInvasion;
+
         [Header("Victory Rewards")]
         [SerializeField]
         [Tooltip("What winning this level grants (coins, player XP, upgrade cards, blueprints). Each line can be " +
@@ -77,6 +83,8 @@ namespace AlienDefense.Data
 
         public string LevelId => _levelId;
         public BossEncounterDefinition BossEncounter => _bossEncounter;
+        public ContinuousInvasionDefinition ContinuousInvasion => _continuousInvasion;
+        public bool HasContinuousInvasion => _continuousInvasion != null && _continuousInvasion.IsValid;
         public IReadOnlyList<LevelRewardEntry> VictoryRewards => _victoryRewards ?? Array.Empty<LevelRewardEntry>();
         public int StartingResource => _startingResource;
         public int BaseMaxHealth => _baseMaxHealth;
@@ -168,7 +176,11 @@ namespace AlienDefense.Data
 
             if (_waves == null || _waves.Length == 0)
             {
-                Debug.LogError($"[LevelDefinition] '{name}' has no waves assigned.", this);
+                if (_continuousInvasion == null)
+                {
+                    Debug.LogError($"[LevelDefinition] '{name}' has no waves assigned.", this);
+                }
+
                 return;
             }
 

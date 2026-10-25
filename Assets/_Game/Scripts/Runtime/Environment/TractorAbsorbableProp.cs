@@ -41,6 +41,12 @@ namespace AlienDefense.Environment
             "rush a level-up any faster than an actual kill.")]
         private int _experienceReward = 1;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("How big this prop counts as, in metres, for the beam's size gate (UFOTractorBeamDefinition." +
+            "MaxPropSizePerRadius): the beam only takes it once its radius has grown to at least this. 0 = measured " +
+            "automatically at start from the renderers - the larger of the footprint radius and 40% of the height.")]
+        private float _absorbSizeOverride;
+
         [Header("Speed Multipliers (relative to the beam's base Pull/Lift speed)")]
         [SerializeField, Min(0.01f)]
         private float _pullSpeedMultiplier = 1f;
@@ -97,6 +103,17 @@ namespace AlienDefense.Environment
         private float _absorbElapsed;
         private float _liftStartDistance = 1f;
         private int _generation;
+        private Tweener _tooBigTween;
+        private float _nextTooBigNudgeTime;
+        private static readonly System.Collections.Generic.List<Renderer> SizeRendererBuffer =
+            new System.Collections.Generic.List<Renderer>(8);
+
+        // Height counts for less than width (a 5 m pine reads as "about 2 m big"), so the Radius skill's levels
+        // unlock trees step by step instead of all of them only at the very last level.
+        private const float HeightSizeWeight = 0.4f;
+        private const float TooBigNudgeDegrees = 5f;
+        private const float TooBigNudgeDuration = 0.6f;
+        private const float TooBigNudgeCooldown = 0.8f;
 
         // Optional. Present on live decorative animals (Cow/Horse/Sheep) that are also marked absorbable - both
         // this component's Pull/Lift and AnimalWanderer's own wander loop drive transform.position every frame,
@@ -117,6 +134,9 @@ namespace AlienDefense.Environment
         public float CaptureStartScale => Mathf.Clamp(_captureStartScale, 0.1f, 1f);
         public int Generation => _generation;
 
+        /// <summary>How big this prop is for the beam's size gate, in metres (see Absorb Size Override).</summary>
+        public float AbsorbSize { get; private set; }
+
         /// <summary>World-space point the beam should measure distance to. Falls back to this Transform if no
         /// VisualRoot was assigned.</summary>
         public Transform AimPoint => _visualRoot != null ? _visualRoot : transform;
@@ -135,7 +155,64 @@ namespace AlienDefense.Environment
 
             _colliders = GetComponentsInChildren<Collider>(true);
             _animalWanderer = GetComponent<AnimalWanderer>();
+            AbsorbSize = _absorbSizeOverride > 0f ? _absorbSizeOverride : MeasureSize();
             enabled = false;
+        }
+
+        /// <summary>Once, at Awake: the larger of the footprint radius and HeightSizeWeight of the height of
+        /// everything this prop draws, in world space - so a wide hay pile and a tall thin tree both count as big.
+        /// Particles don't count.</summary>
+        private float MeasureSize()
+        {
+            GetComponentsInChildren(true, SizeRendererBuffer);
+            bool hasBounds = false;
+            Bounds bounds = default;
+            for (int i = 0; i < SizeRendererBuffer.Count; i++)
+            {
+                Renderer renderer = SizeRendererBuffer[i];
+                if (renderer is ParticleSystemRenderer || renderer is TrailRenderer)
+                {
+                    continue;
+                }
+
+                if (hasBounds)
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+                else
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+            }
+
+            SizeRendererBuffer.Clear();
+            if (!hasBounds)
+            {
+                return 0f;
+            }
+
+            Vector3 extents = bounds.extents;
+            return Mathf.Max(Mathf.Max(extents.x, extents.z), bounds.size.y * HeightSizeWeight);
+        }
+
+        /// <summary>Called by UFOTractorBeamController each scan while this prop sits in a beam that is still too
+        /// small for it: a short rock that settles back exactly where it started, so the player reads "too heavy
+        /// for now" instead of the beam silently ignoring it. Self-throttled; wandering animals are left alone
+        /// (their own movement drives the same Transform).</summary>
+        public void NudgeTooBig()
+        {
+            if (State != TractorAbsorbablePropState.Idle || _visualRoot == null || _animalWanderer != null
+                || Time.time < _nextTooBigNudgeTime)
+            {
+                return;
+            }
+
+            _nextTooBigNudgeTime = Time.time + TooBigNudgeDuration + TooBigNudgeCooldown;
+            Vector2 horizontal = UnityEngine.Random.insideUnitCircle.normalized;
+            _tooBigTween?.Kill(true);
+            _tooBigTween = _visualRoot
+                .DOPunchRotation(new Vector3(horizontal.x, 0f, horizontal.y) * TooBigNudgeDegrees, TooBigNudgeDuration, 5, 0.6f);
         }
 
         /// <summary>Settles which Transform the capture shrink/tilt may actually write to, once, at Awake.
@@ -215,6 +292,8 @@ namespace AlienDefense.Environment
             }
 
             _absorbElapsed = 0f;
+            _tooBigTween?.Kill(true); // settle a "too big" rock first - the capture lean starts from the rest pose
+            _tooBigTween = null;
             StartCaptureShrink();
             StartCaptureTilt();
 
@@ -452,6 +531,7 @@ namespace AlienDefense.Environment
         {
             _captureShrinkTween?.Kill();
             _captureTiltTween?.Kill();
+            _tooBigTween?.Kill();
         }
 
 #if UNITY_EDITOR

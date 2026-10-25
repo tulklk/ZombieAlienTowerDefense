@@ -15,12 +15,23 @@ namespace AlienDefense.Waves
         private EnemyPath3D _path;
 
         [SerializeField]
+        [Tooltip("Optional. More routes into the same base (a level with several enemy spawns). Every regular enemy " +
+            "picks one of Path + these at random with equal chance. Empty = the single-route behaviour.")]
+        private EnemyPath3D[] _additionalPaths = System.Array.Empty<EnemyPath3D>();
+
+        [SerializeField]
+        [Tooltip("Optional. The route the Boss Encounter (boss, its escorts and the minions it summons) always takes. " +
+            "Empty = Path.")]
+        private EnemyPath3D _bossPath;
+
+        [SerializeField]
         private bool _autoStartFirstWave = true;
 
         [SerializeField]
         private bool _autoStartNextWaves = true;
 
         private readonly WaveRuntimeTracker _tracker = new WaveRuntimeTracker();
+        private bool _forceBossPath;
 
         private EnemyFactory _enemyFactory;
         private WaveDefinition[] _waves;
@@ -42,11 +53,38 @@ namespace AlienDefense.Waves
 
         private bool _bossCountdownTicking;
         private bool _bossCountdownExpired;
+        private bool _bossReachedBase;
+
+        // Continuous invasion (levels without separate waves - see ContinuousInvasionDefinition).
+        private ContinuousInvasionDefinition _invasion;
+        private float[] _invasionWeights;
+        private bool[] _invasionUnlockLogged;
+        private int _invasionStreakIndex = -1;
+        private int _invasionStreakCount;
+        private float[] _laneNextSpawnAt;
+        private bool[] _laneOpen;
+        private int[] _miniBossSpawned;
+        private int[] _routeRegularAlive = new int[4];
+
+        // Set while a lane / convoy spawns on a specific route (null = the usual route choice).
+        private EnemyPath3D _forcedSpawnPath;
 
         public WaveState CurrentState { get; private set; } = WaveState.Idle;
 
-        /// <summary>True when this level's boss arrives on a timer (see BossEncounterDefinition.BossCountdown).</summary>
-        public bool HasBossCountdown => HasBossEncounter && _bossEncounter.BossCountdown > 0f;
+        /// <summary>True when this level is one continuous attack instead of separate waves.</summary>
+        public bool IsContinuousInvasion => _invasion != null;
+
+        /// <summary>True when this level's boss arrives on a timer (see BossEncounterDefinition.BossCountdown, or
+        /// ContinuousInvasionDefinition.BossCountdown on a continuous-invasion level).</summary>
+        public bool HasBossCountdown => HasBossEncounter && BossCountdownDuration > 0f;
+
+        private float BossCountdownDuration => _invasion != null
+            ? _invasion.BossCountdown
+            : _bossEncounter != null ? _bossEncounter.BossCountdown : 0f;
+
+        /// <summary>The final boss walked into the base. The encounter is NOT cleared by this - the level is lost
+        /// (LevelCompositionRoot reports Defeat); only killing or capturing the boss wins.</summary>
+        public event Action BossReachedBase;
 
         /// <summary>Seconds until the boss arrives; 0 once it is on its way.</summary>
         public float BossCountdownRemaining { get; private set; }
@@ -66,7 +104,7 @@ namespace AlienDefense.Waves
         public event Action BossEncounterActivated;
         public int CurrentWaveIndex { get; private set; } = -1;
         public int CurrentWaveNumber => CurrentWaveIndex + 1;
-        public int TotalWaveCount => _waves?.Length ?? 0;
+        public int TotalWaveCount => _invasion != null ? 1 : _waves?.Length ?? 0;
         public float PreparationTimeRemaining { get; private set; }
 
         public event Action<int, int> WavePrepared;
@@ -112,7 +150,7 @@ namespace AlienDefense.Waves
                 return;
             }
 
-            if (waves == null || waves.Length == 0)
+            if ((waves == null || waves.Length == 0) && _invasion == null)
             {
                 Debug.LogError("[WaveController] No WaveDefinitions provided; wave system will not start.", this);
                 return;
@@ -125,7 +163,7 @@ namespace AlienDefense.Waves
             }
 
             _enemyFactory = enemyFactory;
-            _waves = waves;
+            _waves = waves ?? Array.Empty<WaveDefinition>();
             _defaultPreparationDuration = Mathf.Max(0f, defaultPreparationDuration);
             _spawnSettings = spawnSettings;
             if (_spawnSettings.MaxSpeedMultiplier < 1f)
@@ -148,6 +186,13 @@ namespace AlienDefense.Waves
 
         public bool StartFirstWave()
         {
+            return StartFirstWave(skipPreparation: false);
+        }
+
+        /// <param name="skipPreparation">True when the level's own start sequence (the 3-2-1 countdown) already
+        /// was the preparation: the first wave spawns at once instead of after its preparation duration.</param>
+        public bool StartFirstWave(bool skipPreparation)
+        {
             if (!_isInitialized || CurrentWaveIndex >= 0)
             {
                 return false;
@@ -162,7 +207,15 @@ namespace AlienDefense.Waves
             }
 
             CurrentWaveIndex = 0;
-            BeginPreparation();
+            if (_invasion != null)
+            {
+                CurrentState = WaveState.Preparing;
+                WavePrepared?.Invoke(CurrentWaveNumber, TotalWaveCount);
+                StartScheduler(ContinuousInvasionRoutine());
+                return true;
+            }
+
+            BeginPreparation(skipPreparation);
             return true;
         }
 
@@ -174,11 +227,25 @@ namespace AlienDefense.Waves
             ResetBossCountdown();
         }
 
+        /// <summary>Optional: makes this level one continuous attack (see ContinuousInvasionDefinition) instead of
+        /// separate waves. Must be called before Initialize, together with ConfigureBossEncounter.</summary>
+        public void ConfigureContinuousInvasion(ContinuousInvasionDefinition invasion)
+        {
+            _invasion = invasion != null && invasion.IsValid ? invasion : null;
+            _invasionWeights = _invasion != null ? new float[_invasion.EnemyCount] : null;
+            _invasionUnlockLogged = _invasion != null ? new bool[_invasion.EnemyCount] : null;
+            _laneNextSpawnAt = _invasion != null ? new float[_invasion.LaneCount] : null;
+            _laneOpen = _invasion != null ? new bool[_invasion.LaneCount] : null;
+            _miniBossSpawned = _invasion != null ? new int[_invasion.MiniBossCount] : null;
+            ResetBossCountdown();
+        }
+
         private void ResetBossCountdown()
         {
             _bossCountdownTicking = false;
             _bossCountdownExpired = false;
-            SetBossCountdown(HasBossCountdown ? _bossEncounter.BossCountdown : 0f);
+            _bossReachedBase = false;
+            SetBossCountdown(HasBossCountdown ? BossCountdownDuration : 0f);
         }
 
         private void SetBossCountdown(float seconds)
@@ -335,11 +402,12 @@ namespace AlienDefense.Waves
             _waveRunId++;
         }
 
-        private void BeginPreparation()
+        private void BeginPreparation(bool skipPreparation = false)
         {
             CurrentState = WaveState.Preparing;
             WaveDefinition wave = _waves[CurrentWaveIndex];
-            float preparationDuration = wave.HasPreparationOverride ? wave.PreparationDurationOverride : _defaultPreparationDuration;
+            float preparationDuration = skipPreparation ? 0f
+                : wave.HasPreparationOverride ? wave.PreparationDurationOverride : _defaultPreparationDuration;
 
             WavePrepared?.Invoke(CurrentWaveNumber, TotalWaveCount);
             StartScheduler(PrepareThenSpawnRoutine(wave, preparationDuration));
@@ -457,6 +525,335 @@ namespace AlienDefense.Waves
             }
         }
 
+        /// <summary>One continuous attack for BossCountdown seconds of combat time (scaled time, so pausing pauses
+        /// it): a regular enemy every GetSpawnInterval seconds whenever fewer than MaxAliveEnemies are alive (when
+        /// the cap is reached the next one simply comes the moment a slot frees - nothing ever waits for a group to be
+        /// cleared), mini bosses dropped in at their times regardless of the cap, then regular spawning stops and the
+        /// boss encounter arrives at once with everything still alive kept in play (see BossEncounterRoutine's
+        /// carried enemies). Tracked as one "wave" whose completion only becomes possible once spawning has ended.</summary>
+        private IEnumerator ContinuousInvasionRoutine()
+        {
+            _waveRunId++;
+            int runId = _waveRunId;
+
+            _tracker.Initialize(0);
+            CurrentState = WaveState.Spawning;
+            _invasionStreakIndex = -1;
+            _invasionStreakCount = 0;
+            for (int i = 0; i < _invasionUnlockLogged.Length; i++)
+            {
+                _invasionUnlockLogged[i] = _invasion.GetEnemy(i) == null || _invasion.GetEnemy(i).UnlockTime <= 0f;
+            }
+
+            float duration = _invasion.BossCountdown;
+            float elapsed = 0f;
+            float nextSpawnAt = 0f;
+            int maxAlive = _spawnSettings.MaxAliveEnemies;
+            bool useLanes = _invasion.LaneCount > 0;
+            for (int i = 0; i < _miniBossSpawned.Length; i++)
+            {
+                _miniBossSpawned[i] = 0;
+            }
+
+            for (int l = 0; l < _laneNextSpawnAt.Length; l++)
+            {
+                _laneNextSpawnAt[l] = 0f;
+                _laneOpen[l] = false;
+            }
+
+            for (int r = 0; r < _routeRegularAlive.Length; r++)
+            {
+                _routeRegularAlive[r] = 0;
+            }
+
+            SetBossCountdown(duration);
+            WaveStarted?.Invoke(CurrentWaveNumber, TotalWaveCount);
+            RaiseProgressChanged();
+            InvasionLog("Continuous invasion started (" + duration.ToString("0") + "s, max alive " + maxAlive
+                + (useLanes ? ", " + _invasion.LaneCount + " lane windows" : string.Empty) + ")");
+
+            while (elapsed < duration)
+            {
+                LogInvasionUnlocks(elapsed);
+                SpawnDueMiniBosses(runId, elapsed);
+
+                if (useLanes)
+                {
+                    SpawnDueLanes(runId, elapsed, maxAlive);
+                }
+                else if (elapsed >= nextSpawnAt && (maxAlive <= 0 || _tracker.ActiveEnemyCount < maxAlive))
+                {
+                    SpawnInvasionRegular(elapsed, runId, null);
+                    nextSpawnAt = elapsed + _invasion.GetSpawnInterval(elapsed);
+                }
+
+                yield return null;
+                if (runId != _waveRunId)
+                {
+                    yield break;
+                }
+
+                elapsed += Time.deltaTime;
+                SetBossCountdown(duration - elapsed);
+            }
+
+            // Combat time is up: regular spawning and mini-boss scheduling end here; nothing alive is removed.
+            _tracker.MarkSpawnSchedulingCompleted();
+            CurrentState = WaveState.WaitingForRemainingEnemies;
+            RaiseProgressChanged();
+
+            if (HasBossEncounter && EncounterPhase == BossEncounterPhase.Pending)
+            {
+                InvasionLog("Final Boss spawned at " + elapsed.ToString("0") + "s (" + _tracker.ActiveEnemyCount + " enemies still alive)");
+                StartScheduler(BossEncounterRoutine(0f, raiseWaveStarted: false)); // spawns past MaxAliveEnemies
+                yield break;
+            }
+
+            TryCompleteWave(runId);
+        }
+
+        /// <summary>Every lane window with its own timer: opens at StartTime, spawns a regular enemy on its route
+        /// every GetSpawnInterval while the shared alive cap allows, and stops taking new spawns at EndTime (what is
+        /// already walking that route carries on).</summary>
+        private void SpawnDueLanes(int runId, float elapsed, int maxAlive)
+        {
+            for (int l = 0; l < _invasion.LaneCount; l++)
+            {
+                ContinuousInvasionDefinition.LaneWindow lane = _invasion.GetLane(l);
+                if (lane == null)
+                {
+                    continue;
+                }
+
+                bool open = elapsed >= lane.StartTime && elapsed < lane.EndTime;
+                if (open != _laneOpen[l])
+                {
+                    _laneOpen[l] = open;
+                    InvasionLog("t=" + elapsed.ToString("0") + " " + lane.Label + " lane " + (open ? "enabled" : "stopped"));
+                    if (open)
+                    {
+                        _laneNextSpawnAt[l] = elapsed;
+                    }
+                }
+
+                if (!open || elapsed < _laneNextSpawnAt[l] || !LaneHasRoom(lane.PathIndex, maxAlive))
+                {
+                    continue;
+                }
+
+                // A pack: the first member at the spawn, the rest a step ahead each on their own random lane, so the
+                // stream reads as a crowd rather than single file.
+                EnemyPath3D path = GetPath(lane.PathIndex);
+                int pack = UnityEngine.Random.Range(_invasion.PackSizeMin, _invasion.PackSizeMax + 1);
+                for (int k = 0; k < pack && LaneHasRoom(lane.PathIndex, maxAlive); k++)
+                {
+                    EnemyController spawned = SpawnInvasionRegular(elapsed, runId, path);
+                    if (spawned != null && k > 0 && path != null)
+                    {
+                        spawned.Movement.PlaceAlongPath(k * _invasion.PackStagger, UnityEngine.Random.Range(-path.LaneHalfWidth, path.LaneHalfWidth));
+                    }
+
+                    CountOnRoute(spawned, lane.PathIndex);
+                }
+                _laneNextSpawnAt[l] = elapsed + _invasion.GetSpawnInterval(elapsed);
+            }
+        }
+
+        private bool LaneHasRoom(int route, int maxAlive)
+        {
+            int perLane = _invasion.MaxAlivePerLane;
+            if (perLane <= 0)
+            {
+                return maxAlive <= 0 || _tracker.ActiveEnemyCount < maxAlive;
+            }
+
+            return route < 0 || route >= _routeRegularAlive.Length || _routeRegularAlive[route] < perLane;
+        }
+
+        /// <summary>Keeps the per-route count of regular lane enemies (for Max Alive Per Lane).</summary>
+        private void CountOnRoute(EnemyController enemy, int route)
+        {
+            if (enemy == null || route < 0 || route >= _routeRegularAlive.Length)
+            {
+                return;
+            }
+
+            _routeRegularAlive[route]++;
+            void HandleRouteResolved(EnemyController resolved, EnemyResolveReason reason)
+            {
+                resolved.Resolved -= HandleRouteResolved;
+                _routeRegularAlive[route] = Mathf.Max(0, _routeRegularAlive[route] - 1);
+            }
+
+            enemy.Resolved += HandleRouteResolved;
+        }
+
+        /// <summary>Mini bosses whose time has come; a convoy entry releases one member every Spacing seconds.</summary>
+        private void SpawnDueMiniBosses(int runId, float elapsed)
+        {
+            for (int i = 0; i < _invasion.MiniBossCount; i++)
+            {
+                ContinuousInvasionDefinition.MiniBossEntry entry = _invasion.GetMiniBoss(i);
+                if (entry == null || !entry.IsValid)
+                {
+                    continue;
+                }
+
+                int count = Mathf.Max(1, entry.Count);
+                while (_miniBossSpawned[i] < count && elapsed >= entry.Time + _miniBossSpawned[i] * entry.Spacing)
+                {
+                    SpawnInvasionMiniBoss(i, _miniBossSpawned[i], runId, elapsed);
+                    _miniBossSpawned[i]++;
+                }
+            }
+        }
+
+        private EnemyController SpawnInvasionRegular(float elapsed, int runId, EnemyPath3D path)
+        {
+            int index = SelectInvasionEnemy(elapsed);
+            if (index < 0)
+            {
+                return null;
+            }
+
+            ContinuousInvasionDefinition.EnemyEntry entry = _invasion.GetEnemy(index);
+            EnemySpawnModifiers modifiers = ComputeModifiers(CurrentWaveNumber, entry.Enemy);
+            if (entry.BaseDamage > 0)
+            {
+                modifiers = new EnemySpawnModifiers(
+                    modifiers.HealthMultiplier,
+                    modifiers.SpeedMultiplier,
+                    DamageMultiplierFor(entry.Enemy, entry.BaseDamage),
+                    modifiers.ScaleMultiplier);
+            }
+
+            return SpawnOnPath(entry.Enemy, runId, modifiers, path);
+        }
+
+        /// <summary>Spawns on the given route (null = the usual route choice).</summary>
+        private EnemyController SpawnOnPath(EnemyDefinition definition, int runId, EnemySpawnModifiers modifiers, EnemyPath3D path)
+        {
+            _forcedSpawnPath = IsUsablePath(path) ? path : null;
+            try
+            {
+                return SpawnTrackedEnemy(definition, runId, modifiers);
+            }
+            finally
+            {
+                _forcedSpawnPath = null;
+            }
+        }
+
+        private void SpawnInvasionMiniBoss(int index, int member, int runId, float elapsed)
+        {
+            ContinuousInvasionDefinition.MiniBossEntry entry = _invasion.GetMiniBoss(index);
+            if (entry == null || !entry.IsValid)
+            {
+                return;
+            }
+
+            // The level's normal scaling for this type, times the mini boss's own multipliers.
+            EnemySpawnModifiers level = ComputeModifiers(CurrentWaveNumber, entry.Enemy);
+            var modifiers = new EnemySpawnModifiers(
+                level.HealthMultiplier * entry.HealthMultiplier,
+                level.SpeedMultiplier * entry.SpeedMultiplier,
+                DamageMultiplierFor(entry.Enemy, entry.BaseDamage),
+                entry.Scale);
+
+            EnemyPath3D path = entry.PathIndex >= 0 ? GetPath(entry.PathIndex) : null;
+            EnemyController enemy = SpawnOnPath(entry.Enemy, runId, modifiers, path); // never held back by the alive cap
+            if (enemy != null)
+            {
+                enemy.SetRank(EnemyRank.MiniBoss);
+                enemy.SetHealthBarLayers(entry.HealthLayers);
+            }
+
+            int count = Mathf.Max(1, entry.Count);
+            InvasionLog("t=" + elapsed.ToString("0") + " MiniBoss " + (index + 1) + (count > 1 ? " (" + (member + 1) + "/" + count + ")" : string.Empty)
+                + " " + entry.Enemy.DisplayName + (path != null ? " on " + path.name : string.Empty));
+        }
+
+        /// <summary>The damage multiplier that makes EnemyController's rounded BaseDamage come out at exactly
+        /// <paramref name="baseDamage"/> for this definition.</summary>
+        private static float DamageMultiplierFor(EnemyDefinition definition, int baseDamage)
+        {
+            return Mathf.Max(1, baseDamage) / (float)Mathf.Max(1, definition.BaseDamage);
+        }
+
+        /// <summary>Weighted pick among the unlocked types at this combat time (weights interpolated start -> end and
+        /// normalised by their sum), excluding a type that has just come MaxConsecutive times in a row. If that
+        /// rule leaves nothing, the plain weights are used. Allocation-free (weights buffer made in Configure).</summary>
+        private int SelectInvasionEnemy(float elapsed)
+        {
+            float total = 0f;
+            for (int i = 0; i < _invasionWeights.Length; i++)
+            {
+                float weight = _invasion.GetWeight(i, elapsed);
+                if (i == _invasionStreakIndex && _invasionStreakCount >= _invasion.GetEnemy(i).MaxConsecutive)
+                {
+                    weight = 0f;
+                }
+
+                _invasionWeights[i] = weight;
+                total += weight;
+            }
+
+            if (total <= 0f)
+            {
+                for (int i = 0; i < _invasionWeights.Length; i++)
+                {
+                    _invasionWeights[i] = _invasion.GetWeight(i, elapsed);
+                    total += _invasionWeights[i];
+                }
+            }
+
+            if (total <= 0f)
+            {
+                return -1;
+            }
+
+            float roll = UnityEngine.Random.value * total;
+            int picked = -1;
+            for (int i = 0; i < _invasionWeights.Length; i++)
+            {
+                if (_invasionWeights[i] <= 0f)
+                {
+                    continue;
+                }
+
+                picked = i; // float rounding can leave roll a hair above 0: the last non-zero type then wins
+                roll -= _invasionWeights[i];
+                if (roll <= 0f)
+                {
+                    break;
+                }
+            }
+
+            _invasionStreakCount = picked == _invasionStreakIndex ? _invasionStreakCount + 1 : 1;
+            _invasionStreakIndex = picked;
+            return picked;
+        }
+
+        private void LogInvasionUnlocks(float elapsed)
+        {
+            for (int i = 0; i < _invasionUnlockLogged.Length; i++)
+            {
+                if (!_invasionUnlockLogged[i] && elapsed >= _invasion.GetEnemy(i).UnlockTime)
+                {
+                    _invasionUnlockLogged[i] = true;
+                    InvasionLog(_invasion.GetEnemy(i).Enemy.DisplayName + " unlocked at " + elapsed.ToString("0") + "s");
+                }
+            }
+        }
+
+        private void InvasionLog(string message)
+        {
+            if (_invasion != null && _invasion.DebugLogs)
+            {
+                Debug.Log("[" + _invasion.name + "] " + message, this);
+            }
+        }
+
         private IEnumerator WaitForAliveCapacity(int runId)
         {
             int maxAlive = _spawnSettings.MaxAliveEnemies;
@@ -485,26 +882,41 @@ namespace AlienDefense.Waves
         /// schedule (e.g. a Boss's minions), attributed to the currently running wave.</summary>
         public EnemyController SpawnTrackedEnemy(EnemyDefinition definition)
         {
-            return SpawnTrackedEnemy(definition, _waveRunId);
+            // Today's only caller is the boss summoning minions: they come down the boss's own route.
+            bool previous = _forceBossPath;
+            _forceBossPath = true;
+            try
+            {
+                return SpawnTrackedEnemy(definition, _waveRunId);
+            }
+            finally
+            {
+                _forceBossPath = previous;
+            }
         }
 
         private static readonly ProfilerMarker SpawnMarker = new ProfilerMarker("AlienDefense.WaveController.SpawnEnemy");
 
         private EnemyController SpawnTrackedEnemy(EnemyDefinition definition, int runId)
         {
+            return SpawnTrackedEnemy(definition, runId, ComputeModifiers(CurrentWaveNumber, definition));
+        }
+
+        private EnemyController SpawnTrackedEnemy(EnemyDefinition definition, int runId, EnemySpawnModifiers modifiers)
+        {
             using (SpawnMarker.Auto())
             {
-                return SpawnTrackedEnemyCore(definition, runId);
+                return SpawnTrackedEnemyCore(definition, runId, modifiers);
             }
         }
 
-        private EnemyController SpawnTrackedEnemyCore(EnemyDefinition definition, int runId)
+        private EnemyController SpawnTrackedEnemyCore(EnemyDefinition definition, int runId, EnemySpawnModifiers modifiers)
         {
-            Vector3 spawnPosition = _path.GetPoint(0);
-            Quaternion spawnRotation = ComputeSpawnRotation();
-            EnemySpawnModifiers modifiers = ComputeModifiers(CurrentWaveNumber, definition);
+            EnemyPath3D path = ResolveSpawnPath();
+            Vector3 spawnPosition = path.GetPoint(0);
+            Quaternion spawnRotation = ComputeSpawnRotation(path);
 
-            EnemyController enemy = _enemyFactory.Spawn(definition, _path, spawnPosition, spawnRotation, modifiers);
+            EnemyController enemy = _enemyFactory.Spawn(definition, path, spawnPosition, spawnRotation, modifiers);
             if (enemy == null)
             {
                 _tracker.RecordSpawnFailure();
@@ -534,6 +946,15 @@ namespace AlienDefense.Waves
                     && (reason == EnemyResolveReason.Defeated || reason == EnemyResolveReason.Captured))
                 {
                     CompleteBossEncounter();
+                    return;
+                }
+
+                // ...and it loses: the boss leaving play through the base must never let the encounter "empty out"
+                // into a victory once its escorts are gone too.
+                if (_bossEncounterRunning && resolvedEnemy == _bossEncounterBoss && reason == EnemyResolveReason.ReachedBase)
+                {
+                    _bossReachedBase = true;
+                    BossReachedBase?.Invoke();
                     return;
                 }
 
@@ -629,10 +1050,68 @@ namespace AlienDefense.Waves
             Debug.Log(sb.ToString(), this);
         }
 
-        private Quaternion ComputeSpawnRotation()
+        /// <summary>All routes enemies may take: Path first, then the valid Additional Paths.</summary>
+        public int PathCount => 1 + CountAdditionalPaths();
+
+        public EnemyPath3D GetPath(int index)
         {
-            Vector3 from = _path.GetPoint(0);
-            Vector3 to = _path.GetPoint(1);
+            if (index <= 0)
+            {
+                return _path;
+            }
+
+            int seen = 0;
+            for (int i = 0; i < _additionalPaths.Length; i++)
+            {
+                if (IsUsablePath(_additionalPaths[i]) && ++seen == index)
+                {
+                    return _additionalPaths[i];
+                }
+            }
+
+            return _path;
+        }
+
+        private EnemyPath3D BossSpawnPath => IsUsablePath(_bossPath) ? _bossPath : _path;
+
+        /// <summary>The boss encounter (and anything the boss summons) keeps to its own route; every other enemy
+        /// picks one route at random with equal chance. One route = exactly the old behaviour, no random call.</summary>
+        private EnemyPath3D ResolveSpawnPath()
+        {
+            if (_forceBossPath)
+            {
+                return BossSpawnPath;
+            }
+
+            if (_forcedSpawnPath != null)
+            {
+                return _forcedSpawnPath;
+            }
+
+            int count = PathCount;
+            return count <= 1 ? _path : GetPath(UnityEngine.Random.Range(0, count));
+        }
+
+        private int CountAdditionalPaths()
+        {
+            int count = 0;
+            for (int i = 0; i < _additionalPaths.Length; i++)
+            {
+                if (IsUsablePath(_additionalPaths[i]))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static bool IsUsablePath(EnemyPath3D path) => path != null && path.Count >= 2;
+
+        private Quaternion ComputeSpawnRotation(EnemyPath3D path)
+        {
+            Vector3 from = path.GetPoint(0);
+            Vector3 to = path.GetPoint(1);
             Vector3 flatDirection = new Vector3(to.x - from.x, 0f, to.z - from.z);
             return flatDirection.sqrMagnitude > 0.0001f
                 ? Quaternion.LookRotation(flatDirection.normalized, Vector3.up)
@@ -654,6 +1133,11 @@ namespace AlienDefense.Waves
             if (!_tracker.IsCompleted)
             {
                 return;
+            }
+
+            if (_bossEncounterRunning && _bossReachedBase)
+            {
+                return; // lost (see BossReachedBase) - never complete the encounter into a victory
             }
 
             CurrentState = WaveState.Completed;
@@ -771,6 +1255,7 @@ namespace AlienDefense.Waves
             RaiseProgressChanged();
 
             bool hold = _holdBossEncounterForIntro;
+            _forceBossPath = true; // the whole encounter group spawns on the boss route (cleared below)
 
             // Escorts first, then the boss last: BossSpawned listeners (boss health bar, BossController wiring)
             // then see a fully laid-out group.
@@ -803,8 +1288,10 @@ namespace AlienDefense.Waves
             }
 
             EnemyController boss = SpawnTrackedEnemy(_bossEncounter.BossDefinition, runId);
+            _forceBossPath = false;
             if (boss != null)
             {
+                boss.SetRank(EnemyRank.FinalBoss);
                 BossEncounterDefinition.FormationSlot bossSlot = _bossEncounter.BossSlot;
                 boss.Movement.PlaceAlongPath(bossSlot.DistanceAlongPath, bossSlot.LateralOffset);
                 if (hold)

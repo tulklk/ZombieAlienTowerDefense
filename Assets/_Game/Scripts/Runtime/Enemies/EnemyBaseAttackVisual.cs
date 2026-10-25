@@ -2,15 +2,10 @@ using UnityEngine;
 
 namespace AlienDefense.Enemies
 {
-    /// <summary>Optional. Plays an "Attack" Animator trigger when this enemy reaches PlayerBase instead of
-    /// vanishing instantly, and reports how long one attack cycle takes - EnemyController repeats BaseDamage
-    /// every Duration seconds for as long as this enemy stays alive (see EnemyController.AttackBaseRepeatedly),
-    /// rather than a single hit. The Attack Animator state is expected to LOOP on its own (no back-transition to
-    /// Walk) once triggered, since this enemy never walks again after reaching the base - PlayAttack only needs
-    /// to fire the trigger once. If a Tower kills this enemy while it's attacking, EnemyHealth.Died resolves it
-    /// as Defeated (see EnemyController.Resolve's _isResolved guard), which the repeating loop notices on its
-    /// next wake and stops - so a dead zombie never keeps damaging the base. Enemies without this component keep
-    /// the original instant single-hit resolve behavior (see EnemyController.HandleReachedBase).</summary>
+    /// <summary>No longer driven by EnemyController: every enemy now deals its BaseDamage once on reaching the
+    /// base and disappears at once (see EnemyController.HandleReachedBase), with no attack animation. The
+    /// component stays on the Enemy_* prefabs (added by ZombieVariantBuilder) so they keep loading cleanly, and
+    /// PlayAttack still works if something wants to trigger the Animator's "Attack" state explicitly.</summary>
     public sealed class EnemyBaseAttackVisual : MonoBehaviour
     {
         private static readonly int AttackTrigger = Animator.StringToHash("Attack");

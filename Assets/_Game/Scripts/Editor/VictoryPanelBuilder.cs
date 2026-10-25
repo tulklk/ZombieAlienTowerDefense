@@ -87,6 +87,7 @@ namespace AlienDefense.EditorTools
             }
 
             VictoryPanelView view = Build(root, catalog);
+            DamageStatisticsPopupBuilder.Rebuild(view); // the reference layout for the statistics popup
             root.transform.SetAsLastSibling(); // above the HUD, the minimap and the pause panel
 
             panelProperty.objectReferenceValue = root;

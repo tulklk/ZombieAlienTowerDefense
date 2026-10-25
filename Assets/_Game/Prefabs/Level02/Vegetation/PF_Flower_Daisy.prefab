@@ -1,0 +1,151 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1941491073065813662
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7218432969164254393}
+  - component: {fileID: 8886845269258186502}
+  m_Layer: 0
+  m_Name: PF_Flower_Daisy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7218432969164254393
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1941491073065813662}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3847251171603248433}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8886845269258186502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1941491073065813662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b966fb3e5dca731489c26d58bef0d223, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Environment.TractorAbsorbableProp
+  _canBeAbsorbed: 1
+  _tractorResistance: 1
+  _visualRoot: {fileID: 3847251171603248433}
+  _experienceReward: 1
+  _absorbSizeOverride: 0
+  _pullSpeedMultiplier: 1
+  _liftSpeedMultiplier: 1
+  _captureStartScale: 1
+  _captureShrinkDuration: 0.35
+  _captureTiltDegrees: 30
+  _absorbStartSpeedFactor: 0.35
+  _absorbAccelerationTime: 0.5
+  _shrinkDuringLift: 1
+  _minimumVisualScale: 0.15
+--- !u!1001 &4694132553404822541
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7218432969164254393}
+    m_Modifications:
+    - target: {fileID: 4847757468758050264, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_Name
+      value: Flower
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: -8688390562676823552, guid: 772619802dded0140a801dd015e2acf7, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 772619802dded0140a801dd015e2acf7, type: 3}
+--- !u!4 &3847251171603248433 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8376913153477787964, guid: 772619802dded0140a801dd015e2acf7,
+    type: 3}
+  m_PrefabInstance: {fileID: 4694132553404822541}
+  m_PrefabAsset: {fileID: 0}

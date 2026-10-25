@@ -1,0 +1,157 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8944553340408586265
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5038218922773558799}
+  - component: {fileID: 4740355480159585255}
+  m_Layer: 0
+  m_Name: PF_WindPump
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5038218922773558799
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8944553340408586265}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1816890778109555153}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4740355480159585255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8944553340408586265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11383035922b2cb478c343be243c2828, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Occlusion.OcclusionObject
+  _localBounds:
+    m_Center: {x: -0.0032448769, y: 5.532698, z: 0.1596756}
+    m_Extent: {x: 2.7318177, y: 5.664698, z: 1.3485246}
+  _hasLocalBounds: 1
+--- !u!1001 &4358695959311264114
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5038218922773558799}
+    m_Modifications:
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3314656766657741337, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      propertyPath: m_Name
+      value: Bld_FarmMill_01
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 6412574411201326137, guid: 6c20b91f6f25ebb499766bb0be6b5f8a, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 898602674649036514, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8783012114782841072}
+  m_SourcePrefab: {fileID: 100100000, guid: 6c20b91f6f25ebb499766bb0be6b5f8a, type: 3}
+--- !u!4 &1816890778109555153 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2687477348618115235, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+    type: 3}
+  m_PrefabInstance: {fileID: 4358695959311264114}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &3460251872034971536 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 898602674649036514, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+    type: 3}
+  m_PrefabInstance: {fileID: 4358695959311264114}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8783012114782841072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3460251872034971536}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6a4fdd3e03dfd4794acae346e2be75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Environment.AmbientSpinner
+  _localAxis: {x: 0, y: 0, z: 1}
+  _degreesPerSecond: 40
+  _visibilityRenderer: {fileID: 4902944839731931050}
+--- !u!23 &4902944839731931050 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 8680671494459870936, guid: 6c20b91f6f25ebb499766bb0be6b5f8a,
+    type: 3}
+  m_PrefabInstance: {fileID: 4358695959311264114}
+  m_PrefabAsset: {fileID: 0}

@@ -22,6 +22,25 @@ namespace AlienDefense.UI.Minimap
         private MinimapPathGraphic _pathGraphic;
 
         [SerializeField]
+        [Tooltip("Optional. Second path graphic drawn over _pathGraphic from the path start up to the furthest " +
+            "enemy's progress (see SetActivePathProgress) - the 'active enemy route' overlay. Leave unassigned to " +
+            "keep the plain single-colour path.")]
+        private MinimapPathGraphic _activePathGraphic;
+
+        [SerializeField]
+        [Tooltip("Optional, for levels with more than one enemy route: one path graphic per extra route (same " +
+            "order as MinimapPresenter's Additional Enemy Paths). Styled by hand like Path Graphic.")]
+        private MinimapPathGraphic[] _extraPathGraphics = new MinimapPathGraphic[0];
+
+        [SerializeField]
+        [Tooltip("Optional. Active-route overlay of each extra route, same order as Extra Path Graphics.")]
+        private MinimapPathGraphic[] _extraActivePathGraphics = new MinimapPathGraphic[0];
+
+        [SerializeField]
+        [Tooltip("Optional. Spawn marker of each extra route, same order as Extra Path Graphics.")]
+        private RectTransform[] _extraSpawnMarkers = new RectTransform[0];
+
+        [SerializeField]
         private RectTransform _spawnMarker;
 
         [SerializeField]
@@ -67,12 +86,31 @@ namespace AlienDefense.UI.Minimap
             "alive, so a huge wave can't spawn UI objects unbounded.")]
         private int _maxEnemyMarkers = 30;
 
+        [SerializeField]
+        [Tooltip("If on, enemies flagged as bosses (mini bosses, the final boss - see SetEnemyPositions' isBoss) use " +
+            "the boss colour/size below. Off = every enemy dot looks the same.")]
+        private bool _highlightBossEnemies;
+
+        [SerializeField]
+        private Color _bossEnemyMarkerColor = new Color(1f, 0.48f, 0.13f); // #FF7A21
+
+        [SerializeField, Min(1f)]
+        private float _bossEnemyMarkerSize = 16f;
+
         [Header("Base/BuildNode markers (optional - static, built once, see InitializeBuildNodes)")]
         [SerializeField]
         private Color _buildNodeMarkerColor = new Color(0.31f, 0.66f, 0.91f); // #4FA8E8
 
         [SerializeField, Min(1f)]
         private float _buildNodeMarkerSize = 11f;
+
+        [SerializeField]
+        [Tooltip("If on, a BuildNode dot switches to _buildNodeOccupiedMarkerColor while a tower stands on it (see " +
+            "SetBuildNodeMarkerState). Off = every dot keeps _buildNodeMarkerColor.")]
+        private bool _tintOccupiedBuildNodes;
+
+        [SerializeField]
+        private Color _buildNodeOccupiedMarkerColor = new Color(0.31f, 0.66f, 0.91f); // #4FA8E8
 
         [Header("Orientation / Bounds (verify visually, don't assume world axes - see spec)")]
         [SerializeField]
@@ -147,10 +185,32 @@ namespace AlienDefense.UI.Minimap
         private float _paddedRangeX;
         private float _paddedRangeZ;
         private bool _boundsValid;
+        private bool _hasWorldBounds;
+        private Rect _worldBounds; // x/y = world X/Z, see SetWorldBounds
         private float _pulseTimer;
         private readonly List<Transform> _spawnedWaypointDots = new List<Transform>();
         private readonly List<Transform> _spawnedBuildNodeDots = new List<Transform>();
+        private readonly List<int> _buildNodeDotStates = new List<int>(); // -1 unknown, 0 hidden, 1 free, 2 occupied
         private readonly List<RectTransform> _enemyMarkerPool = new List<RectTransform>();
+        private readonly List<bool> _enemyMarkerShowsBoss = new List<bool>();
+        private List<Vector2> _smoothedPathPoints = new List<Vector2>();
+        private int _smoothedPointsPerWaypoint = 1;
+        private readonly List<Vector2> _activePathBuffer = new List<Vector2>();
+        private float _drawnActiveProgress = -1f;
+        private readonly List<List<Vector2>> _extraSmoothedPoints = new List<List<Vector2>>();
+        private readonly List<int> _extraPointsPerWaypoint = new List<int>();
+        private readonly List<float> _extraDrawnProgress = new List<float>();
+
+        /// <summary>Optional, call before InitializePath: the level's playable rectangle (world X/Z). The minimap
+        /// then maps that whole rectangle - plus the path itself, in case the path starts or ends outside it (an
+        /// enemy spawn inside a building beyond the fence line) - into the panel with one uniform scale, instead
+        /// of fitting only the path's own extents. That keeps the player marker inside the panel wherever the
+        /// player can actually fly, and keeps the path at its real size and position within the level.</summary>
+        public void SetWorldBounds(Rect worldXZ)
+        {
+            _worldBounds = worldXZ;
+            _hasWorldBounds = worldXZ.width > 0.01f && worldXZ.height > 0.01f;
+        }
 
         /// <summary>Call once (level load). Computes bounds from the waypoints themselves, converts every point to
         /// minimap-local space, and builds the path graphic + Spawn/Goal/corner markers. Safe to call again (e.g.
@@ -186,10 +246,19 @@ namespace AlienDefense.UI.Minimap
                 uiPoints.Add(WorldToMinimap(worldPoints[i]));
             }
 
+            _smoothedPathPoints = BuildSmoothedPathPoints(uiPoints);
+            _smoothedPointsPerWaypoint = uiPoints.Count >= 3 && _pathSmoothingSegments > 1 ? _pathSmoothingSegments : 1;
             if (_pathGraphic != null)
             {
                 _pathGraphic.SetThickness(_pathWidthPx);
-                _pathGraphic.SetPoints(BuildSmoothedPathPoints(uiPoints));
+                _pathGraphic.SetPoints(_smoothedPathPoints);
+            }
+
+            if (_activePathGraphic != null)
+            {
+                _activePathGraphic.SetThickness(_pathWidthPx);
+                _drawnActiveProgress = -1f;
+                SetActivePathProgress(0f);
             }
 
             if (_spawnMarker != null)
@@ -269,6 +338,7 @@ namespace AlienDefense.UI.Minimap
             }
 
             _spawnedBuildNodeDots.Clear();
+            _buildNodeDotStates.Clear();
 
             if (_buildNodeMarkersParent == null || _dotSprite == null || worldPositions == null || !_boundsValid)
             {
@@ -291,7 +361,141 @@ namespace AlienDefense.UI.Minimap
                 image.color = _buildNodeMarkerColor;
 
                 _spawnedBuildNodeDots.Add(markerObject.transform);
+                _buildNodeDotStates.Add(-1);
             }
+        }
+
+        /// <summary>Optional live state of the BuildNode dot at <paramref name="index"/> (same order as the
+        /// positions given to InitializeBuildNodes): hidden while its node is gone or inactive, tinted while a
+        /// tower occupies it (only if _tintOccupiedBuildNodes). Touches the Image only when the state changes, so
+        /// polling it from a throttled tick costs nothing between changes.</summary>
+        public void SetBuildNodeMarkerState(int index, bool visible, bool occupied)
+        {
+            if (index < 0 || index >= _spawnedBuildNodeDots.Count || _spawnedBuildNodeDots[index] == null)
+            {
+                return;
+            }
+
+            int state = !visible ? 0 : occupied ? 2 : 1;
+            if (_buildNodeDotStates[index] == state)
+            {
+                return;
+            }
+
+            _buildNodeDotStates[index] = state;
+            GameObject dot = _spawnedBuildNodeDots[index].gameObject;
+            dot.SetActive(visible);
+            if (visible)
+            {
+                dot.GetComponent<Image>().color = occupied && _tintOccupiedBuildNodes ? _buildNodeOccupiedMarkerColor : _buildNodeMarkerColor;
+            }
+        }
+
+        /// <summary>Optional: redraws the active-route overlay (_activePathGraphic) from the path start up to
+        /// <paramref name="waypointProgress"/>, in EnemyPath3D waypoint units (EnemyMovement.PathProgress: segment
+        /// index + fraction). 0 or less hides it. Rebuilds the overlay mesh only when the end point has moved by
+        /// at least half a smoothed step, so a caller may poll this every tick. No-op without _activePathGraphic.</summary>
+        public void SetActivePathProgress(float waypointProgress)
+        {
+            _drawnActiveProgress = DrawActiveRoute(_activePathGraphic, _smoothedPathPoints, _smoothedPointsPerWaypoint,
+                _drawnActiveProgress, waypointProgress);
+        }
+
+        /// <summary>An extra enemy route (levels with several spawns), drawn with Extra Path Graphics[index]. Call
+        /// after InitializePath - it reuses the bounds and scale computed there. No-op for an index with no
+        /// graphic assigned, so single-route levels never call or pay for it.</summary>
+        public void InitializeExtraPath(int index, IReadOnlyList<Transform> waypoints)
+        {
+            if (index < 0 || index >= _extraPathGraphics.Length || _extraPathGraphics[index] == null || waypoints == null || !_boundsValid)
+            {
+                return;
+            }
+
+            var uiPoints = new List<Vector2>(waypoints.Count);
+            for (int i = 0; i < waypoints.Count; i++)
+            {
+                if (waypoints[i] != null)
+                {
+                    uiPoints.Add(WorldToMinimap(waypoints[i].position));
+                }
+            }
+
+            if (uiPoints.Count < 2)
+            {
+                return;
+            }
+
+            while (_extraSmoothedPoints.Count <= index)
+            {
+                _extraSmoothedPoints.Add(new List<Vector2>());
+                _extraPointsPerWaypoint.Add(1);
+                _extraDrawnProgress.Add(-1f);
+            }
+
+            _extraSmoothedPoints[index] = BuildSmoothedPathPoints(uiPoints);
+            _extraPointsPerWaypoint[index] = uiPoints.Count >= 3 && _pathSmoothingSegments > 1 ? _pathSmoothingSegments : 1;
+            _extraPathGraphics[index].SetThickness(_pathWidthPx);
+            _extraPathGraphics[index].SetPoints(_extraSmoothedPoints[index]);
+
+            if (index < _extraActivePathGraphics.Length && _extraActivePathGraphics[index] != null)
+            {
+                _extraActivePathGraphics[index].SetThickness(_pathWidthPx);
+                _extraDrawnProgress[index] = -1f;
+                SetExtraActivePathProgress(index, 0f);
+            }
+
+            if (index < _extraSpawnMarkers.Length && _extraSpawnMarkers[index] != null)
+            {
+                _extraSpawnMarkers[index].anchoredPosition = uiPoints[0];
+                _extraSpawnMarkers[index].gameObject.SetActive(true);
+            }
+        }
+
+        /// <summary>SetActivePathProgress for an extra route.</summary>
+        public void SetExtraActivePathProgress(int index, float waypointProgress)
+        {
+            if (index < 0 || index >= _extraSmoothedPoints.Count || index >= _extraActivePathGraphics.Length)
+            {
+                return;
+            }
+
+            _extraDrawnProgress[index] = DrawActiveRoute(_extraActivePathGraphics[index], _extraSmoothedPoints[index],
+                _extraPointsPerWaypoint[index], _extraDrawnProgress[index], waypointProgress);
+        }
+
+        /// <summary>Shared by every route; returns the progress now drawn (unchanged when nothing was redrawn).</summary>
+        private float DrawActiveRoute(MinimapPathGraphic graphic, List<Vector2> points, int pointsPerWaypoint,
+            float drawnProgress, float waypointProgress)
+        {
+            if (graphic == null || points.Count < 2)
+            {
+                return drawnProgress;
+            }
+
+            float smoothedProgress = Mathf.Clamp(waypointProgress * pointsPerWaypoint, 0f, points.Count - 1);
+            if (drawnProgress >= 0f && Mathf.Abs(smoothedProgress - drawnProgress) < 0.5f)
+            {
+                return drawnProgress;
+            }
+
+            _activePathBuffer.Clear();
+            if (smoothedProgress > 0.01f)
+            {
+                int whole = Mathf.FloorToInt(smoothedProgress);
+                for (int i = 0; i <= whole; i++)
+                {
+                    _activePathBuffer.Add(points[i]);
+                }
+
+                float fraction = smoothedProgress - whole;
+                if (fraction > 0.01f && whole + 1 < points.Count)
+                {
+                    _activePathBuffer.Add(Vector2.Lerp(points[whole], points[whole + 1], fraction));
+                }
+            }
+
+            graphic.SetPoints(_activePathBuffer);
+            return smoothedProgress;
         }
 
         /// <summary>World position (XZ plane) -> minimap-local point, centered on MapContent's pivot. Public so
@@ -423,6 +627,13 @@ namespace AlienDefense.UI.Minimap
         /// if no _enemyMarkersParent was assigned (feature left off).</summary>
         public void SetEnemyPositions(IReadOnlyList<Vector3> worldPositions)
         {
+            SetEnemyPositions(worldPositions, null);
+        }
+
+        /// <summary>Same, with an optional parallel list flagging bosses (shown with the boss colour/size when
+        /// _highlightBossEnemies is on). A marker's look is only touched when its flag changes.</summary>
+        public void SetEnemyPositions(IReadOnlyList<Vector3> worldPositions, IReadOnlyList<bool> isBoss)
+        {
             if (_enemyMarkersParent == null)
             {
                 return;
@@ -436,6 +647,19 @@ namespace AlienDefense.UI.Minimap
                 RectTransform marker = _enemyMarkerPool[i];
                 if (i < count)
                 {
+                    bool boss = _highlightBossEnemies && isBoss != null && i < isBoss.Count && isBoss[i];
+                    if (boss != _enemyMarkerShowsBoss[i])
+                    {
+                        _enemyMarkerShowsBoss[i] = boss;
+                        float size = boss ? _bossEnemyMarkerSize : _enemyMarkerSize;
+                        marker.sizeDelta = new Vector2(size, size);
+                        marker.GetComponent<Image>().color = boss ? _bossEnemyMarkerColor : _enemyMarkerColor;
+                        if (boss)
+                        {
+                            marker.SetAsLastSibling(); // drawn over the ordinary dots
+                        }
+                    }
+
                     marker.anchoredPosition = WorldToMinimap(worldPositions[i]);
                     if (!marker.gameObject.activeSelf)
                     {
@@ -472,12 +696,21 @@ namespace AlienDefense.UI.Minimap
 
                 markerObject.SetActive(false);
                 _enemyMarkerPool.Add(rect);
+                _enemyMarkerShowsBoss.Add(false);
             }
         }
 
         private void ComputeBounds(List<Vector3> worldPoints)
         {
             float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+            if (_hasWorldBounds)
+            {
+                minX = _worldBounds.xMin;
+                maxX = _worldBounds.xMax;
+                minZ = _worldBounds.yMin;
+                maxZ = _worldBounds.yMax;
+            }
+
             for (int i = 0; i < worldPoints.Count; i++)
             {
                 Vector3 p = worldPoints[i];

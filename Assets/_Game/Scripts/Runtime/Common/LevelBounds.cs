@@ -11,6 +11,12 @@ namespace AlienDefense.Common
         [SerializeField]
         private Vector2 _extents = new Vector2(25f, 25f);
 
+        /// <summary>Center of the playable rectangle on the XZ plane (.y holds world Z).</summary>
+        public Vector2 Center => _center;
+
+        /// <summary>Half-size of the playable rectangle on the XZ plane (.y holds world Z).</summary>
+        public Vector2 Extents => _extents;
+
         /// <summary>Clamps the X/Z components of a world position to stay inside the bounds; Y is untouched.</summary>
         public Vector3 ClampXZ(Vector3 worldPosition)
         {

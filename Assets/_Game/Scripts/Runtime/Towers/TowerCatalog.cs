@@ -11,6 +11,12 @@ namespace AlienDefense.Towers
         [SerializeField]
         private TowerDefinition[] _towers = System.Array.Empty<TowerDefinition>();
 
+        [SerializeField]
+        [Tooltip("Crit and UFO Base numbers for the Defense tab. Optional: without it there are no crits and no Base levels.")]
+        private DefenseMetaConfig _defenseConfig;
+
+        public DefenseMetaConfig DefenseConfig => _defenseConfig;
+
         public int Count => _towers?.Length ?? 0;
 
         public TowerDefinition GetTower(int index)

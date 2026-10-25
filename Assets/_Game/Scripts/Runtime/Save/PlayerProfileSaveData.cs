@@ -16,6 +16,9 @@ namespace AlienDefense.Save
         public List<LevelProgressSaveData> LevelProgress = new List<LevelProgressSaveData>();
         public List<string> UnlockedTowerIds = new List<string>();
         public List<PermanentTowerUpgradeSaveData> TowerUpgrades = new List<PermanentTowerUpgradeSaveData>();
+
+        /// <summary>Permanent UFO Base level index (0 = level 1). Absent in older saves, which read back as 0.</summary>
+        public int BaseDefenseLevel;
         public List<MetaItemStackSaveData> Inventory = new List<MetaItemStackSaveData>();
 
         /// <summary>Equipment pieces the player owns, at most one entry per piece. Added in save version 5.</summary>
