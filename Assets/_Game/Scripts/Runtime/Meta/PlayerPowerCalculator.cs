@@ -13,8 +13,16 @@ namespace AlienDefense.Meta
         /// <param name="baseProgression">Optional. When given, Force earned from base buildings is added. The base is a
         /// second Power source folded in here rather than kept as its own total, so the HUD, the Profile screen and
         /// the base's completion banner can never show three different numbers.</param>
+        /// <param name="inventory">Optional. When given, the equipped UFO pieces' weapon power is added.</param>
         public static int Compute(PlayerProfileService profile, TowerCatalog catalog = null,
-            AlienDefense.Base.BaseProgressionService baseProgression = null)
+            AlienDefense.Base.BaseProgressionService baseProgression = null, InventoryService inventory = null)
+        {
+            return ComputeWithoutEquipment(profile, catalog, baseProgression)
+                + (inventory != null && inventory.IsReady ? inventory.GetEquipmentPower() : 0);
+        }
+
+        private static int ComputeWithoutEquipment(PlayerProfileService profile, TowerCatalog catalog,
+            AlienDefense.Base.BaseProgressionService baseProgression)
         {
             if (profile == null)
             {

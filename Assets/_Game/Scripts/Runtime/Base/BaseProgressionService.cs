@@ -108,9 +108,14 @@ namespace AlienDefense.Base
             return count;
         }
 
+        /// <summary>Builds that may run at once: the catalog's base value plus the queues bought in the Shop
+        /// (Construction Queue Pack).</summary>
+        public int MaxConstructionQueues => _catalog == null ? 0
+            : _catalog.MaxConcurrentConstruction + (_profile != null ? _profile.ExtraConstructionQueues : 0);
+
         public bool IsBuilderBusy(DateTime nowUtc)
         {
-            return _catalog != null && GetActiveConstructionCount(nowUtc) >= _catalog.MaxConcurrentConstruction;
+            return _catalog != null && GetActiveConstructionCount(nowUtc) >= MaxConstructionQueues;
         }
 
         /// <summary>True when pressing Start on this building right now would succeed. Drives the green arrow over

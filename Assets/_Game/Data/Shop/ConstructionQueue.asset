@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 941e95fa720b2ef43894d177cb9b4307, type: 3}
+  m_Name: ConstructionQueue
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Shop.ShopItemData
+  _productId: alien.construction_queue
+  _category: 0
+  _layout: 0
+  _displayName: Construction Queue Pack
+  _subtitle: 
+  _description: Permanently unlock an extra Construction Queue to develop your Base
+    with efficiency!
+  _benefits: 
+  _art: {fileID: 21300000, guid: 0a2ccee2d66b11e4fb809987cd3f3da1, type: 3}
+  _secondaryArt: {fileID: 0}
+  _theme: {r: 0.54901963, g: 0.7764706, b: 0.9411765, a: 1}
+  _themeDark: {r: 0.9647059, g: 0.7254902, b: 0.24313726, a: 1}
+  _priceVnd: 99000
+  _originalPriceVnd: 0
+  _discountPercent: 3500
+  _purchaseLimit: 1
+  _oneTime: 1
+  _limitedTime: 0
+  _firstPurchaseDouble: 0
+  _unlockLevelId: 
+  _lockedLabel: 
+  _rewards:
+  - Type: 0
+    ItemId: 
+    Amount: 250
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 3
+    ItemId: 
+    Amount: 1
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 2
+    ItemId: wood
+    Amount: 5000
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 1
+    ItemId: 
+    Amount: 25000
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 2
+    ItemId: volt_drip
+    Amount: 500
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 

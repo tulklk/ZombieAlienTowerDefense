@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 941e95fa720b2ef43894d177cb9b4307, type: 3}
+  m_Name: Vip10Day
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Shop.ShopItemData
+  _productId: alien.vip_10days
+  _category: 2
+  _layout: 2
+  _displayName: VIP 10 Days
+  _subtitle: 
+  _description: 
+  _benefits: 
+  _art: {fileID: 0}
+  _secondaryArt: {fileID: 0}
+  _theme: {r: 0.47843137, g: 0.18431373, b: 0.8156863, a: 1}
+  _themeDark: {r: 0.2901961, g: 0.08235294, b: 0.5647059, a: 1}
+  _priceVnd: 199000
+  _originalPriceVnd: 0
+  _discountPercent: 0
+  _purchaseLimit: 0
+  _oneTime: 0
+  _limitedTime: 0
+  _firstPurchaseDouble: 0
+  _unlockLevelId: 
+  _lockedLabel: 
+  _rewards:
+  - Type: 0
+    ItemId: 
+    Amount: 300
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 4
+    ItemId: 
+    Amount: 10
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 

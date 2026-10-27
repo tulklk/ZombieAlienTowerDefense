@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 941e95fa720b2ef43894d177cb9b4307, type: 3}
+  m_Name: CityConstructionPack
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Shop.ShopItemData
+  _productId: alien.resource_city_construction
+  _category: 4
+  _layout: 4
+  _displayName: City Construction Pack
+  _subtitle: 
+  _description: 
+  _benefits: 
+  _art: {fileID: 5280109439331579606, guid: 6930a5a1fa6121a458c4b445d23e6f29, type: 3}
+  _secondaryArt: {fileID: 0}
+  _theme: {r: 0.17254902, g: 0.5254902, b: 0.9019608, a: 1}
+  _themeDark: {r: 0.08627451, g: 0.30588236, b: 0.68235296, a: 1}
+  _priceVnd: 119000
+  _originalPriceVnd: 0
+  _discountPercent: 940
+  _purchaseLimit: 1
+  _oneTime: 0
+  _limitedTime: 1
+  _firstPurchaseDouble: 0
+  _unlockLevelId: 
+  _lockedLabel: 
+  _rewards:
+  - Type: 0
+    ItemId: 
+    Amount: 500
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 2
+    ItemId: wood
+    Amount: 3000
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 1
+    ItemId: 
+    Amount: 30000
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 2
+    ItemId: volt_drip
+    Amount: 300
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 
+  - Type: 2
+    ItemId: microcircuit
+    Amount: 20
+    Icon: {fileID: 0}
+    Tag: 
+    Label: 

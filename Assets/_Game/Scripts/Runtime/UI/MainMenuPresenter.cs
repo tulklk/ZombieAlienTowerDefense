@@ -158,6 +158,11 @@ namespace AlienDefense.UI
                 return;
             }
 
+            if (_menuShellPresenter != null && _menuShellPresenter.TryHandleBack())
+            {
+                return; // the Shop closed a popup or returned to the previous tab
+            }
+
             HandleExitRequested();
         }
 

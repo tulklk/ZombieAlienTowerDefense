@@ -1,6 +1,7 @@
 // Soft additive glow for world decoration (street-lamp light pools and bulb halos at night).
 // One unlit pass: texture alpha x colour, added on top (Blend SrcAlpha One), no depth write, no lighting.
-// Cheap on mobile: a quad with a radial texture instead of a real-time point light.
+// Cheap on mobile: a quad with a radial texture instead of a real-time point light. Vertex colour multiplies
+// in (white on quads), so particle systems (fireflies) can fade their particles with it.
 Shader "AlienDefense/WorldGlowAdditive"
 {
     Properties
@@ -39,12 +40,14 @@ Shader "AlienDefense/WorldGlowAdditive"
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
             };
 
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
             };
 
             Varyings Vert(Attributes input)
@@ -52,13 +55,14 @@ Shader "AlienDefense/WorldGlowAdditive"
                 Varyings output;
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
+                output.color = input.color;
                 return output;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
                 half mask = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).a;
-                return half4(_BaseColor.rgb, mask * _BaseColor.a);
+                return half4(_BaseColor.rgb * input.color.rgb, mask * _BaseColor.a * input.color.a);
             }
             ENDHLSL
         }

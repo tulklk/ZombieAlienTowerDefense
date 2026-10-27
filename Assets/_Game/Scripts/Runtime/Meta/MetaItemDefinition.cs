@@ -29,6 +29,12 @@ namespace AlienDefense.Meta
         [SerializeField]
         private Color _headerColor = new Color(0.16f, 0.72f, 0.95f, 1f);
 
+        [SerializeField]
+        [Tooltip("Containers only: what opening one can give.")]
+        private ContainerReward[] _containerRewards = System.Array.Empty<ContainerReward>();
+
+        public System.Collections.Generic.IReadOnlyList<ContainerReward> ContainerRewards => _containerRewards;
+
         public string Id => _id;
         public string DisplayName => _displayName;
         public string Description => _description;

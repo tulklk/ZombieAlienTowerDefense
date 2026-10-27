@@ -111,15 +111,25 @@ namespace AlienDefense.EditorTools
             SetArray(so.FindProperty("_nightLights"), lamps.ToArray());
             so.FindProperty("_groundGlowMaterial").objectReferenceValue = groundGlow;
             so.FindProperty("_bulbGlowMaterial").objectReferenceValue = bulbGlow;
-            so.FindProperty("_groundGlowColor").colorValue = new Color(1f, 0.80f, 0.45f, 0.8f);
+            so.FindProperty("_groundGlowColor").colorValue = new Color(1f, 0.80f, 0.45f, 0.68f); // softer, wider pool (2026-10-27)
             so.FindProperty("_bulbGlowColor").colorValue = new Color(1f, 0.86f, 0.55f, 1f);
 
-            // Day = the scene exactly as authored.
+            // Day = the authored scene, a touch warmer and with a slightly blue ambient for more depth (2026-10-27).
+            // The sun itself gets the same values so the edit-mode look matches.
+            var dayLight = new Color(1f, 0.95f, 0.84f);
+            const float dayIntensity = 1.32f;
+            if (sun != null)
+            {
+                sun.color = dayLight;
+                sun.intensity = dayIntensity;
+                EditorUtility.SetDirty(sun);
+            }
+
             SerializedProperty day = so.FindProperty("_day");
-            day.FindPropertyRelative("LightColor").colorValue = sun != null ? sun.color : Color.white;
-            day.FindPropertyRelative("LightIntensity").floatValue = sun != null ? sun.intensity : 1.25f;
+            day.FindPropertyRelative("LightColor").colorValue = dayLight;
+            day.FindPropertyRelative("LightIntensity").floatValue = dayIntensity;
             day.FindPropertyRelative("LightRotation").vector3Value = sun != null ? sun.transform.eulerAngles : new Vector3(52f, 325f, 0f);
-            day.FindPropertyRelative("AmbientTint").colorValue = Color.white;
+            day.FindPropertyRelative("AmbientTint").colorValue = new Color(0.95f, 0.98f, 1.05f);
             day.FindPropertyRelative("AmbientIntensity").floatValue = 1f;
             day.FindPropertyRelative("ReflectionIntensity").floatValue = 1f;
             day.FindPropertyRelative("CameraBackground").colorValue = camera != null ? camera.backgroundColor : new Color(0.624f, 0.847f, 0.961f);
@@ -137,14 +147,15 @@ namespace AlienDefense.EditorTools
             night.FindPropertyRelative("LightIntensity").floatValue = 0.28f;
             Vector3 sunAngles = sun != null ? sun.transform.eulerAngles : new Vector3(52f, 325f, 0f);
             night.FindPropertyRelative("LightRotation").vector3Value = new Vector3(58f, sunAngles.y - 35f, 0f);
-            night.FindPropertyRelative("AmbientTint").colorValue = new Color(0.26f, 0.34f, 0.70f);
-            night.FindPropertyRelative("AmbientIntensity").floatValue = 0.75f;
+            night.FindPropertyRelative("AmbientTint").colorValue = new Color(0.27f, 0.36f, 0.72f);
+            night.FindPropertyRelative("AmbientIntensity").floatValue = 0.85f; // a little more moonlight: tree silhouettes read
             night.FindPropertyRelative("ReflectionIntensity").floatValue = 0.35f;
             night.FindPropertyRelative("CameraBackground").colorValue = new Color(0.03f, 0.05f, 0.12f);
             night.FindPropertyRelative("WaterShallow").colorValue = new Color(0.12f, 0.38f, 0.55f);
             night.FindPropertyRelative("WaterDeep").colorValue = new Color(0.05f, 0.18f, 0.36f);
             night.FindPropertyRelative("WaterFoam").colorValue = new Color(0.50f, 0.66f, 0.78f);
             night.FindPropertyRelative("WaterHighlight").floatValue = 0.22f;
+            RegisterDecor(so, world);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -205,7 +216,7 @@ namespace AlienDefense.EditorTools
             pool.transform.SetParent(visual.transform, false);
             pool.transform.position = new Vector3(bulbWorld.x, lamp.position.y + 0.2f, bulbWorld.z);
             pool.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            pool.transform.localScale = new Vector3(8.5f, 8.5f, 1f);
+            pool.transform.localScale = new Vector3(9.5f, 9.5f, 1f);
             SetupGlowRenderer(pool, groundGlow);
 
             GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -229,6 +240,68 @@ namespace AlienDefense.EditorTools
                 new[] { pool.GetComponent<Renderer>(), halo.GetComponent<Renderer>() });
             EditorUtility.SetDirty(night);
             return night;
+        }
+
+        /// <summary>Hooks the environment upgrade's decor into the controller (re-running this builder alone keeps
+        /// them): renderers using the alien-tech glow materials, "NightHalo"/"NightFX" objects (night only; their
+        /// renderers fade with the lamps) and "DayFX" objects (day only).</summary>
+        private static void RegisterDecor(SerializedObject so, GameObject world)
+        {
+            var techMaterials = new List<Material>();
+            foreach (string name in new[] { "MAT_Tech_Cyan", "MAT_Tech_Purple", "MAT_Tech_Warm" })
+            {
+                var material = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Base/Decor/Materials/" + name + ".mat");
+                if (material != null)
+                {
+                    techMaterials.Add(material);
+                }
+            }
+
+            var techRenderers = new List<Renderer>();
+            var nightObjects = new List<GameObject>();
+            var nightGlows = new List<Renderer>();
+            var dayObjects = new List<GameObject>();
+            foreach (Transform t in world.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "NightHalo" || t.name == "NightFX")
+                {
+                    nightObjects.Add(t.gameObject);
+                    if (t.name == "NightHalo")
+                    {
+                        foreach (Renderer r in t.GetComponentsInChildren<Renderer>(true))
+                        {
+                            nightGlows.Add(r);
+                        }
+                    }
+
+                    t.gameObject.SetActive(false);
+                }
+                else if (t.name == "DayFX")
+                {
+                    dayObjects.Add(t.gameObject);
+                }
+
+                var renderer = t.GetComponent<Renderer>();
+                if (renderer == null || techMaterials.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (Material m in renderer.sharedMaterials)
+                {
+                    if (m != null && techMaterials.Contains(m))
+                    {
+                        techRenderers.Add(renderer);
+                        break;
+                    }
+                }
+            }
+
+            SetArray(so.FindProperty("_techGlowMaterials"), techMaterials.ToArray());
+            SetArray(so.FindProperty("_techRenderers"), techRenderers.ToArray());
+            SetArray(so.FindProperty("_nightObjects"), nightObjects.ToArray());
+            SetArray(so.FindProperty("_nightGlowRenderers"), nightGlows.ToArray());
+            SetArray(so.FindProperty("_dayObjects"), dayObjects.ToArray());
         }
 
         private static void SetupGlowRenderer(GameObject quad, Material material)
@@ -300,7 +373,7 @@ namespace AlienDefense.EditorTools
                     float r = Mathf.Sqrt(u * u + v * v);
                     float a = Mathf.Clamp01(1f - r);
                     a = a * a * (3f - 2f * a); // smooth falloff
-                    a *= a;
+                    a = Mathf.Pow(a, 1.6f); // soft shoulder: the pool melts into the ground instead of a disc
                     pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
                 }
             }

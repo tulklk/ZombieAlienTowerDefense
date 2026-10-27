@@ -57,6 +57,20 @@ namespace AlienDefense.Save
                 data.Statistics = new PlayerStatisticsSaveData();
             }
 
+            if (data.Shop == null)
+            {
+                data.Shop = new ShopSaveData();
+            }
+
+            data.Shop.Purchases ??= new List<ShopPurchaseSaveData>();
+            data.Shop.Purchases.RemoveAll(p => p == null || string.IsNullOrWhiteSpace(p.ProductId));
+            data.Shop.Transactions ??= new List<string>();
+            data.Shop.Subscriptions ??= new List<ShopSubscriptionSaveData>();
+            data.Shop.Subscriptions.RemoveAll(s => s == null || string.IsNullOrWhiteSpace(s.Id));
+            data.Shop.SeenProductIds ??= new List<string>();
+            data.Shop.ExtraConstructionQueues = Mathf.Clamp(data.Shop.ExtraConstructionQueues, 0, 8);
+            data.InventoryNew ??= new List<string>();
+
             ProfileIdentityUtility.EnsureDisplayIdentity(data);
 
             RepairLevelProgress(data);

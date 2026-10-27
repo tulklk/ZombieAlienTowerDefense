@@ -241,7 +241,7 @@ namespace AlienDefense.UI.Defense
 
         private int CurrentForce()
         {
-            return PlayerPowerCalculator.Compute(_services.PlayerProfileService, _services.TowerCatalog, _services.BaseProgression);
+            return PlayerPowerCalculator.Compute(_services.PlayerProfileService, _services.TowerCatalog, _services.BaseProgression, _services.Inventory);
         }
 
         /// <summary>Base health the UFO Base card quotes: the first level's BaseMaxHealth (every level's value scales

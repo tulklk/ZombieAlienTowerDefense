@@ -81,6 +81,47 @@ namespace AlienDefense.Meta
             "here IS the rarity ladder for this piece.")]
         private Tier[] _tiers = Array.Empty<Tier>();
 
+        [Header("Level upgrade (within a rarity, up to the tier's Max Level)")]
+        [SerializeField, Min(0f)]
+        [Tooltip("Every level above 1 adds this fraction of the tier's stats (0.1 = +10% per level).")]
+        private float _statGrowthPerLevel = 0.1f;
+
+        [SerializeField, Min(0)]
+        [Tooltip("Coins for level 1 -> 2; each further level costs Level Cost Growth times more.")]
+        private int _levelCoinCost = 300;
+
+        [SerializeField, Min(1f)]
+        private float _levelCostGrowth = 1.35f;
+
+        [SerializeField]
+        [Tooltip("Material spent on every level-up (empty = coins only).")]
+        private string _levelMaterialId;
+
+        [SerializeField, Min(0)]
+        [Tooltip("Material amount for level 1 -> 2; +this much for every further level.")]
+        private int _levelMaterialAmount = 2;
+
+        [Header("Craft recipe (makes a new copy from materials)")]
+        [SerializeField]
+        private MetaItemAmount[] _recipe = Array.Empty<MetaItemAmount>();
+
+        [SerializeField, Min(0)]
+        private int _recipeCoins;
+
+        public float StatGrowthPerLevel => _statGrowthPerLevel;
+        public string LevelMaterialId => _levelMaterialId;
+        public IReadOnlyList<MetaItemAmount> Recipe => _recipe;
+        public int RecipeCoins => _recipeCoins;
+        public bool HasRecipe => _recipe != null && _recipe.Length > 0;
+
+        /// <summary>Stat multiplier at a level (1 at level 1).</summary>
+        public float LevelMultiplier(int level) => 1f + _statGrowthPerLevel * Mathf.Max(0, level - 1);
+
+        /// <summary>Coins to go from <paramref name="level"/> to the next level.</summary>
+        public int GetLevelCoinCost(int level) => Mathf.RoundToInt(_levelCoinCost * Mathf.Pow(_levelCostGrowth, Mathf.Max(0, level - 1)));
+
+        public int GetLevelMaterialCost(int level) => string.IsNullOrEmpty(_levelMaterialId) ? 0 : _levelMaterialAmount * Mathf.Max(1, level);
+
         public string Id => _id;
         public string DisplayName => _displayName;
         public string Description => _description;
