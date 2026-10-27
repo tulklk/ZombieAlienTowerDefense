@@ -34,6 +34,27 @@ namespace AlienDefense.Meta
         [Tooltip("Copies consumed per merge. The design default is 5; set it per family rather than hard-coding.")]
         private int _mergeInputCount = 5;
 
+        [SerializeField]
+        [Tooltip("The UFO part this artifact belongs to (its type badge and progression row).")]
+        private EquipmentSlotType _slot = EquipmentSlotType.Controls;
+
+        [SerializeField]
+        [Tooltip("What the bonus boosts, shown in the detail popup (\"Weapon Power\").")]
+        private string _effectName = "Weapon Power";
+
+        [SerializeField]
+        [Tooltip("Bonus percent per rarity, indexed by MetaItemRarity (Common .. Legendary).")]
+        private float[] _bonusPercentByRarity = { 2f, 4f, 8f, 15f, 25f };
+
+        public EquipmentSlotType Slot => _slot;
+        public string EffectName => _effectName;
+
+        public float GetBonusPercent(MetaItemRarity rarity)
+        {
+            int i = (int)rarity;
+            return _bonusPercentByRarity != null && i >= 0 && i < _bonusPercentByRarity.Length ? _bonusPercentByRarity[i] : 0f;
+        }
+
         public string Id => _id;
         public string DisplayName => _displayName;
         public string Description => _description;

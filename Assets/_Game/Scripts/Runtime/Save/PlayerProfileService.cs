@@ -6,7 +6,7 @@ namespace AlienDefense.Save
     /// <summary>Owns the current in-memory PlayerProfileSaveData and is the only way anything else may read or
     /// mutate it. Never exposes the mutable internal lists directly (only read-only snapshots), validates every
     /// mutation, and drives SaveService (immediate for progression, debounced for settings).</summary>
-    public sealed class PlayerProfileService
+    public sealed partial class PlayerProfileService
     {
         private const float SettingsSaveDebounceSeconds = 0.75f;
         private const int MaxRememberedRewardTransactions = 32;
@@ -226,12 +226,14 @@ namespace AlienDefense.Save
                 if (stack != null && stack.ItemId == itemId)
                 {
                     stack.Amount = Mathf.Max(0, stack.Amount) + amount;
+                    MarkInventoryNewSilently(InventoryNewKeys.Item(itemId));
                     RequestImmediateSave();
                     return;
                 }
             }
 
             _data.Inventory.Add(new MetaItemStackSaveData { ItemId = itemId, Amount = amount });
+            MarkInventoryNewSilently(InventoryNewKeys.Item(itemId));
             RequestImmediateSave();
         }
 
@@ -763,6 +765,7 @@ namespace AlienDefense.Save
                 });
             }
 
+            MarkInventoryNewSilently(InventoryNewKeys.Equipment(itemId));
             RequestImmediateSave();
         }
 
@@ -873,6 +876,7 @@ namespace AlienDefense.Save
                 _data.Artifacts.Add(new ArtifactSaveData { ItemId = itemId, Rarity = (int)rarity, Amount = amount });
             }
 
+            MarkInventoryNewSilently(InventoryNewKeys.Artifact(itemId, rarity));
             RequestImmediateSave();
         }
 

@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dadc9b700f184033be02272dcb7dd652, type: 3}
+  m_Name: MetaItem_resource_container
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Meta.MetaItemDefinition
+  _id: resource_container
+  _displayName: Resource Container
+  _description: Open it for coins, materials and sometimes an artifact.
+  _icon: {fileID: 21300000, guid: 2b48f242c23e2204c84d01868a23b08e, type: 3}
+  _rarity: 2
+  _kind: 1
+  _headerColor: {r: 0.18431373, g: 0.72156864, b: 0.8509804, a: 1}
+  _containerRewards:
+  - Kind: 1
+    Id: 
+    Min: 1000
+    Max: 3000
+    Chance: 1
+  - Kind: 0
+    Id: wood
+    Min: 100
+    Max: 300
+    Chance: 1
+  - Kind: 0
+    Id: volt_drip
+    Min: 30
+    Max: 80
+    Chance: 0.8
+  - Kind: 0
+    Id: microcircuit
+    Min: 2
+    Max: 6
+    Chance: 0.7
+  - Kind: 3
+    Id: art_stick
+    Min: 1
+    Max: 1
+    Chance: 0.08
+  - Kind: 3
+    Id: art_chair
+    Min: 1
+    Max: 1
+    Chance: 0.08
+  - Kind: 3
+    Id: art_reactor
+    Min: 1
+    Max: 1
+    Chance: 0.08
+  - Kind: 3
+    Id: art_cargo
+    Min: 1
+    Max: 1
+    Chance: 0.08
+  - Kind: 3
+    Id: art_antigravity
+    Min: 1
+    Max: 1
+    Chance: 0.08
+  - Kind: 3
+    Id: art_engine
+    Min: 1
+    Max: 1
+    Chance: 0.08

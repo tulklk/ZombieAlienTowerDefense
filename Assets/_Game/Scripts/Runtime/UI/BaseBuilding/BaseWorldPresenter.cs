@@ -771,7 +771,7 @@ namespace AlienDefense.UI.BaseBuilding
             }
 
             int delta = definition.TryGetLevel(newLevel, out BuildingLevelDefinition level) ? level.ForceReward : 0;
-            int total = PlayerPowerCalculator.Compute(_profile, _services?.TowerCatalog, _base);
+            int total = PlayerPowerCalculator.Compute(_profile, _services?.TowerCatalog, _base, _services?.Inventory);
             _banner?.Enqueue(total, delta, $"{definition.DisplayName} Lvl {newLevel}");
             _audio?.PlaySfx(_completeClip);
 

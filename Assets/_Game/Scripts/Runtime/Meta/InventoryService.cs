@@ -14,7 +14,7 @@ namespace AlienDefense.Meta
     ///
     /// Every craft/merge runs inside a profile batch so a multi-step transaction hits the disk once, and each
     /// one validates before it spends - there is no path that charges the player for a failed operation.</summary>
-    public sealed class InventoryService
+    public sealed partial class InventoryService
     {
         private readonly PlayerProfileService _profile;
         private readonly MetaItemCatalog _catalog;

@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7aa25ed21dbf3d74194629d31075040f, type: 3}
+  m_Name: ShopCatalog
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Shop.ShopCatalog
+  _items:
+  - {fileID: 11400000, guid: 0405835838433654b80fb3c0b17c2feb, type: 2}
+  - {fileID: 11400000, guid: 73d93459c4cfd4d4d93aaf1305d721d8, type: 2}
+  - {fileID: 11400000, guid: 69a5fa18988732749b227d4046ebd090, type: 2}
+  - {fileID: 11400000, guid: d5c581ed1e8acf04dbeca840bf624d74, type: 2}
+  - {fileID: 11400000, guid: ec70584126ef7e94a9063ea0132d7c46, type: 2}
+  - {fileID: 11400000, guid: 2a23b92916e24db41bab1b133dbe3af1, type: 2}
+  - {fileID: 11400000, guid: dd02c9e2da4dc114e9448987182c48b1, type: 2}
+  - {fileID: 11400000, guid: d9bb907f8fa6c9d418a414002529a54d, type: 2}
+  - {fileID: 11400000, guid: 8874161836cf7594d8e6f688d6d2d23d, type: 2}
+  - {fileID: 11400000, guid: 347a2bdd4a8984345b3e29ba356a1365, type: 2}
+  - {fileID: 11400000, guid: 9dd4fd4cfc66f184ebf83aedfd290956, type: 2}
+  - {fileID: 11400000, guid: 2026f7cbb578390499b469661ee7ef36, type: 2}
+  - {fileID: 11400000, guid: c87843d723499d843a272f7757fb36fc, type: 2}
+  - {fileID: 11400000, guid: e4fcb6fd2453acb479ebef21d3398e85, type: 2}
+  - {fileID: 11400000, guid: 4d472e54aa62aaa43957c7bfb396e17d, type: 2}
+  - {fileID: 11400000, guid: 8ff7d965de35ef84aa51aaeb0565c18f, type: 2}
+  - {fileID: 11400000, guid: 0a18d1db5a2c3324a927e739b7403037, type: 2}
+  - {fileID: 11400000, guid: 964d1d0bf1c2c1e4183211cfa2ee276e, type: 2}
+  - {fileID: 11400000, guid: 9d79ab93ddb48a846a84e5c7263a61f1, type: 2}
+  - {fileID: 11400000, guid: 34c15833d4e807545b466468d69e9c28, type: 2}
+  _offerCycleHours: 168
+  _vipDailyGems: 100
+  _gemIcon: {fileID: 21300000, guid: a202e06c9c2fdce4e80178e0291703e3, type: 3}
+  _coinIcon: {fileID: 21300000, guid: 50b6f41324ed46c46b0a574873fcbdbf, type: 3}
+  _constructionQueueIcon: {fileID: 21300000, guid: c17af2ef6b0647c4d8e823398fc49939,
+    type: 3}
+  _vipIcon: {fileID: 21300000, guid: 81ccf85230272034ba126d6f4ea8a1a4, type: 3}
+  _privilegeIcon: {fileID: 21300000, guid: 9ba735be4f1f2364fa90dd4384957c3e, type: 3}
+  _itemIcons:
+  - ItemId: wood
+    Icon: {fileID: 21300000, guid: 24a00b84560c34b45a7b594325fc8574, type: 3}
+    Name: Wood
+  - ItemId: volt_drip
+    Icon: {fileID: 21300000, guid: bac1a0e0033331842b4ac200ee50c08d, type: 3}
+    Name: Volt Drip
+  - ItemId: rare_atom
+    Icon: {fileID: 21300000, guid: e9ea24910121c4e46bad34d349464d73, type: 3}
+    Name: Evolution Coin
+  - ItemId: microcircuit
+    Icon: {fileID: 21300000, guid: 517771ea4e415064fbf22cc08faeac61, type: 3}
+    Name: Microcircuit
+  - ItemId: card_turret
+    Icon: {fileID: 21300000, guid: 9b47d97294833854582d5a0b32c22abf, type: 3}
+    Name: Blaster Tower upgrade card
+  - ItemId: card_ice_dagger
+    Icon: {fileID: 21300000, guid: 035bdf66cddd9404aa9e255dd3670908, type: 3}
+    Name: Frost Tower upgrade card
+  - ItemId: card_mortar
+    Icon: {fileID: 21300000, guid: f8071b9a806924746a3ead9b92ac2480, type: 3}
+    Name: Mortar Tower upgrade card
+  - ItemId: card_tesla
+    Icon: {fileID: 21300000, guid: cc8ac4a0a5957d14d87354adb897bcd7, type: 3}
+    Name: Tesla upgrade card
+  - ItemId: card_ufo
+    Icon: {fileID: 21300000, guid: 74815771b6abfc14fbcaa9e822bff306, type: 3}
+    Name: UFO Base upgrade card

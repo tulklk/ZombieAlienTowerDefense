@@ -90,6 +90,34 @@ namespace AlienDefense.Base.DayNight
         [SerializeField]
         private BaseWorldLightingPreset _night = new BaseWorldLightingPreset();
 
+        [Header("Alien tech & ambience (filled by BaseWorldDayNightBuilder)")]
+        [SerializeField]
+        [Tooltip("Shared emissive materials of the alien tech decor. One runtime copy of each is made and swapped onto " +
+                 "Tech Renderers, so the glow can grow at night without touching the assets.")]
+        private Material[] _techGlowMaterials = new Material[0];
+
+        [SerializeField]
+        private Renderer[] _techRenderers = new Renderer[0];
+
+        [SerializeField, Min(0f)]
+        [Tooltip("Emission multiplier by day (the tech still reads as lit, but sunlight dominates).")]
+        private float _techEmissionDay = 0.6f;
+
+        [SerializeField, Min(0f)]
+        private float _techEmissionNight = 2.2f;
+
+        [SerializeField]
+        [Tooltip("Shown only at night (tech halos, beacon glow, fireflies). Their glow quads fade with the lamps.")]
+        private GameObject[] _nightObjects = new GameObject[0];
+
+        [SerializeField]
+        [Tooltip("Halo quads among the night objects; they get the shared bulb-glow runtime material (fades in).")]
+        private Renderer[] _nightGlowRenderers = new Renderer[0];
+
+        [SerializeField]
+        [Tooltip("Shown only by day (drifting pollen).")]
+        private GameObject[] _dayObjects = new GameObject[0];
+
         private DayPeriod _period;
         private bool _hasPeriod;
         private float _blend;          // 0 = day, 1 = night
@@ -106,6 +134,12 @@ namespace AlienDefense.Base.DayNight
         private Material _groundGlowRuntime;
         private Material _bulbGlowRuntime;
         private float[] _bulbThresholds;
+        private Material[] _techRuntime;
+        private Color[] _techBaseEmission;
+        private bool _nightObjectsOn;
+        private bool _dayObjectsOn;
+        private bool _togglesSynced; // first blend always writes the toggles (the scene stores night objects off)
+        private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         public DayPeriod CurrentPeriod => _period;
 
@@ -151,6 +185,57 @@ namespace AlienDefense.Base.DayNight
                     }
                 }
             }
+
+            for (int i = 0; i < _nightGlowRenderers.Length; i++)
+            {
+                if (_nightGlowRenderers[i] != null && _bulbGlowRuntime != null)
+                {
+                    _nightGlowRenderers[i].sharedMaterial = _bulbGlowRuntime;
+                }
+            }
+
+            // One runtime copy per tech glow material, swapped onto every renderer that uses the asset (once, here).
+            _techRuntime = new Material[_techGlowMaterials.Length];
+            _techBaseEmission = new Color[_techGlowMaterials.Length];
+            for (int m = 0; m < _techGlowMaterials.Length; m++)
+            {
+                Material asset = _techGlowMaterials[m];
+                if (asset == null)
+                {
+                    continue;
+                }
+
+                _techRuntime[m] = new Material(asset) { name = asset.name + " (Runtime)" };
+                _techBaseEmission[m] = asset.HasProperty(EmissionId) ? asset.GetColor(EmissionId) : Color.black;
+            }
+
+            for (int r = 0; r < _techRenderers.Length; r++)
+            {
+                Renderer renderer = _techRenderers[r];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Material[] materials = renderer.sharedMaterials;
+                bool changed = false;
+                for (int s = 0; s < materials.Length; s++)
+                {
+                    for (int m = 0; m < _techGlowMaterials.Length; m++)
+                    {
+                        if (materials[s] == _techGlowMaterials[m] && _techRuntime[m] != null)
+                        {
+                            materials[s] = _techRuntime[m];
+                            changed = true;
+                        }
+                    }
+                }
+
+                if (changed)
+                {
+                    renderer.sharedMaterials = materials;
+                }
+            }
         }
 
         private void OnEnable()
@@ -187,6 +272,17 @@ namespace AlienDefense.Base.DayNight
             if (_bulbGlowRuntime != null)
             {
                 Destroy(_bulbGlowRuntime);
+            }
+
+            if (_techRuntime != null)
+            {
+                for (int m = 0; m < _techRuntime.Length; m++)
+                {
+                    if (_techRuntime[m] != null)
+                    {
+                        Destroy(_techRuntime[m]);
+                    }
+                }
             }
         }
 
@@ -343,6 +439,46 @@ namespace AlienDefense.Base.DayNight
 
             // Glows fade in over the second half of the blend, after the sun has mostly gone.
             float glow = Mathf.Clamp01((night - 0.35f) / 0.65f);
+
+            if (_techRuntime != null)
+            {
+                float emission = Mathf.Lerp(_techEmissionDay, _techEmissionNight, night);
+                for (int m = 0; m < _techRuntime.Length; m++)
+                {
+                    if (_techRuntime[m] != null)
+                    {
+                        _techRuntime[m].SetColor(EmissionId, _techBaseEmission[m] * emission);
+                    }
+                }
+            }
+
+            bool nightOn = glow > 0.001f;
+            bool force = !_togglesSynced;
+            _togglesSynced = true;
+            if (force || nightOn != _nightObjectsOn)
+            {
+                _nightObjectsOn = nightOn;
+                for (int i = 0; i < _nightObjects.Length; i++)
+                {
+                    if (_nightObjects[i] != null)
+                    {
+                        _nightObjects[i].SetActive(nightOn);
+                    }
+                }
+            }
+
+            bool dayOn = night < 0.5f;
+            if (force || dayOn != _dayObjectsOn)
+            {
+                _dayObjectsOn = dayOn;
+                for (int i = 0; i < _dayObjects.Length; i++)
+                {
+                    if (_dayObjects[i] != null)
+                    {
+                        _dayObjects[i].SetActive(dayOn);
+                    }
+                }
+            }
             if (_groundGlowRuntime != null)
             {
                 _groundGlowRuntime.SetColor(BaseColorId, new Color(_groundGlowColor.r, _groundGlowColor.g, _groundGlowColor.b, _groundGlowColor.a * glow));

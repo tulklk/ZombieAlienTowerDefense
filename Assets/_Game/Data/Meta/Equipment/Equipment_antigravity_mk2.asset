@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49b151c377ee80b4780ee2e2d0e4baa7, type: 3}
+  m_Name: Equipment_antigravity_mk2
+  m_EditorClassIdentifier: AlienDefense.Runtime::AlienDefense.Meta.EquipmentDefinition
+  _id: eq_antigravity_mk2
+  _displayName: Grav Lens
+  _description: Elite antigravity built from rare blueprints. Starts at Rare.
+  _icon: {fileID: 21300000, guid: a266d3de3f8a15342adf724e4dda5253, type: 3}
+  _slot: 4
+  _abilityDisplayName: Hover Range
+  _tiers:
+  - _rarity: 2
+    _weaponPower: 70
+    _abilityPercent: 35
+    _flightSpeedPercent: 12
+    _maxLevel: 20
+    _upgradeDuplicates: 3
+    _upgradeCurrency: 4000
+  - _rarity: 3
+    _weaponPower: 120
+    _abilityPercent: 55
+    _flightSpeedPercent: 18
+    _maxLevel: 25
+    _upgradeDuplicates: 3
+    _upgradeCurrency: 10000
+  - _rarity: 4
+    _weaponPower: 190
+    _abilityPercent: 90
+    _flightSpeedPercent: 28
+    _maxLevel: 30
+    _upgradeDuplicates: 0
+    _upgradeCurrency: 0
+  _statGrowthPerLevel: 0.1
+  _levelCoinCost: 800
+  _levelCostGrowth: 1.35
+  _levelMaterialId: anti_gravity_blueprint
+  _levelMaterialAmount: 4
+  _recipe:
+  - ItemId: microcircuit
+    Amount: 30
+  - ItemId: anti_gravity_blueprint
+    Amount: 5
+  - ItemId: volt_drip
+    Amount: 150
+  _recipeCoins: 2000

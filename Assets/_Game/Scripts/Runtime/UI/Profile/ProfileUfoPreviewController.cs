@@ -92,9 +92,63 @@ namespace AlienDefense.UI.Profile
             _pivotBaseLocalPosition = _modelPivot.localPosition;
         }
 
-        public void Show() => SetActive(true);
+        public void Show()
+        {
+            RestoreDefaultTarget();
+            SetActive(true);
+        }
 
         public void Hide() => SetActive(false);
+
+        private RawImage _defaultTarget;
+        private RawImage _borrowedTarget;
+
+        /// <summary>Lets another screen (the Inventory) show the same garage UFO in its own RawImage, so the scene
+        /// keeps a single preview camera. The camera renders only while one of the two is shown.</summary>
+        public void ShowOn(RawImage target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (_defaultTarget == null && _borrowedTarget == null)
+            {
+                _defaultTarget = _targetImage;
+            }
+
+            _borrowedTarget = target;
+            _targetImage = target;
+            BindTexture();
+            SetActive(true);
+        }
+
+        /// <summary>Stops a borrowed preview (only if that screen is still the one showing it).</summary>
+        public void HideFrom(RawImage target)
+        {
+            if (_borrowedTarget != target || _targetImage != target)
+            {
+                return;
+            }
+
+            SetActive(false);
+            RestoreDefaultTarget();
+        }
+
+        private void RestoreDefaultTarget()
+        {
+            if (_borrowedTarget == null)
+            {
+                return;
+            }
+
+            _borrowedTarget = null;
+            if (_defaultTarget != null)
+            {
+                _targetImage = _defaultTarget;
+                BindTexture();
+            }
+        }
 
         private void Awake()
         {

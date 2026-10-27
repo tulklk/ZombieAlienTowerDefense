@@ -38,8 +38,55 @@ namespace AlienDefense.UI.MainMenu
         private AlienDefense.UI.BaseBuilding.BaseWorldPresenter _baseWorldPresenter;
 
         private MenuTab _activeTab = MenuTab.Play;
+        private MenuTab _tabBeforeShop = MenuTab.Play;
+        private AlienDefense.Meta.InventoryService _inventory;
+
+        private void HandleInventoryChanged()
+        {
+            RefreshHud();
+            UpdateInventoryBadge();
+        }
+
+        private void UpdateInventoryBadge()
+        {
+            _view?.BottomNavigation?.UpgradeTab?.SetNotification(_inventory != null && _inventory.HasAnyBadge());
+        }
+
+        private void OnDestroy()
+        {
+            if (_inventory != null)
+            {
+                _inventory.Changed -= HandleInventoryChanged;
+            }
+        }
 
         public MenuTab ActiveTab => _activeTab;
+
+        /// <summary>The Shop's back button / Android back: return to the tab the player came from.</summary>
+        public void LeaveShop()
+        {
+            if (_activeTab == MenuTab.Shop)
+            {
+                SwitchTab(_tabBeforeShop == MenuTab.Shop ? MenuTab.Play : _tabBeforeShop);
+            }
+        }
+
+        /// <summary>Lets the active tab consume the Android back button. True when it did.</summary>
+        public bool TryHandleBack()
+        {
+            if (_activeTab == MenuTab.Shop && _shopPresenter != null)
+            {
+                _shopPresenter.HandleBack();
+                return true;
+            }
+
+            if (_activeTab == MenuTab.Upgrade && _inventoryPresenter != null && _inventoryPresenter.TryHandleBack())
+            {
+                return true;
+            }
+
+            return false;
+        }
 
         public void Initialize(ApplicationServices services)
         {
@@ -49,6 +96,13 @@ namespace AlienDefense.UI.MainMenu
             _basePresenter?.ReceiveApplicationServices(services);
             _inventoryPresenter?.Initialize(services);
             _baseWorldPresenter?.Initialize(services);
+
+            // Equip / craft / merge change Power (HUD) and the Inventory tab's red badge.
+            _inventory = services?.Inventory;
+            if (_inventory != null)
+            {
+                _inventory.Changed += HandleInventoryChanged;
+            }
 
             SwitchTab(MenuTab.Play, force: true);
         }
@@ -76,6 +130,11 @@ namespace AlienDefense.UI.MainMenu
                 return;
             }
 
+            if (tab == MenuTab.Shop && _activeTab != MenuTab.Shop)
+            {
+                _tabBeforeShop = _activeTab;
+            }
+
             _activeTab = tab;
 
             if (_view != null)
@@ -96,6 +155,7 @@ namespace AlienDefense.UI.MainMenu
 
             RefreshHud();
             RefreshTabContent(tab);
+            UpdateInventoryBadge();
         }
 
         private void UpdateBottomNavigation(MenuTab tab)

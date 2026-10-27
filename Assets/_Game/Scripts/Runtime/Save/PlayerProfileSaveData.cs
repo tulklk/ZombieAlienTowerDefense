@@ -54,5 +54,13 @@ namespace AlienDefense.Save
         public DailyQuestSaveData DailyQuest = new DailyQuestSaveData();
         public SettingsSaveData Settings = new SettingsSaveData();
         public TutorialProgressSaveData Tutorial = new TutorialProgressSaveData();
+
+        /// <summary>Shop purchases, VIP / privilege expiry, extra construction queues. Absent in older saves, which
+        /// SaveValidator repairs to an empty record (nothing bought).</summary>
+        public ShopSaveData Shop = new ShopSaveData();
+
+        /// <summary>Inventory entries the player has not looked at yet ("eq:id", "art:id:rarity", "item:id") - the
+        /// red "!" badges. Absent in older saves (nothing is new).</summary>
+        public List<string> InventoryNew = new List<string>();
     }
 }
